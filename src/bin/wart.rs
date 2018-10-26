@@ -2,7 +2,10 @@ extern crate warthog;
 
 use std::{env, process, fs};
 
-use warthog::loader;
+use warthog::{
+    module::Module,
+    reader::Reader,
+};
 
 fn main() {
     // Arg 0 is the executable name
@@ -20,10 +23,11 @@ fn main() {
 
 pub fn run(file: &str) {
     // Load the module
-    let module = {
+    let _module = {
         // Close the file once we're done loading
-        let mut file = fs::File::open(file).unwrap();
-        loader::load(&mut file).unwrap()
+        let file = fs::File::open(file).unwrap();
+        let reader = Reader::new(file); 
+        Module::load(reader).unwrap()
     };
     println!("Module loaded");
 }

@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub enum Error {
     InvalidModule,
+    UnsupportedVersion(u32),
     Utf8Error(std::string::FromUtf8Error),
     IoError(String),
 }
