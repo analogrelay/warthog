@@ -1,10 +1,10 @@
 use std::fmt;
 use std::io;
 
-use utils;
 use error::Error;
+use utils;
 
-use super::{Section, MemberDesc};
+use super::{MemberDesc, Section};
 
 pub struct ExportSection {
     exports: Vec<Export>,
@@ -12,13 +12,9 @@ pub struct ExportSection {
 
 impl Section for ExportSection {
     fn read<R: io::Read>(reader: &mut R) -> Result<ExportSection, Error> {
-        let exports = utils::read_vec(reader, |r| {
-            Export::read(r)
-        })?;
+        let exports = utils::read_vec(reader, |r| Export::read(r))?;
 
-        Ok(ExportSection {
-            exports
-        })
+        Ok(ExportSection { exports })
     }
 }
 
@@ -43,10 +39,6 @@ impl Export {
 
 impl fmt::Display for Export {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "(export \"{}\" {})",
-            self.name, self.description
-        )
+        write!(f, "(export \"{}\" {})", self.name, self.description)
     }
 }

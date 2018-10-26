@@ -1,15 +1,17 @@
-extern crate leb128;
 extern crate byteorder;
+extern crate leb128;
 
-mod format;
 mod error;
+mod format;
 mod utils;
 
 use std::fs;
 use std::io;
 
 pub use crate::error::Error;
-use crate::format::{TypeSection, ImportSection, ExportSection, FunctionSection, DataSection, SectionId};
+use crate::format::{
+    CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, SectionId, TypeSection,
+};
 
 pub fn run(file: &str) -> Result<(), Error> {
     let file = fs::File::open(file)?;
@@ -23,6 +25,7 @@ pub fn run(file: &str) -> Result<(), Error> {
             SectionId::Function => dump_function_section(&mut r)?,
             SectionId::Export => dump_export_section(&mut r)?,
             SectionId::Data => dump_data_section(&mut r)?,
+            SectionId::Code => dump_code_section(&mut r)?,
             _ => r.skip(header.size as usize)?,
         }
     }
@@ -66,6 +69,21 @@ fn dump_data_section<R: io::Read>(r: &mut format::Reader<R>) -> Result<(), Error
     let section: DataSection = r.read_section()?;
     for (i, item) in section.data().iter().enumerate() {
         println!("* {:04} {}", i, item);
+    }
+    Ok(())
+}
+
+fn dump_code_section<R: io::Read>(r: &mut format::Reader<R>) -> Result<(), Error> {
+    let section: CodeSection = r.read_section()?;
+    for (i, item) in section.code().iter().enumerate() {
+        print!("* {:04}", i);
+        for local in item.locals.iter() {
+            print!(" {}", local);
+        }
+        println!();
+        for inst in item.body.iter() {
+            println!("     {}", inst);
+        }
     }
     Ok(())
 }

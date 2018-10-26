@@ -1,7 +1,7 @@
 use std::io;
 
-use utils;
 use error::Error;
+use utils;
 
 use super::Section;
 
@@ -11,13 +11,9 @@ pub struct FunctionSection {
 
 impl Section for FunctionSection {
     fn read<R: io::Read>(reader: &mut R) -> Result<FunctionSection, Error> {
-        let funcs = utils::read_vec(reader, |r| {
-            utils::read_leb128_u32(r)
-        })?;
+        let funcs = utils::read_vec(reader, |r| utils::read_leb128_u32(r))?;
 
-        Ok(FunctionSection {
-            funcs
-        })
+        Ok(FunctionSection { funcs })
     }
 }
 

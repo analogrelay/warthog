@@ -97,7 +97,11 @@ impl TableType {
             Err(Error::InvalidModule)
         } else {
             let (min, max) = utils::read_limits(reader)?;
-            Ok(TableType { elem_type, min, max })
+            Ok(TableType {
+                elem_type,
+                min,
+                max,
+            })
         }
     }
 }
@@ -136,7 +140,7 @@ impl fmt::Display for MemoryType {
 
 pub struct GlobalType {
     pub valtype: ValType,
-    pub mutable: bool
+    pub mutable: bool,
 }
 
 impl GlobalType {
@@ -145,7 +149,7 @@ impl GlobalType {
         let mutable = match reader.read_u8()? {
             0x00 => false,
             0x01 => true,
-            _ => return Err(Error::InvalidModule)
+            _ => return Err(Error::InvalidModule),
         };
         Ok(GlobalType { valtype, mutable })
     }

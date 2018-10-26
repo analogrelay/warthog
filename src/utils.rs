@@ -1,7 +1,7 @@
 use std::io;
 
-use crate::format::Instruction;
 use crate::error::Error;
+use crate::format::Instruction;
 
 use byteorder::ReadBytesExt;
 
@@ -13,10 +13,11 @@ pub fn read_leb128_u32<R: io::Read>(r: &mut R) -> Result<u32, Error> {
     Ok(leb128::read::unsigned(r)? as u32)
 }
 
-pub fn read_vec<R, F, I>(r: &mut R, mut body: F) -> Result<Vec<I>, Error> where 
+pub fn read_vec<R, F, I>(r: &mut R, mut body: F) -> Result<Vec<I>, Error>
+where
     R: io::Read,
-    F: FnMut(&mut R) -> Result<I, Error> {
-
+    F: FnMut(&mut R) -> Result<I, Error>,
+{
     // Read the size and pre-allocate the Vec
     let size = read_leb128_u32(r)?;
     let mut vec = Vec::with_capacity(size as usize);
@@ -29,7 +30,7 @@ pub fn read_vec<R, F, I>(r: &mut R, mut body: F) -> Result<Vec<I>, Error> where
 }
 
 pub fn read_name<R: io::Read>(r: &mut R) -> Result<String, Error> {
-    let byts: Vec<u8> = read_vec(r, |x| { Ok(x.read_u8()?) })?;
+    let byts: Vec<u8> = read_vec(r, |x| Ok(x.read_u8()?))?;
     Ok(String::from_utf8(byts)?)
 }
 
@@ -42,7 +43,7 @@ pub fn read_limits<R: io::Read>(r: &mut R) -> Result<(u32, Option<u32>), Error> 
         0x01 => {
             let max = read_leb128_u32(r)?;
             Ok((min, Some(max)))
-        },
+        }
         _ => Err(Error::InvalidModule),
     }
 }
@@ -52,7 +53,7 @@ pub fn read_instructions<R: io::Read>(r: &mut R) -> Result<Vec<Instruction>, Err
     loop {
         let i = Instruction::read(r)?;
         if i == Instruction::End {
-            return Ok(insts)
+            return Ok(insts);
         }
         insts.push(i);
     }

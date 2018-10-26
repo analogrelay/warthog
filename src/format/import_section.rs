@@ -1,10 +1,10 @@
 use std::fmt;
 use std::io;
 
-use utils;
 use error::Error;
+use utils;
 
-use super::{Section, MemberDesc};
+use super::{MemberDesc, Section};
 
 pub struct ImportSection {
     imports: Vec<Import>,
@@ -12,13 +12,9 @@ pub struct ImportSection {
 
 impl Section for ImportSection {
     fn read<R: io::Read>(reader: &mut R) -> Result<ImportSection, Error> {
-        let imports = utils::read_vec(reader, |r| {
-            Import::read(r)
-        })?;
+        let imports = utils::read_vec(reader, |r| Import::read(r))?;
 
-        Ok(ImportSection {
-            imports
-        })
+        Ok(ImportSection { imports })
     }
 }
 
@@ -39,7 +35,11 @@ impl Import {
         let module = utils::read_name(reader)?;
         let name = utils::read_name(reader)?;
         let description = MemberDesc::read(reader)?;
-        Ok(Import { module, name, description })
+        Ok(Import {
+            module,
+            name,
+            description,
+        })
     }
 }
 

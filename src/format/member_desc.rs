@@ -1,12 +1,12 @@
-use std::io;
 use std::fmt;
+use std::io;
 
 use byteorder::ReadBytesExt;
 
-use super::{TableType, MemoryType, GlobalType};
+use super::{GlobalType, MemoryType, TableType};
 
-use utils;
 use error::Error;
+use utils;
 
 pub enum MemberDesc {
     Function(u32),

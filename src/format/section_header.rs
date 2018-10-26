@@ -23,9 +23,7 @@ impl From<u8> for SectionId {
         if i > 11 {
             panic!("Section ID unknown: {}", i);
         } else {
-            unsafe {
-                transmute(i)
-            }
+            unsafe { transmute(i) }
         }
     }
 }
