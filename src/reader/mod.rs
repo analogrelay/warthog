@@ -24,18 +24,35 @@ pub trait Section: Sized {
     fn read<R: io::Read>(reader: &mut R) -> Result<Self, Error>;
 }
 
+pub struct ModuleHeader {
+    pub version: u32,
+}
+
 const EXPECTED_MAGIC: u32 = 0x6D736100;
 
 pub struct Reader<R: io::Read> {
     source: R,
-    version: u32,
 }
 
 impl<R: io::Read> Reader<R> {
-    pub fn new(mut source: R) -> Result<Reader<R>, Error> {
-        let version = check_module_header(&mut source)?;
+    pub fn new(source: R) -> Reader<R> {
+        Reader { source }
+    }
 
-        Ok(Reader { source, version })
+    pub fn read_module_header(&mut self) -> Result<ModuleHeader, Error> {
+        // Read the header data
+        let mut magic = [0u8; 4];
+        self.source.read_exact(&mut magic)?;
+        let magic_num = LittleEndian::read_u32(&magic);
+
+        if magic_num != EXPECTED_MAGIC {
+            return Err(Error::InvalidModule);
+        }
+
+        let mut version = [0u8; 4];
+        self.source.read_exact(&mut version)?;
+        let version_num = LittleEndian::read_u32(&version);
+        Ok(ModuleHeader { version: version_num })
     }
 
     pub fn read_section_header(&mut self) -> Result<Option<SectionHeader>, Error> {
@@ -54,10 +71,6 @@ impl<R: io::Read> Reader<R> {
     pub fn read_section<S: Section>(&mut self) -> Result<S, Error> {
         S::read(&mut self.source)
     }
-
-    pub fn version(&self) -> u32 {
-        self.version
-    }
 }
 
 impl<R: io::Read + io::Seek> Reader<R> {
@@ -65,20 +78,4 @@ impl<R: io::Read + io::Seek> Reader<R> {
         self.source.seek(io::SeekFrom::Current(amount as i64))?;
         Ok(())
     }
-}
-
-fn check_module_header<R: io::Read>(r: &mut R) -> Result<u32, Error> {
-    // Read the header data
-    let mut magic = [0u8; 4];
-    r.read_exact(&mut magic)?;
-    let magic_num = LittleEndian::read_u32(&magic);
-
-    if magic_num != EXPECTED_MAGIC {
-        return Err(Error::InvalidModule);
-    }
-
-    let mut version = [0u8; 4];
-    r.read_exact(&mut version)?;
-    let version_num = LittleEndian::read_u32(&version);
-    Ok(version_num)
 }

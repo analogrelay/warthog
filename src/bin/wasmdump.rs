@@ -22,7 +22,10 @@ fn main() {
 
 pub fn run(file: &str) {
     let file = fs::File::open(file).unwrap();
-    let mut r = Reader::new(io::BufReader::new(file)).unwrap();
+    let mut r = Reader::new(io::BufReader::new(file));
+
+    let header = r.read_module_header().unwrap();
+    println!("Module Version: {}", header.version);
 
     while let Some(header) = r.read_section_header().unwrap() {
         println!("Section: {} (size: {})", header.id, header.size);
