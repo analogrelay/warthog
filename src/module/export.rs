@@ -1,28 +1,6 @@
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
-use error::Error;
-use utils;
-
-use super::{MemberDesc, Section};
-
-pub struct ExportSection {
-    exports: Vec<Export>,
-}
-
-impl Section for ExportSection {
-    fn read<R: io::Read>(reader: &mut R) -> Result<ExportSection, Error> {
-        let exports = utils::read_vec(reader, |r| Export::read(r))?;
-
-        Ok(ExportSection { exports })
-    }
-}
-
-impl ExportSection {
-    pub fn exports(&self) -> &[Export] {
-        &self.exports
-    }
-}
+use crate::{module::MemberDesc, utils, Error};
 
 pub struct Export {
     name: String,

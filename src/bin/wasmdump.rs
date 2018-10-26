@@ -2,15 +2,11 @@ extern crate warthog;
 
 use std::{env, fs, io, process};
 
-use warthog::Decoder;
-use warthog::format::{
-    CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, SectionId,
-    TypeSection,
+use warthog::reader::{
+    Reader, CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, SectionId, TypeSection
 };
 
 fn main() {
-    // To start with, we are building a module "dumper" so we can parse the module content
-
     // Arg 0 is the executable name
     let arg0 = env::args().nth(0).unwrap();
     let args: Vec<_> = env::args().skip(1).collect();
@@ -26,7 +22,7 @@ fn main() {
 
 pub fn run(file: &str) {
     let file = fs::File::open(file).unwrap();
-    let mut r = Decoder::new(io::BufReader::new(file)).unwrap();
+    let mut r = Reader::new(io::BufReader::new(file)).unwrap();
 
     while let Some(header) = r.read_section_header().unwrap() {
         println!("Section: {} (size: {})", header.id, header.size);
@@ -42,42 +38,42 @@ pub fn run(file: &str) {
     }
 }
 
-fn dump_type_section<R: io::Read>(r: &mut Decoder<R>) {
+fn dump_type_section<R: io::Read>(r: &mut Reader<R>) {
     let section: TypeSection = r.read_section().unwrap();
     for (i, typ) in section.types().iter().enumerate() {
         println!("* {:04} {}", i, typ);
     }
 }
 
-fn dump_import_section<R: io::Read>(r: &mut Decoder<R>) {
+fn dump_import_section<R: io::Read>(r: &mut Reader<R>) {
     let section: ImportSection = r.read_section().unwrap();
     for (i, import) in section.imports().iter().enumerate() {
         println!("* {:04} {}", i, import);
     }
 }
 
-fn dump_function_section<R: io::Read>(r: &mut Decoder<R>) {
+fn dump_function_section<R: io::Read>(r: &mut Reader<R>) {
     let section: FunctionSection = r.read_section().unwrap();
     for (i, func) in section.funcs().iter().enumerate() {
         println!("* {:04} (func {})", i, func);
     }
 }
 
-fn dump_export_section<R: io::Read>(r: &mut Decoder<R>) {
+fn dump_export_section<R: io::Read>(r: &mut Reader<R>) {
     let section: ExportSection = r.read_section().unwrap();
     for (i, export) in section.exports().iter().enumerate() {
         println!("* {:04} {}", i, export);
     }
 }
 
-fn dump_data_section<R: io::Read>(r: &mut Decoder<R>) {
+fn dump_data_section<R: io::Read>(r: &mut Reader<R>) {
     let section: DataSection = r.read_section().unwrap();
     for (i, item) in section.data().iter().enumerate() {
         println!("* {:04} {}", i, item);
     }
 }
 
-fn dump_code_section<R: io::Read>(r: &mut Decoder<R>) {
+fn dump_code_section<R: io::Read>(r: &mut Reader<R>) {
     let section: CodeSection = r.read_section().unwrap();
     for (i, item) in section.code().iter().enumerate() {
         print!("* {:04}", i);

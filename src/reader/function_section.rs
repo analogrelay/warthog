@@ -1,9 +1,6 @@
 use std::io;
 
-use error::Error;
-use utils;
-
-use super::Section;
+use crate::{reader::Section, utils, Error};
 
 pub struct FunctionSection {
     funcs: Vec<u32>,

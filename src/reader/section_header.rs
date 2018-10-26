@@ -1,5 +1,4 @@
-use std::fmt;
-use std::mem::transmute;
+use std::{fmt, mem};
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
@@ -23,7 +22,7 @@ impl From<u8> for SectionId {
         if i > 11 {
             panic!("Section ID unknown: {}", i);
         } else {
-            unsafe { transmute(i) }
+            unsafe { mem::transmute(i) }
         }
     }
 }

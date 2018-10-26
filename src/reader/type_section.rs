@@ -1,10 +1,6 @@
 use std::io;
 
-use error::Error;
-use utils;
-
-use super::FuncType;
-use super::Section;
+use crate::{module::FuncType, reader::Section, utils, Error};
 
 pub struct TypeSection {
     types: Vec<FuncType>,

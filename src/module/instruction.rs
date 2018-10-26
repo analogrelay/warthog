@@ -1,10 +1,8 @@
-use std::fmt;
-use std::io;
-
-use error::Error;
-use utils;
+use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
+
+use crate::{utils, Error};
 
 #[derive(Eq, PartialEq)]
 pub enum Instruction {

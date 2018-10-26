@@ -1,9 +1,8 @@
 use std::io;
 
-use crate::error::Error;
-use crate::format::Instruction;
-
 use byteorder::ReadBytesExt;
+
+use crate::{module::Instruction, Error};
 
 pub fn read_leb128_i32<R: io::Read>(r: &mut R) -> Result<i32, Error> {
     Ok(leb128::read::signed(r)? as i32)

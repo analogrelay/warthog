@@ -1,12 +1,8 @@
-use std::fmt;
-use std::io;
-
-use error::Error;
-use utils;
-
-use super::{Instruction, Section};
+use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
+
+use crate::{module::Instruction, reader::Section, utils, Error};
 
 pub struct DataSection {
     data: Vec<DataItem>,

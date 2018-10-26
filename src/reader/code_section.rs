@@ -1,10 +1,10 @@
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
-use error::Error;
-use utils;
-
-use super::{Instruction, Section, ValType};
+use crate::{
+    module::{Instruction, ValType},
+    reader::Section,
+    utils, Error,
+};
 
 pub struct CodeSection {
     code: Vec<CodeEntry>,

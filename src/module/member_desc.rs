@@ -3,10 +3,10 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 
-use super::{GlobalType, MemoryType, TableType};
-
-use error::Error;
-use utils;
+use crate::{
+    module::{GlobalType, MemoryType, TableType},
+    utils, Error,
+};
 
 pub enum MemberDesc {
     Function(u32),
