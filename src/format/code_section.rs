@@ -1,5 +1,5 @@
-use std::io;
 use std::fmt;
+use std::io;
 
 use error::Error;
 use utils;
@@ -36,11 +36,7 @@ impl CodeEntry {
         let locals = utils::read_vec(reader, |r| Local::read(r))?;
         let body = utils::read_instructions(reader)?;
 
-        Ok(CodeEntry {
-            size,
-            locals,
-            body
-        })
+        Ok(CodeEntry { size, locals, body })
     }
 }
 
@@ -61,7 +57,7 @@ impl Local {
 impl fmt::Display for Local {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "(local")?;
-        for x in 0..self.count {
+        for _ in 0..self.count {
             write!(f, " {}", self.typ)?;
         }
         write!(f, ")")
