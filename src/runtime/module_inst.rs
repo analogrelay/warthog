@@ -1,10 +1,11 @@
-use crate::runtime::{ExportInst, FuncAddr};
+use crate::runtime::{ExportInst, FuncAddr, MemAddr};
 
 addr_type!(ModuleAddr);
 
 pub struct ModuleInst {
     name: String,
     funcs: Vec<FuncAddr>,
+    mems: Vec<MemAddr>,
     exports: Vec<ExportInst>,
 }
 
@@ -29,6 +30,10 @@ impl ModuleInst {
 
     pub fn funcs(&self) -> &[FuncAddr] {
         &self.funcs
+    }
+
+    pub fn mems(&self) -> &[MemAddr] {
+        &self.mems
     }
 
     pub fn exports(&self) -> &[ExportInst] {

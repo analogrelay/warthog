@@ -58,19 +58,39 @@ pub fn run(file: &Path) {
     // Dump the host
     println!("Host information:");
     dump_funcs(&host);
+    dump_mems(&host);
     dump_instances(entry_point, &host);
 }
 
 fn dump_funcs(host: &Host) {
-    println!("  Functions:");
-    for (i, func_inst) in host.funcs().iter().enumerate() {
-        match func_inst.imp() {
-            FuncImpl::Local { module: m, .. } => {
-                println!("  * {:04} {} {}", i, func_inst.typ(), m);
+    if host.funcs().len() > 0 {
+        println!("  Functions:");
+        for (i, func_inst) in host.funcs().iter().enumerate() {
+            match func_inst.imp() {
+                FuncImpl::Local { module: m, .. } => {
+                    println!("  * {:04} {} {}", i, func_inst.typ(), m);
+                }
+                FuncImpl::Synthetic(f) => {
+                    println!("  * {:04} {} <Synthetic: {:p}>", i, func_inst.typ(), f.imp)
+                }
             }
-            FuncImpl::Synthetic(f) => {
-                println!("  * {:04} {} <Synthetic: {:p}>", i, func_inst.typ(), f.imp)
-            }
+        }
+    }
+}
+
+fn dump_mems(host: &Host) {
+    if host.mems().len() > 0 {
+        println!("  Memories:");
+        for (i, mem_inst) in host.mems().iter().enumerate() {
+            println!(
+                "  * {:04} {} {}",
+                i,
+                mem_inst.data().capacity(),
+                match mem_inst.max_size() {
+                    Some(max) => format!("{}", max),
+                    None => "<unlimited>".to_owned(),
+                }
+            );
         }
     }
 }
@@ -82,25 +102,39 @@ fn dump_instances(entry_point: ModuleAddr, host: &Host) {
             println!("  Entry Point");
         }
         dump_instance_funcs(module_inst);
+        dump_instance_mems(module_inst);
         dump_instance_exports(module_inst);
     }
 }
 
 fn dump_instance_funcs(module_inst: &ModuleInst) {
-    println!("  Functions:");
-    for (i, func_addr) in module_inst.funcs().iter().enumerate() {
-        println!("  * {:04} {}", i, func_addr);
+    if module_inst.funcs().len() > 0 {
+        println!("  Functions:");
+        for (i, func_addr) in module_inst.funcs().iter().enumerate() {
+            println!("  * {:04} {}", i, func_addr);
+        }
+    }
+}
+
+fn dump_instance_mems(module_inst: &ModuleInst) {
+    if module_inst.mems().len() > 0 {
+        println!("  Memories:");
+        for (i, mem_addr) in module_inst.mems().iter().enumerate() {
+            println!("  * {:04} {}", i, mem_addr);
+        }
     }
 }
 
 fn dump_instance_exports(module_inst: &ModuleInst) {
-    println!("  Exports:");
-    for (i, export_inst) in module_inst.exports().iter().enumerate() {
-        println!(
-            "  * {:04} {} {:?}",
-            i,
-            export_inst.name(),
-            export_inst.value()
-        );
+    if module_inst.exports().len() > 0 {
+        println!("  Exports:");
+        for (i, export_inst) in module_inst.exports().iter().enumerate() {
+            println!(
+                "  * {:04} {} {:?}",
+                i,
+                export_inst.name(),
+                export_inst.value()
+            );
+        }
     }
 }

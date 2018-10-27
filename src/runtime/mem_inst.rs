@@ -1,4 +1,4 @@
-use crate::module::MemoryType;
+use crate::{module::MemoryType, PAGE_SIZE};
 
 addr_type!(MemAddr);
 
@@ -10,8 +10,11 @@ pub struct MemInst {
 impl MemInst {
     pub fn from_type(mem_type: &MemoryType) -> MemInst {
         match mem_type.max {
-            Some(max) => MemInst::new(mem_type.min as usize, Some(max as usize)),
-            None => MemInst::new(mem_type.min as usize, None),
+            Some(max) => MemInst::new(
+                mem_type.min as usize * PAGE_SIZE,
+                Some(max as usize * PAGE_SIZE),
+            ),
+            None => MemInst::new(mem_type.min as usize * PAGE_SIZE, None),
         }
     }
 
@@ -21,5 +24,13 @@ impl MemInst {
             data: Vec::with_capacity(min_size),
             max_size: max_size,
         }
+    }
+
+    pub fn max_size(&self) -> Option<usize> {
+        self.max_size
+    }
+
+    pub fn data(&self) -> &Vec<u8> {
+        &self.data
     }
 }

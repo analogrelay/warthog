@@ -68,6 +68,10 @@ impl Host {
         &self.funcs
     }
 
+    pub fn mems(&self) -> &[MemInst] {
+        &self.mems
+    }
+
     pub fn find_module(&self, name: &str) -> Option<&ModuleInst> {
         self.modules.iter().find(|m| m.name() == name)
     }

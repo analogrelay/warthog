@@ -34,16 +34,13 @@ impl ExportInst {
 pub enum ExternVal {
     Func(FuncAddr),
     Mem(MemAddr),
-
-    // Temporary until other extern vals are defined
-    Other,
 }
 
 impl fmt::Debug for ExternVal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ExternVal::Func(a) => write!(f, "{}", a),
-            _ => unimplemented!(),
+            ExternVal::Mem(a) => write!(f, "{}", a),
         }
     }
 }
