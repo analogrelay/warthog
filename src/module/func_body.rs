@@ -5,6 +5,7 @@ use crate::{
     utils, Error,
 };
 
+#[derive(Clone)]
 pub struct FuncBody {
     pub size: u32,
     pub locals: Vec<Local>,

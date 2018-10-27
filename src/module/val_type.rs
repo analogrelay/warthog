@@ -4,6 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::Error;
 
+#[derive(Clone)]
 pub enum ValType {
     Integer32,
     Integer64,

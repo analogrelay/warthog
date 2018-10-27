@@ -6,5 +6,6 @@ mod utils;
 
 pub mod module;
 pub mod reader;
+pub mod runtime;
 
 pub use crate::error::Error;

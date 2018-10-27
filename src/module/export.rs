@@ -2,6 +2,7 @@ use std::{fmt, io};
 
 use crate::{module::MemberDesc, utils, Error};
 
+#[derive(Clone)]
 pub struct Export {
     name: String,
     description: MemberDesc,

@@ -4,6 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::Instruction, utils, Error};
 
+#[derive(Clone)]
 pub struct DataItem {
     pub index: u32,
     pub expr: Vec<Instruction>,

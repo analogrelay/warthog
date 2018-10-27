@@ -2,6 +2,7 @@ use std::{fmt, io};
 
 use crate::{utils, Error};
 
+#[derive(Clone)]
 pub struct MemoryType {
     pub min: u32,
     pub max: Option<u32>,

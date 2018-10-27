@@ -2,6 +2,7 @@ use std::{fmt, io};
 
 use crate::{module::ValType, utils, Error};
 
+#[derive(Clone)]
 pub struct Local {
     pub count: u32,
     pub typ: ValType,

@@ -8,6 +8,7 @@ use crate::{
     utils, Error,
 };
 
+#[derive(Clone)]
 pub enum MemberDesc {
     Function(u32),
     Table(TableType),

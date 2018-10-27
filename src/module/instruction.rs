@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{utils, Error};
 
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Instruction {
     ConstI32(i32),
     Call(u32),

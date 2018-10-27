@@ -4,6 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::ValType, utils, Error};
 
+#[derive(Clone)]
 pub struct FuncType {
     pub parameters: Vec<ValType>,
     pub results: Vec<ValType>,

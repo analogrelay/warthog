@@ -4,6 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::ValType, Error};
 
+#[derive(Clone)]
 pub struct GlobalType {
     pub valtype: ValType,
     pub mutable: bool,

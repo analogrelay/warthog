@@ -4,6 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{utils, Error};
 
+#[derive(Clone)]
 pub struct TableType {
     pub elem_type: u8,
     pub min: u32,
