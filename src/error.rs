@@ -1,7 +1,10 @@
 #[derive(Debug)]
 pub enum Error {
     InvalidModule,
-    UnsupportedVersion(u32),
+    ModuleNotFound { module: String },
+    ExportNotFound { module: String, name: String },
+    ExportTypeMismatch { module: String, name: String },
+    UnsupportedVersion { version: u32 },
     Utf8Error(std::string::FromUtf8Error),
     IoError(String),
 }

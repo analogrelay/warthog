@@ -1,14 +1,31 @@
 use std::{fmt, io};
 
-use crate::{module::MemberDesc, utils, Error};
+use crate::{
+    module::{MemberDesc, MemoryType},
+    utils, Error,
+};
 
 #[derive(Clone)]
 pub struct Export {
-    name: String,
-    description: MemberDesc,
+    pub name: String,
+    pub description: MemberDesc,
 }
 
 impl Export {
+    pub fn func<S: Into<String>>(name: S, idx: u32) -> Export {
+        Export {
+            name: name.into(),
+            description: MemberDesc::Function(idx),
+        }
+    }
+
+    pub fn mem<S: Into<String>>(name: S, typ: MemoryType) -> Export {
+        Export {
+            name: name.into(),
+            description: MemberDesc::Memory(typ),
+        }
+    }
+
     pub fn read<R: io::Read>(reader: &mut R) -> Result<Export, Error> {
         let name = utils::read_name(reader)?;
         let description = MemberDesc::read(reader)?;

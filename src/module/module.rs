@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Represents the static information associated with a WebAssembly Module
-/// 
+///
 /// The Module object itself holds an [`Arc`] pointer to it's content so it
 /// is cheap to clone and all instances of a specific module share the same content.
 #[derive(Clone)]
@@ -20,6 +20,7 @@ pub struct Module {
 }
 
 struct ModuleContent {
+    name: String,
     types: Vec<FuncType>,
     imports: Vec<Import>,
     funcs: Vec<u32>,
@@ -30,12 +31,17 @@ struct ModuleContent {
 
 impl Module {
     /// Loads a module up from the provided reader, consuming the reader in the process
-    pub fn load<R: io::Read + io::Seek>(mut r: Reader<R>) -> Result<Module, Error> {
+    pub fn load<R: io::Read + io::Seek, S: Into<String>>(
+        name: S,
+        mut r: Reader<R>,
+    ) -> Result<Module, Error> {
         // Read and validate the header
         let header = r.read_module_header()?;
 
         if header.version != 1 {
-            return Err(Error::UnsupportedVersion(header.version));
+            return Err(Error::UnsupportedVersion {
+                version: header.version,
+            });
         }
 
         let mut types = None;
@@ -63,6 +69,7 @@ impl Module {
         }
 
         let content = ModuleContent {
+            name: name.into(),
             types: types.unwrap_or_else(|| Vec::new()),
             imports: imports.unwrap_or_else(|| Vec::new()),
             funcs: funcs.unwrap_or_else(|| Vec::new()),
@@ -76,21 +83,30 @@ impl Module {
         })
     }
 
+    pub fn name(&self) -> &str {
+        &self.content.name
+    }
+
     pub fn types(&self) -> &Vec<FuncType> {
         &self.content.types
     }
+
     pub fn imports(&self) -> &Vec<Import> {
         &self.content.imports
     }
+
     pub fn funcs(&self) -> &Vec<u32> {
         &self.content.funcs
     }
+
     pub fn exports(&self) -> &Vec<Export> {
         &self.content.exports
     }
+
     pub fn code(&self) -> &Vec<FuncBody> {
         &self.content.code
     }
+
     pub fn data(&self) -> &Vec<DataItem> {
         &self.content.data
     }

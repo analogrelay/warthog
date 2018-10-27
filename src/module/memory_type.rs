@@ -9,6 +9,10 @@ pub struct MemoryType {
 }
 
 impl MemoryType {
+    pub fn new(min: u32, max: Option<u32>) -> MemoryType {
+        MemoryType { min, max }
+    }
+
     pub fn read<R: io::Read>(reader: &mut R) -> Result<MemoryType, Error> {
         let (min, max) = utils::read_limits(reader)?;
         Ok(MemoryType { min, max })

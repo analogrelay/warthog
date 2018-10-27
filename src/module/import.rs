@@ -4,9 +4,9 @@ use crate::{module::MemberDesc, utils, Error};
 
 #[derive(Clone)]
 pub struct Import {
-    module: String,
-    name: String,
-    description: MemberDesc,
+    pub module: String,
+    pub name: String,
+    pub description: MemberDesc,
 }
 
 impl Import {

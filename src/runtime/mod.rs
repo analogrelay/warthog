@@ -21,10 +21,14 @@ macro_rules! addr_type {
     };
 }
 
+mod export_inst;
 mod func_inst;
 mod host;
-mod instance;
+mod mem_inst;
+mod module_inst;
 
-pub use self::func_inst::{FuncAddr, FuncInst};
+pub use self::export_inst::{ExportInst, ExternVal};
+pub use self::func_inst::{FuncAddr, FuncInst, FuncImpl};
 pub use self::host::Host;
-pub use self::instance::{Instance, InstanceAddr};
+pub use self::mem_inst::{MemInst, MemAddr};
+pub use self::module_inst::{ModuleInst, ModuleAddr};

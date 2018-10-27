@@ -1,50 +1,45 @@
 use crate::{
     module::{FuncBody, FuncType},
-    runtime::InstanceAddr,
+    runtime::ModuleAddr,
+    synth::SyntheticFunc,
 };
 
 addr_type!(FuncAddr);
 
 pub struct FuncInst {
-    typ: FuncType,
     imp: FuncImpl,
 }
 
-enum FuncImpl {
-    Local { module: InstanceAddr, code: FuncBody },
-    // TODO: Host
-}
-
 impl FuncInst {
-    pub fn local(typ: FuncType, module: InstanceAddr, code: FuncBody) -> FuncInst {
+    pub fn local(typ: FuncType, module: ModuleAddr, code: FuncBody) -> FuncInst {
         FuncInst {
-            typ,
-            imp: FuncImpl::Local{ module, code }
+            imp: FuncImpl::Local { typ, module, code },
+        }
+    }
+
+    pub fn synthetic(func: SyntheticFunc) -> FuncInst {
+        FuncInst {
+            imp: FuncImpl::Synthetic(func),
         }
     }
 
     pub fn typ(&self) -> &FuncType {
-        &self.typ
-    }
-
-    pub fn is_local(&self) -> bool {
         match self.imp {
-            FuncImpl::Local { .. } => true,
-            _ => false
+            FuncImpl::Local { typ: ref t, .. } => t,
+            FuncImpl::Synthetic(ref f) => &f.typ,
         }
     }
 
-    pub fn module(&self) -> Option<InstanceAddr> {
-        match self.imp {
-            FuncImpl::Local { module: m, .. } => Some(m),
-            _ => None
-        }
+    pub fn imp(&self) -> &FuncImpl {
+        &self.imp
     }
+}
 
-    pub fn code(&self) -> Option<&FuncBody> {
-        match self.imp {
-            FuncImpl::Local { code: ref c, .. } => Some(c),
-            _ => None
-        }
-    }
+pub enum FuncImpl {
+    Local {
+        typ: FuncType,
+        module: ModuleAddr,
+        code: FuncBody,
+    },
+    Synthetic(SyntheticFunc),
 }

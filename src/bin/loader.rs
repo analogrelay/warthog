@@ -1,8 +1,13 @@
 extern crate warthog;
 
-use std::{env, fs, process};
+use std::{borrow::Cow, env, fs, path::Path, process};
 
-use warthog::{module::Module, reader::Reader, runtime::Host};
+use warthog::{
+    module::{FuncType, Module, ValType},
+    reader::Reader,
+    runtime::{FuncImpl, Host, ModuleAddr, ModuleInst},
+    synth::ModuleBuilder,
+};
 
 fn main() {
     // Arg 0 is the executable name
@@ -11,42 +16,91 @@ fn main() {
 
     if args.len() > 0 {
         let file = &args[0];
-        run(file);
+        run(Path::new(file));
     } else {
         eprintln!("Usage: {} <wasm file>", arg0);
         process::exit(1);
     }
 }
 
-pub fn run(file: &str) {
+pub fn run(file: &Path) {
     // Create a host
     let mut host = Host::new();
+
+    // Determine the module name
+    let name = match file.file_stem() {
+        Some(stem) => stem.to_string_lossy(),
+        None => Cow::from("unnamed"),
+    };
 
     // Load the module
     let module = {
         // Close the file once we're done loading
         let file = fs::File::open(file).unwrap();
         let reader = Reader::new(file);
-        Module::load(reader).unwrap()
+        Module::load(name, reader).unwrap()
     };
 
+    // Synthesize the 'env' module
+    let env = ModuleBuilder::new("env")
+        .func(
+            "print",
+            FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
+            || {
+                panic!("'print' function not implemented");
+            },
+        ).mem("memory", 256, Some(256));
+    host.synthesize(env);
+
     // Instantiate the module
-    let instance = host.instantiate(module);
+    let entry_point = host.instantiate(module).unwrap();
 
     // Dump the host
     println!("Host information:");
+    dump_funcs(&host);
+    dump_instances(entry_point, &host);
+}
+
+fn dump_funcs(host: &Host) {
     println!("  Functions:");
     for (i, func_inst) in host.funcs().iter().enumerate() {
-        if func_inst.is_local() {
-            println!("  * {:04} {} {}", i, func_inst.typ(), func_inst.module().unwrap());
-        } else {
-            println!("  * {:04} {} <Host Function>", i, func_inst.typ())
+        match func_inst.imp() {
+            FuncImpl::Local { module: m, .. } => {
+                println!("  * {:04} {} {}", i, func_inst.typ(), m);
+            }
+            FuncImpl::Synthetic(f) => {
+                println!("  * {:04} {} <Synthetic: {:p}>", i, func_inst.typ(), f.imp)
+            }
         }
     }
+}
 
-    println!("Instance information:");
+fn dump_instances(entry_point: ModuleAddr, host: &Host) {
+    for (i, module_inst) in host.modules().iter().enumerate() {
+        println!("Instance '{}':", module_inst.name());
+        if i == entry_point.val() {
+            println!("  Entry Point");
+        }
+        dump_instance_funcs(module_inst);
+        dump_instance_exports(module_inst);
+    }
+}
+
+fn dump_instance_funcs(module_inst: &ModuleInst) {
     println!("  Functions:");
-    for (i, func_addr) in instance.funcs().iter().enumerate() {
+    for (i, func_addr) in module_inst.funcs().iter().enumerate() {
         println!("  * {:04} {}", i, func_addr);
+    }
+}
+
+fn dump_instance_exports(module_inst: &ModuleInst) {
+    println!("  Exports:");
+    for (i, export_inst) in module_inst.exports().iter().enumerate() {
+        println!(
+            "  * {:04} {} {:?}",
+            i,
+            export_inst.name(),
+            export_inst.value()
+        );
     }
 }

@@ -11,6 +11,16 @@ pub struct FuncType {
 }
 
 impl FuncType {
+    pub fn new<P: Into<Vec<ValType>>, R: Into<Vec<ValType>>>(
+        parameters: P,
+        results: R,
+    ) -> FuncType {
+        FuncType {
+            parameters: parameters.into(),
+            results: results.into(),
+        }
+    }
+
     pub fn read<R: io::Read>(reader: &mut R) -> Result<FuncType, Error> {
         let type_code = reader.read_u8()?;
         if type_code != 0x60 {

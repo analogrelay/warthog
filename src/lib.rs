@@ -7,5 +7,8 @@ mod utils;
 pub mod module;
 pub mod reader;
 pub mod runtime;
+pub mod synth;
 
 pub use crate::error::Error;
+
+pub const PAGE_SIZE: usize = 65536;
