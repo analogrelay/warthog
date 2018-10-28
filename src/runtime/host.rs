@@ -1,5 +1,5 @@
 use crate::{
-    module::{Export, Import, Instruction, MemberDesc, Module},
+    module::{Export, Instruction, MemberDesc, Module},
     runtime::{
         ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
     },
@@ -54,7 +54,7 @@ impl Host {
 
         self.resolve_imports(&module, &mut funcs, &mut mems)?;
         self.instantiate_funcs(module_addr, &module, &mut funcs);
-        self.instantiate_data(&module, &mems);
+        self.instantiate_data(&module, &mems)?;
 
         let exports = self.export_module(&funcs, module.exports());
 
@@ -63,8 +63,16 @@ impl Host {
         Ok(module_addr)
     }
 
+    pub fn get_module(&self, addr: ModuleAddr) -> &ModuleInst {
+        &self.modules[addr.val()]
+    }
+
     pub fn modules(&self) -> &[ModuleInst] {
         &self.modules
+    }
+
+    pub fn get_func(&self, addr: FuncAddr) -> &FuncInst {
+        &self.funcs[addr.val()]
     }
 
     pub fn funcs(&self) -> &[FuncInst] {
@@ -75,23 +83,21 @@ impl Host {
         &self.mems
     }
 
-    pub fn find_module(&self, name: &str) -> Option<&ModuleInst> {
-        self.modules.iter().find(|m| m.name() == name)
+    pub fn find_module(&self, name: &str) -> Option<ModuleAddr> {
+        self.modules
+            .iter()
+            .position(|m| m.name() == name)
+            .map(|a| ModuleAddr::new(a))
     }
 
-    pub fn resolve_import(&self, import: &Import) -> Result<&ExportInst, Error> {
-        if let Some(module) = self.find_module(&import.module) {
-            if let Some(export) = module.find_export(&import.name) {
-                Ok(export)
-            } else {
-                Err(Error::ExportNotFound {
-                    module: import.module.clone(),
-                    name: import.name.clone(),
-                })
-            }
+    pub fn resolve_import(&self, module: ModuleAddr, name: &str) -> Result<&ExportInst, Error> {
+        let module_inst = self.get_module(module);
+        if let Some(export) = module_inst.find_export(name) {
+            Ok(export)
         } else {
-            Err(Error::ModuleNotFound {
-                module: import.module.clone(),
+            Err(Error::ExportNotFound {
+                module: module_inst.name().to_owned(),
+                name: name.to_owned(),
             })
         }
     }
@@ -149,11 +155,16 @@ impl Host {
         mems: &mut Vec<MemAddr>,
     ) -> Result<(), Error> {
         for import in module.imports() {
-            let export = self.resolve_import(import)?;
-            match export.value() {
-                ExternVal::Func(func_addr) => funcs.push(func_addr.clone()),
-                ExternVal::Mem(mem_addr) => mems.push(mem_addr.clone()),
-                _ => unimplemented!(),
+            if let Some(module_addr) = self.find_module(&import.module) {
+                let export = self.resolve_import(module_addr, &import.name)?;
+                match export.value() {
+                    ExternVal::Func(func_addr) => funcs.push(func_addr.clone()),
+                    ExternVal::Mem(mem_addr) => mems.push(mem_addr.clone()),
+                }
+            } else {
+                return Err(Error::ModuleNotFound {
+                    module: import.module.to_owned(),
+                });
             }
         }
         Ok(())

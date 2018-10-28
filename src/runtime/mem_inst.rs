@@ -1,6 +1,4 @@
-use std::{
-    ops::Index, ops::IndexMut, ops::Range, ops::RangeFrom, ops::RangeFull, slice::SliceIndex,
-};
+use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull};
 
 use crate::{module::MemoryType, PAGE_SIZE};
 

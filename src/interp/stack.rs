@@ -1,14 +1,11 @@
-use crate::runtime::ModuleAddr;
+use crate::{runtime::ModuleAddr, interp::Value};
 
 pub enum StackItem {
-    Integer32(u32),
-    Integer64(u64),
-    Float32(f32),
-    Float64(f64),
+    Val(Value),
 
     // TODO: Figure out what to put here.
     Label,
-    Activation(ModuleAddr),
+    Activation(ModuleAddr, Vec<Value>),
 }
 
 pub struct Stack(Vec<StackItem>);
