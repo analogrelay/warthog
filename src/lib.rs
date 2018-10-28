@@ -4,6 +4,7 @@ extern crate leb128;
 mod error;
 mod utils;
 
+pub mod interp;
 pub mod module;
 pub mod reader;
 pub mod runtime;

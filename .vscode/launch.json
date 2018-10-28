@@ -18,10 +18,10 @@
             "externalConsole": true
         },
         {
-            "name": "(Windows; Debug) loader hello_world.wasm",
+            "name": "(Windows; Debug) wasminit hello_world.wasm",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/loader.exe",
+            "program": "${workspaceFolder}/target/debug/wasminit.exe",
             "args": [
                 "${workspaceFolder}/samples/hello_world.wasm"
             ],
