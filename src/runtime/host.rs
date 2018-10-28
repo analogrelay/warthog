@@ -1,5 +1,5 @@
 use crate::{
-    module::{Export, Import, MemberDesc, Module},
+    module::{Export, Import, Instruction, MemberDesc, Module},
     runtime::{
         ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
     },
@@ -51,8 +51,11 @@ impl Host {
 
         let mut funcs = Vec::new();
         let mut mems = Vec::new();
+
         self.resolve_imports(&module, &mut funcs, &mut mems)?;
         self.instantiate_funcs(module_addr, &module, &mut funcs);
+        self.instantiate_data(&module, &mems);
+
         let exports = self.export_module(&funcs, module.exports());
 
         self.modules
@@ -152,6 +155,29 @@ impl Host {
                 ExternVal::Mem(mem_addr) => mems.push(mem_addr.clone()),
                 _ => unimplemented!(),
             }
+        }
+        Ok(())
+    }
+
+    fn instantiate_data(&mut self, module: &Module, mems: &Vec<MemAddr>) -> Result<(), Error> {
+        for data in module.data() {
+            // Offset must be a constant expression
+            let offset = match data.expr.as_slice() {
+                [Instruction::ConstI32(val)] => *val as usize,
+                _ => return Err(Error::InvalidModule),
+            };
+
+            // Find an initialize the memory
+            let mem_addr = mems[data.index as usize];
+            let mem_inst = &mut self.mems[mem_addr.val()];
+
+            // Bounds check
+            let end = offset + data.init.len();
+            if (offset + end) > mem_inst.len() {
+                return Err(Error::InvalidModule);
+            }
+
+            mem_inst[offset..end].copy_from_slice(&data.init);
         }
         Ok(())
     }

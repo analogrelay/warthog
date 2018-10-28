@@ -5,7 +5,7 @@ use std::{borrow::Cow, env, fs, path::Path, process};
 use warthog::{
     module::{FuncType, Module, ValType},
     reader::Reader,
-    runtime::{FuncImpl, Host, ModuleAddr, ModuleInst},
+    runtime::{FuncImpl, Host, MemInst, ModuleAddr, ModuleInst},
     synth::ModuleBuilder,
 };
 
@@ -85,12 +85,37 @@ fn dump_mems(host: &Host) {
             println!(
                 "  * {:04} {} {}",
                 i,
-                mem_inst.data().capacity(),
+                mem_inst.data().len(),
                 match mem_inst.max_size() {
                     Some(max) => format!("{}", max),
                     None => "<unlimited>".to_owned(),
                 }
             );
+
+            println!("    Initialized Ranges:");
+            dump_initialized_ranges(mem_inst);
+        }
+    }
+}
+
+fn dump_initialized_ranges(mem: &MemInst) {
+    let mut range_start = None;
+    for (i, v) in mem.data().iter().enumerate() {
+        match (v, range_start) {
+            (0, Some(start)) => {
+                // End of a range
+                let end = i - 1;
+                println!(
+                    "    * 0x{:08x} - 0x{:08x} (size: {})",
+                    start,
+                    end,
+                    end - start
+                );
+                range_start = None;
+            }
+            (0, None) => { /* no-op */ }
+            (_, None) => range_start = Some(i),
+            _ => { /* no-op */ }
         }
     }
 }
