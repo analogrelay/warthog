@@ -51,7 +51,7 @@ pub fn run(file: &Path) {
                 panic!("'print' function not implemented");
             },
         ).mem("memory", 256, Some(256));
-    host.synthesize(env);
+    host.synthesize(env).unwrap();
 
     // Instantiate the module
     let entry_point = host.instantiate(module).unwrap();

@@ -50,7 +50,7 @@ pub fn run(file: &Path) {
                 panic!("'print' function not implemented");
             },
         ).mem("memory", 256, Some(256));
-    host.synthesize(env);
+    host.synthesize(env).unwrap();
 
     // Instantiate the module
     let entry_point = host.instantiate(module).unwrap();
@@ -63,72 +63,71 @@ pub fn run(file: &Path) {
 }
 
 fn dump_funcs(host: &Host) {
-    if host.funcs().len() > 0 {
-        println!("  Functions:");
-        for (i, func_inst) in host.funcs().iter().enumerate() {
-            match func_inst.imp() {
-                FuncImpl::Local { module: m, .. } => {
-                    println!("  * {:04} {} {}", i, func_inst.typ(), m);
-                }
-                FuncImpl::Synthetic(f) => {
-                    println!("  * {:04} {} <Synthetic: {:p}>", i, func_inst.typ(), f.imp)
-                }
+    println!("  Functions:");
+    for (i, func_inst) in host.funcs().enumerate() {
+        match func_inst.imp() {
+            FuncImpl::Local { module: m, .. } => {
+                println!("  * {:04} {} {}", i, func_inst.typ(), m);
+            }
+            FuncImpl::Synthetic(f) => {
+                println!("  * {:04} {} <Synthetic: {:p}>", i, func_inst.typ(), f.imp)
             }
         }
     }
 }
 
 fn dump_mems(host: &Host) {
-    if host.mems().len() > 0 {
-        println!("  Memories:");
-        for (i, mem_inst) in host.mems().iter().enumerate() {
-            println!(
-                "  * {:04} {} {}",
-                i,
-                mem_inst.data().len(),
-                match mem_inst.max_size() {
-                    Some(max) => format!("{}", max),
-                    None => "<unlimited>".to_owned(),
-                }
-            );
+    println!("  Memories:");
+    for (i, mem_inst) in host.mems().enumerate() {
+        println!(
+            "  * {:04} {} {}",
+            i,
+            mem_inst.memory().len(),
+            match mem_inst.memory().max_size() {
+                Some(max) => format!("{}", max),
+                None => "<unlimited>".to_owned(),
+            }
+        );
 
-            println!("    Initialized Ranges:");
-            dump_initialized_ranges(mem_inst);
-        }
+        println!("    Initialized Ranges:");
+        dump_initialized_ranges(&mem_inst);
     }
 }
 
 fn dump_initialized_ranges(mem: &MemInst) {
     let mut range_start = None;
-    for (i, v) in mem.data().iter().enumerate() {
-        match (v, range_start) {
-            (0, Some(start)) => {
-                // End of a range
-                let end = i - 1;
-                println!(
-                    "    * 0x{:08x} - 0x{:08x} (size: {})",
-                    start,
-                    end,
-                    end - start
-                );
-                range_start = None;
+    let mem = mem.memory();
+    unsafe {
+        for (i, v) in mem.data().iter().enumerate() {
+            match (v, range_start) {
+                (0, Some(start)) => {
+                    // End of a range
+                    let end = i - 1;
+                    println!(
+                        "    * 0x{:08x} - 0x{:08x} (size: {})",
+                        start,
+                        end,
+                        end - start
+                    );
+                    range_start = None;
+                }
+                (0, None) => { /* no-op */ }
+                (_, None) => range_start = Some(i),
+                _ => { /* no-op */ }
             }
-            (0, None) => { /* no-op */ }
-            (_, None) => range_start = Some(i),
-            _ => { /* no-op */ }
         }
     }
 }
 
 fn dump_instances(entry_point: ModuleAddr, host: &Host) {
-    for (i, module_inst) in host.modules().iter().enumerate() {
+    for (i, module_inst) in host.modules().enumerate() {
         println!("Instance '{}':", module_inst.name());
         if i == entry_point.val() {
             println!("  Entry Point");
         }
-        dump_instance_funcs(module_inst);
-        dump_instance_mems(module_inst);
-        dump_instance_exports(module_inst);
+        dump_instance_funcs(&module_inst);
+        dump_instance_mems(&module_inst);
+        dump_instance_exports(&module_inst);
     }
 }
 

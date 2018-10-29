@@ -5,6 +5,7 @@ pub enum Error {
     ExportNotFound { module: String, name: String },
     ExportTypeMismatch { module: String, name: String },
     UnsupportedVersion { version: u32 },
+    LayoutError,
     Utf8Error(std::string::FromUtf8Error),
     IoError(String),
 }
@@ -24,5 +25,11 @@ impl From<std::string::FromUtf8Error> for Error {
 impl From<leb128::read::Error> for Error {
     fn from(_: leb128::read::Error) -> Error {
         Error::InvalidModule
+    }
+}
+
+impl From<std::alloc::LayoutErr> for Error {
+    fn from(l: std::alloc::LayoutErr) -> Error {
+        Error::LayoutError
     }
 }
