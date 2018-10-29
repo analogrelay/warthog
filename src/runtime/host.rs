@@ -1,3 +1,5 @@
+use std::{sync::Arc, ops::Deref};
+
 use crate::{
     module::{Export, Instruction, MemberDesc, Module},
     runtime::{
@@ -8,9 +10,9 @@ use crate::{
 };
 
 pub struct Host {
-    modules: Vec<ModuleInst>,
-    funcs: Vec<FuncInst>,
-    mems: Vec<MemInst>,
+    modules: Vec<Arc<ModuleInst>>,
+    funcs: Vec<Arc<FuncInst>>,
+    mems: Vec<Arc<MemInst>>,
 }
 
 // TODO: Consider if this type needs to be thread-safe
@@ -23,64 +25,24 @@ impl Host {
         }
     }
 
-    /// Synthesizes a module from the provided [`ModuleBuilder`], consuming it in the process.
-    pub fn synthesize(&mut self, module: ModuleBuilder) -> ModuleAddr {
-        let module_addr = ModuleAddr::new(self.modules.len());
-
-        let mut funcs = Vec::new();
-        for func in module.funcs {
-            // Allocate a func in the host
-            let func_addr = FuncAddr::new(self.funcs.len());
-            let func_inst = FuncInst::synthetic(func);
-            self.funcs.push(func_inst);
-            funcs.push(func_addr);
-        }
-
-        // Export the synthetic module
-        let exports = self.export_module(&funcs, &module.exports);
-
-        // Register the module and return
-        self.modules
-            .push(ModuleInst::new(module.name, funcs, Vec::new(), exports));
-        module_addr
-    }
-
-    /// Instantiates the provided [`Module`], consuming it in the process.
-    pub fn instantiate(&mut self, module: Module) -> Result<ModuleAddr, Error> {
-        let module_addr = ModuleAddr::new(self.modules.len());
-
-        let mut funcs = Vec::new();
-        let mut mems = Vec::new();
-
-        self.resolve_imports(&module, &mut funcs, &mut mems)?;
-        self.instantiate_funcs(module_addr, &module, &mut funcs);
-        self.instantiate_data(&module, &mems)?;
-
-        let exports = self.export_module(&funcs, module.exports());
-
-        self.modules
-            .push(ModuleInst::new(module.name(), funcs, mems, exports));
-        Ok(module_addr)
-    }
-
     pub fn get_module(&self, addr: ModuleAddr) -> &ModuleInst {
         &self.modules[addr.val()]
-    }
-
-    pub fn modules(&self) -> &[ModuleInst] {
-        &self.modules
     }
 
     pub fn get_func(&self, addr: FuncAddr) -> &FuncInst {
         &self.funcs[addr.val()]
     }
 
-    pub fn funcs(&self) -> &[FuncInst] {
-        &self.funcs
+    pub fn modules<'a>(&'a self) -> impl 'a + Iterator<Item = Arc<ModuleInst>> {
+        self.modules.iter().cloned()
     }
 
-    pub fn mems(&self) -> &[MemInst] {
-        &self.mems
+    pub fn funcs<'a>(&'a self) -> impl 'a + Iterator<Item = Arc<FuncInst>> {
+        self.funcs.iter().cloned()
+    }
+
+    pub fn mems<'a>(&'a self) -> impl 'a + Iterator<Item = Arc<MemInst>> {
+        self.mems.iter().cloned()
     }
 
     pub fn find_module(&self, name: &str) -> Option<ModuleAddr> {
@@ -102,6 +64,46 @@ impl Host {
         }
     }
 
+    /// Synthesizes a module from the provided [`ModuleBuilder`], consuming it in the process.
+    pub fn synthesize(&mut self, module: ModuleBuilder) -> ModuleAddr {
+        let module_addr = ModuleAddr::new(self.modules.len());
+
+        let mut funcs = Vec::new();
+        for func in module.funcs {
+            // Allocate a func in the host
+            let func_addr = FuncAddr::new(self.funcs.len());
+            let func_inst = FuncInst::synthetic(func);
+            self.funcs.push(Arc::new(func_inst));
+            funcs.push(func_addr);
+        }
+
+        // Export the synthetic module
+        let exports = self.export_module(&funcs, &module.exports);
+
+        // Register the module and return
+        self.modules
+            .push(Arc::new(ModuleInst::new(module.name, funcs, Vec::new(), exports)));
+        module_addr
+    }
+
+    /// Instantiates the provided [`Module`], consuming it in the process.
+    pub fn instantiate(&mut self, module: Module) -> Result<ModuleAddr, Error> {
+        let module_addr = ModuleAddr::new(self.modules.len());
+
+        let mut funcs = Vec::new();
+        let mut mems = Vec::new();
+
+        self.resolve_imports(&module, &mut funcs, &mut mems)?;
+        self.instantiate_funcs(module_addr, &module, &mut funcs);
+        self.instantiate_data(&module, &mems)?;
+
+        let exports = self.export_module(&funcs, module.exports());
+
+        self.modules
+            .push(Arc::new(ModuleInst::new(module.name(), funcs, mems, exports)));
+        Ok(module_addr)
+    }
+
     fn export_module(
         &mut self,
         funcs: &[FuncAddr],
@@ -117,7 +119,7 @@ impl Host {
                 }
                 MemberDesc::Memory(ref mem_type) => {
                     let mem_addr = MemAddr::new(self.mems.len());
-                    self.mems.push(MemInst::from_type(mem_type));
+                    self.mems.push(Arc::new(MemInst::from_type(mem_type)));
                     let inst = ExportInst::mem(export.name.as_str(), mem_addr);
                     exports.push(inst);
                 }
@@ -144,7 +146,7 @@ impl Host {
             let body = module.code()[code_idx].clone();
 
             // Create the instance and register it in the host
-            self.funcs.push(FuncInst::local(typ, instance_addr, body));
+            self.funcs.push(Arc::new(FuncInst::local(typ, instance_addr, body)));
         }
     }
 
@@ -181,14 +183,15 @@ impl Host {
             // Find an initialize the memory
             let mem_addr = mems[data.index as usize];
             let mem_inst = &mut self.mems[mem_addr.val()];
+            let mut mem = mem_inst.memory_mut();
 
             // Bounds check
             let end = offset + data.init.len();
-            if (offset + end) > mem_inst.len() {
+            if (offset + end) > mem.len() {
                 return Err(Error::InvalidModule);
             }
 
-            mem_inst[offset..end].copy_from_slice(&data.init);
+            mem[offset..end].copy_from_slice(&data.init);
         }
         Ok(())
     }

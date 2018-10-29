@@ -1,4 +1,4 @@
-use std::{io, sync::Arc};
+use std::{io};
 
 use crate::{
     module::{DataItem, Export, FuncBody, FuncType, Import},
@@ -10,16 +10,7 @@ use crate::{
 };
 
 /// Represents the static information associated with a WebAssembly Module
-///
-/// The Module object itself holds an [`Arc`] pointer to it's content so it
-/// is cheap to clone and all instances of a specific module share the same content.
-#[derive(Clone)]
 pub struct Module {
-    // Hold all our contents via an Arc so we can be Cloned and Sent
-    content: Arc<ModuleContent>,
-}
-
-struct ModuleContent {
     name: String,
     types: Vec<FuncType>,
     imports: Vec<Import>,
@@ -68,7 +59,7 @@ impl Module {
             }
         }
 
-        let content = ModuleContent {
+        Ok(Module {
             name: name.into(),
             types: types.unwrap_or_else(|| Vec::new()),
             imports: imports.unwrap_or_else(|| Vec::new()),
@@ -76,39 +67,35 @@ impl Module {
             exports: exports.unwrap_or_else(|| Vec::new()),
             code: code.unwrap_or_else(|| Vec::new()),
             data: data.unwrap_or_else(|| Vec::new()),
-        };
-
-        Ok(Module {
-            content: Arc::new(content),
         })
     }
 
     pub fn name(&self) -> &str {
-        &self.content.name
+        &self.name
     }
 
     pub fn types(&self) -> &Vec<FuncType> {
-        &self.content.types
+        &self.types
     }
 
     pub fn imports(&self) -> &Vec<Import> {
-        &self.content.imports
+        &self.imports
     }
 
     pub fn funcs(&self) -> &Vec<u32> {
-        &self.content.funcs
+        &self.funcs
     }
 
     pub fn exports(&self) -> &Vec<Export> {
-        &self.content.exports
+        &self.exports
     }
 
     pub fn code(&self) -> &Vec<FuncBody> {
-        &self.content.code
+        &self.code
     }
 
     pub fn data(&self) -> &Vec<DataItem> {
-        &self.content.data
+        &self.data
     }
 }
 

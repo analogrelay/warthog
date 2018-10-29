@@ -1,7 +1,7 @@
 use crate::{
-    module::Instruction,
     interp::{Stack, StackItem},
-    runtime::{FuncAddr, Host, FuncImpl},
+    module::Instruction,
+    runtime::{FuncAddr, FuncImpl, Host},
 };
 
 pub struct Thread {
@@ -23,11 +23,20 @@ impl Thread {
         let func_inst = self.host.get_func(func);
         match func_inst.imp() {
             FuncImpl::Synthetic(synth_fn) => synth_fn.invoke(),
-            FuncImpl::Local { module: module_addr, code: code, .. } => {
+            FuncImpl::Local {
+                module: module_addr,
+                code: code,
+                ..
+            } => {
                 // TODO: Initialize locals
-                self.stack.push(StackItem::Activation(*module_addr, Vec::new()));
+                self.stack
+                    .push(StackItem::Activation(*module_addr, Vec::new()));
                 self.execute(code.body.as_slice());
             }
         };
+    }
+
+    fn execute(&mut self, _code: &[Instruction]) {
+        unimplemented!()
     }
 }
