@@ -4,6 +4,7 @@ extern crate leb128;
 mod error;
 mod memory;
 mod utils;
+mod value;
 
 pub mod interp;
 pub mod module;
@@ -13,5 +14,6 @@ pub mod synth;
 
 pub use crate::error::Error;
 pub use crate::memory::Memory;
+pub use crate::value::Value;
 
 pub const PAGE_SIZE: usize = 65536;

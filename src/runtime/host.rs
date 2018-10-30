@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     module::{Export, Instruction, MemberDesc, Module},
@@ -6,7 +6,7 @@ use crate::{
         ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
     },
     synth::ModuleBuilder,
-    Error,
+    Error, Value,
 };
 
 pub struct Host {
@@ -33,6 +33,10 @@ impl Host {
         self.funcs[addr.val()].clone()
     }
 
+    pub fn get_mem(&self, addr: MemAddr) -> Arc<MemInst> {
+        self.mems[addr.val()].clone()
+    }
+
     pub fn modules<'a>(&'a self) -> impl 'a + Iterator<Item = Arc<ModuleInst>> {
         self.modules.iter().cloned()
     }
@@ -50,6 +54,16 @@ impl Host {
             .iter()
             .position(|m| m.name() == name)
             .map(|a| ModuleAddr::new(a))
+    }
+
+    pub fn resolve_mem(&self, module: ModuleAddr, mem_idx: u32) -> MemAddr {
+        let module_inst = &self.modules[module.val()];
+        module_inst.get_mem(mem_idx as usize)
+    }
+
+    pub fn resolve_func(&self, module: ModuleAddr, func_idx: u32) -> FuncAddr {
+        let module_inst = &self.modules[module.val()];
+        module_inst.get_func(func_idx as usize)
     }
 
     pub fn resolve_import(&self, module: ModuleAddr, name: &str) -> Result<&ExportInst, Error> {
@@ -185,7 +199,7 @@ impl Host {
         for data in module.data() {
             // Offset must be a constant expression
             let offset = match data.expr.as_slice() {
-                [Instruction::ConstI32(val)] => *val as usize,
+                [Instruction::Const(Value::Integer32(val))] => *val as usize,
                 _ => return Err(Error::InvalidModule),
             };
 

@@ -8,6 +8,7 @@ use warthog::{
     reader::Reader,
     runtime::{ExternVal, Host},
     synth::ModuleBuilder,
+    Value,
 };
 
 fn main() {
@@ -47,9 +48,7 @@ pub fn run(file: &Path) {
         .func(
             "print",
             FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            || {
-                panic!("'print' function not implemented");
-            },
+            |thread| print(thread),
         ).mem("memory", 256, Some(256));
     host.synthesize(env).unwrap();
 
@@ -67,4 +66,17 @@ pub fn run(file: &Path) {
 
     // Invoke the entry point
     thread.invoke(main_func);
+}
+
+fn print(thread: &mut Thread) -> Value {
+    let (stack, host) = (thread.stack_mut(), thread.host_mut())
+    let count = stack.pop().unwrap().unwrap_i32();
+    let offset = stack.pop().unwrap().unwrap_i32();
+
+    // Get memory 0 for the current frame
+    let mem_addr = host.resolve_mem(thread.stack.module(), 0);
+    let mem = host.get_mem(mem_addr);
+
+    println!("print(0x{:X},0x{:X})", offset, count);
+    Value::Nil
 }

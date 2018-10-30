@@ -40,6 +40,14 @@ impl ModuleInst {
         &self.exports
     }
 
+    pub fn get_mem(&self, mem_idx: usize) -> MemAddr {
+        self.mems[mem_idx]
+    }
+
+    pub fn get_func(&self, func_idx: usize) -> FuncAddr {
+        self.funcs[func_idx]
+    }
+
     pub fn find_export(&self, name: &str) -> Option<&ExportInst> {
         self.exports.iter().find(|e| e.name() == name)
     }

@@ -1,6 +1,8 @@
 use crate::{
+    interp::Thread,
     module::{Export, FuncType, MemoryType},
     synth::SyntheticFunc,
+    Value,
 };
 
 pub struct ModuleBuilder {
@@ -18,7 +20,12 @@ impl ModuleBuilder {
         }
     }
 
-    pub fn func<S: Into<String>>(mut self, name: S, typ: FuncType, imp: fn() -> ()) -> Self {
+    pub fn func<S: Into<String>>(
+        mut self,
+        name: S,
+        typ: FuncType,
+        imp: fn(&mut Thread) -> Value,
+    ) -> Self {
         let idx = self.funcs.len();
         self.funcs.push(SyntheticFunc::new(typ, imp));
         self.exports.push(Export::func(name, idx as u32));

@@ -2,22 +2,23 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{utils, Error};
+use crate::{utils, Error, Value};
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Instruction {
-    ConstI32(i32),
+    Const(Value),
     Call(u32),
-    End,
 }
 
 impl Instruction {
-    pub fn read<R: io::Read>(reader: &mut R) -> Result<Instruction, Error> {
+    pub fn read<R: io::Read>(reader: &mut R) -> Result<Option<Instruction>, Error> {
         let opcode = reader.read_u8()?;
         match opcode {
-            0x0B => Ok(Instruction::End),
-            0x41 => Ok(Instruction::ConstI32(utils::read_leb128_i32(reader)?)),
-            0x10 => Ok(Instruction::Call(utils::read_leb128_u32(reader)?)),
+            0x0B => Ok(None),
+            0x41 => Ok(Some(Instruction::Const(Value::Integer32(
+                utils::read_leb128_i32(reader)?,
+            )))),
+            0x10 => Ok(Some(Instruction::Call(utils::read_leb128_u32(reader)?))),
             x => panic!("Instruction not implemented: 0x{:X}", x),
         }
     }
@@ -26,9 +27,11 @@ impl Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Instruction::ConstI32(x) => write!(f, "i32.const {}", x),
+            Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
+            Instruction::Const(Value::Integer64(x)) => write!(f, "i64.const {}", x),
+            Instruction::Const(Value::Float32(x)) => write!(f, "f32.const {}", x),
+            Instruction::Const(Value::Float64(x)) => write!(f, "f64.const {}", x),
             Instruction::Call(x) => write!(f, "call {}", x),
-            Instruction::End => write!(f, "end"),
         }
     }
 }

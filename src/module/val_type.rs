@@ -6,6 +6,7 @@ use crate::Error;
 
 #[derive(Clone)]
 pub enum ValType {
+    Nil,
     Integer32,
     Integer64,
     Float32,
@@ -32,6 +33,7 @@ impl ValType {
 impl fmt::Display for ValType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let v = match self {
+            ValType::Nil => "nil",
             ValType::Integer32 => "i32",
             ValType::Integer64 => "i64",
             ValType::Float32 => "f32",

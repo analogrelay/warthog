@@ -1,4 +1,4 @@
-use std::{io};
+use std::io;
 
 use crate::{
     module::{DataItem, Export, FuncBody, FuncType, Import},

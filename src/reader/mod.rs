@@ -52,7 +52,9 @@ impl<R: io::Read> Reader<R> {
         let mut version = [0u8; 4];
         self.source.read_exact(&mut version)?;
         let version_num = LittleEndian::read_u32(&version);
-        Ok(ModuleHeader { version: version_num })
+        Ok(ModuleHeader {
+            version: version_num,
+        })
     }
 
     pub fn read_section_header(&mut self) -> Result<Option<SectionHeader>, Error> {

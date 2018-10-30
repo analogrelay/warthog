@@ -1,5 +1,5 @@
 use crate::{
-    interp::{Stack, StackItem},
+    interp::Stack,
     module::Instruction,
     runtime::{FuncAddr, FuncImpl, Host},
 };
@@ -17,26 +17,44 @@ impl Thread {
         }
     }
 
+    pub fn host_mut(&mut self) -> &mut Host {
+        &mut self.host
+    }
+
+    pub fn stack_mut(&mut self) -> &mut Stack {
+        &mut self.stack
+    }
+
     /// Runs the function specified by the [`FuncAddr`] in the context of this thread.
     pub fn invoke(&mut self, func: FuncAddr) {
         // Resolve the function
         let func_inst = self.host.get_func(func);
         match func_inst.imp() {
-            FuncImpl::Synthetic(synth_fn) => synth_fn.invoke(),
-            FuncImpl::Local {
-                module: module_addr,
-                code: code,
-                ..
-            } => {
+            FuncImpl::Synthetic(synth_fn) => {
+                let result = synth_fn.invoke(self);
+                self.stack.push(result);
+            }
+            FuncImpl::Local { module, code, .. } => {
                 // TODO: Initialize locals
-                self.stack
-                    .push(StackItem::Activation(*module_addr, Vec::new()));
-                self.execute(code.body.as_slice());
+                self.stack.enter(module.clone(), Vec::new());
+                self.run(code.body.as_slice());
             }
         };
     }
 
-    fn execute(&mut self, _code: &[Instruction]) {
-        unimplemented!()
+    fn run(&mut self, code: &[Instruction]) {
+        for inst in code {
+            self.execute(inst);
+        }
+    }
+
+    fn execute(&mut self, inst: &Instruction) {
+        match inst {
+            Instruction::Const(val) => self.stack.push(val.clone()),
+            Instruction::Call(func_idx) => {
+                let func = self.host.resolve_func(self.stack.module(), *func_idx);
+                self.invoke(func);
+            }
+        }
     }
 }

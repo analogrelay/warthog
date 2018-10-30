@@ -46,7 +46,7 @@ pub fn run(file: &Path) {
         .func(
             "print",
             FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            || {
+            |_| {
                 panic!("'print' function not implemented");
             },
         ).mem("memory", 256, Some(256));
@@ -69,9 +69,7 @@ fn dump_funcs(host: &Host) {
             FuncImpl::Local { module: m, .. } => {
                 println!("  * {:04} {} {}", i, func_inst.typ(), m);
             }
-            FuncImpl::Synthetic(f) => {
-                println!("  * {:04} {} <Synthetic: {:p}>", i, func_inst.typ(), f.imp)
-            }
+            FuncImpl::Synthetic(f) => println!("  * {:04} {} <Synthetic>", i, func_inst.typ()),
         }
     }
 }

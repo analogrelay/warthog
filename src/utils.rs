@@ -50,10 +50,10 @@ pub fn read_limits<R: io::Read>(r: &mut R) -> Result<(u32, Option<u32>), Error> 
 pub fn read_instructions<R: io::Read>(r: &mut R) -> Result<Vec<Instruction>, Error> {
     let mut insts = Vec::new();
     loop {
-        let i = Instruction::read(r)?;
-        if i == Instruction::End {
+        if let Some(i) = Instruction::read(r)? {
+            insts.push(i);
+        } else {
             return Ok(insts);
         }
-        insts.push(i);
     }
 }

@@ -3,7 +3,8 @@ extern crate warthog;
 use std::{env, fs, io, process};
 
 use warthog::reader::{
-    Reader, CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, SectionId, TypeSection
+    CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader, SectionId,
+    TypeSection,
 };
 
 fn main() {
