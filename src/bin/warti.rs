@@ -69,14 +69,28 @@ pub fn run(file: &Path) {
 }
 
 fn print(thread: &mut Thread) -> Value {
-    let (stack, host) = (thread.stack_mut(), thread.host_mut())
-    let count = stack.pop().unwrap().unwrap_i32();
-    let offset = stack.pop().unwrap().unwrap_i32();
+    let (count, start, module) = {
+        let stack = thread.stack_mut();
+        (stack.pop().unwrap().unwrap_i32() as usize,
+         stack.pop().unwrap().unwrap_i32() as usize,
+         stack.module())
+    };
+    let end = start + count;
 
     // Get memory 0 for the current frame
-    let mem_addr = host.resolve_mem(thread.stack.module(), 0);
-    let mem = host.get_mem(mem_addr);
+    let host = thread.host_mut();
+    let mem_addr = host.resolve_mem(module, 0);
+    let mem_inst = host.get_mem(mem_addr);
+    let mem = mem_inst.memory();
 
-    println!("print(0x{:X},0x{:X})", offset, count);
+    // Safe as long as other threads (which don't even exist in WASM yet)
+    // aren't accessing memory. When threading exists, WASM will provide
+    // it's own synchronization primitives.
+    unsafe {
+        // Read the memory sequence in as a UTF-8 string
+        let s = std::str::from_utf8(&mem.data()[start..end]).unwrap();
+        println!("{}", s);
+    }
+
     Value::Nil
 }
