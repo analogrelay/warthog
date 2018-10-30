@@ -48,7 +48,7 @@ pub fn run(file: &Path) {
         .func(
             "print",
             FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            |thread| print(thread),
+            |thread, values| print(thread, values),
         ).mem("memory", 256, Some(256));
     host.synthesize(env).unwrap();
 
@@ -68,13 +68,12 @@ pub fn run(file: &Path) {
     thread.invoke(main_func);
 }
 
-fn print(thread: &mut Thread) -> Value {
-    let (count, start, module) = {
-        let stack = thread.stack_mut();
-        (stack.pop().unwrap().unwrap_i32() as usize,
-         stack.pop().unwrap().unwrap_i32() as usize,
-         stack.module())
-    };
+fn print(thread: &mut Thread, values: &[Value]) -> Value {
+    let (count, start) = (
+        values[0].unwrap_i32() as usize,
+        values[1].unwrap_i32() as usize,
+    );
+    let module = thread.stack_mut().module();
     let end = start + count;
 
     // Get memory 0 for the current frame
