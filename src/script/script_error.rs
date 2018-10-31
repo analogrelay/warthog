@@ -5,10 +5,17 @@ pub enum ScriptError {
     InvalidUtf8,
     IoError(io::ErrorKind),
     UnexpectedCharacter(u8),
+    UnexpectedEof,
 }
 
-impl<'a> From<&'a io::Error> for ScriptError {
-    fn from(e: &io::Error) -> ScriptError {
+impl From<std::io::Error> for ScriptError {
+    fn from(e: std::io::Error) -> ScriptError {
+        ScriptError::IoError(e.kind())
+    }
+}
+
+impl<'a> From<&'a std::io::Error> for ScriptError {
+    fn from(e: &std::io::Error) -> ScriptError {
         ScriptError::IoError(e.kind())
     }
 }

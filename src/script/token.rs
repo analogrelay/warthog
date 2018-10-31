@@ -32,6 +32,34 @@ impl<R: io::BufRead> Tokenizer<R> {
         }
     }
 
+    // Inverts the Option and Result returned by `bytes.next` to make `?` work better
+    #[inline]
+    fn peek(&mut self) -> Result<Option<u8>, ScriptError> {
+        match self.bytes.peek() {
+            Some(Ok(b)) => Ok(Some(*b)),
+            Some(Err(e)) => Err(e.into()),
+            None => Ok(None),
+        }
+    }
+
+    #[inline]
+    fn consume(&mut self) -> Result<Option<u8>, ScriptError> {
+        match self.bytes.next() {
+            Some(Ok(b)) => Ok(Some(b)),
+            Some(Err(e)) => Err(e.into()),
+            None => Ok(None),
+        }
+    }
+
+    #[inline]
+    fn expect_any(&mut self) -> Result<u8, ScriptError> {
+        match self.consume() {
+            Ok(Some(b)) => Ok(b),
+            Ok(None) => Err(ScriptError::UnexpectedEof),
+            Err(e) => Err(e),
+        }
+    }
+
     #[inline]
     fn consume_as(&mut self, token: Token) -> Result<Token, ScriptError> {
         self.bytes.next();
@@ -45,15 +73,13 @@ impl<R: io::BufRead> Tokenizer<R> {
     ) -> Result<Vec<u8>, ScriptError> {
         let mut vals = Vec::new();
         loop {
-            let byt = match self.bytes.peek() {
-                Some(Ok(b)) => *b,
-                Some(Err(e)) => return Err(e.into()),
-                None => break,
-            };
-
-            if predicate(byt) {
-                self.bytes.next();
-                vals.push(byt);
+            if let Some(byt) = self.peek()? {
+                if predicate(byt) {
+                    self.bytes.next();
+                    vals.push(byt);
+                } else {
+                    break;
+                }
             } else {
                 break;
             }
@@ -72,16 +98,65 @@ impl<R: io::BufRead> Tokenizer<R> {
             b'(' => self.consume_as(Token::LParen),
             b')' => self.consume_as(Token::RParen),
             b'a'...b'z' | b'A'...b'Z' | b'_' => self.read_atom(),
-            b'+' | b'-' | b'0'...b'9' => self.read_int(),
+            b'+' | b'-' | b'0'...b'9' => self.read_num(),
             x => Err(ScriptError::UnexpectedCharacter(x)),
         })
     }
 
-    fn read_int(&mut self) -> Result<Token, ScriptError> {
-        // Read sign
-        // Check for hex number
-        // Read number
-        unimplemented!()
+    fn read_num(&mut self) -> Result<Token, ScriptError> {
+        // Read the optional sign
+        let mut negate = match self.peek()? {
+            Some(b'+') => { self.consume()?; false },
+            Some(b'-') => { self.consume()?; true }
+            _ => false,
+        };
+
+        // Read the first digit
+        let first_digit = self.expect_any()?;
+        if first_digit < b'0' || first_digit > b'9' {
+            return Err(ScriptError::UnexpectedCharacter(first_digit));
+        }
+
+        // Prepare a place to store the running total.
+        let mut val: i64 = 0;
+
+        // Check if we're a hex number
+        let hex = if self.peek()? == Some(b'x') {
+            // Ignore first_digit and this character
+            self.expect_any()?;
+
+            // Mark the number as hex
+            true
+        } else {
+            // Process the first digit
+            val = first_digit as i64 - b'0' as i64;
+            false
+        };
+
+        // Iterate over remaining digits, shifting and adding
+        loop {
+            let chr = match self.peek()? {
+                Some(c) => c,
+                None => break
+            };
+            if chr >= b'0' && chr <= b'9' {
+                if hex {
+                    val = (val << 4) + (chr - b'0') as i64;
+                } else {
+                    val = (val << 3) + (val << 1) + (chr - b'0') as i64;
+                }
+                self.consume()?;
+            } else if hex && chr >= b'A' && chr <= b'F' {
+                val = (val << 4) + (chr - b'A' + 10) as i64;
+                self.consume()?;
+            } else if hex && chr >= b'a' && chr <= b'f' {
+                val = (val << 4) + (chr - b'a' + 10) as i64;
+                self.consume()?;
+            } else {
+                break;
+            }
+        }
+        Ok(Token::Integer(if negate { -val } else { val }))
     }
 
     fn read_atom(&mut self) -> Result<Token, ScriptError> {
@@ -117,6 +192,34 @@ mod tests {
         assert_eq!(
             Some(Token::Atom("h3ll0_h0r1d".to_owned())),
             single_tok("h3ll0_h0r1d")
+        );
+    }
+
+    #[test]
+    pub fn single_token_int_hex() {
+        assert_eq!(
+            Some(Token::Integer(0xAB)),
+            single_tok("0xABgarbage")
+        );
+        assert_eq!(
+            Some(Token::Integer(0xAB)),
+            single_tok("+0xABgarbage")
+        );
+        assert_eq!(
+            Some(Token::Integer(-0xAB)),
+            single_tok("-0xABgarbage")
+        );
+        assert_eq!(
+            Some(Token::Integer(0xAB)),
+            single_tok("0xAbgarbage")
+        );
+        assert_eq!(
+            Some(Token::Integer(0xAB)),
+            single_tok("+0xAbgarbage")
+        );
+        assert_eq!(
+            Some(Token::Integer(-0xAB)),
+            single_tok("-0xAbgarbage")
         );
     }
 

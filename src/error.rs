@@ -16,6 +16,12 @@ impl From<std::io::Error> for Error {
     }
 }
 
+impl<'a> From<&'a std::io::Error> for Error {
+    fn from(e: &std::io::Error) -> Error {
+        Error::IoError(format!("{}", e))
+    }
+}
+
 impl From<std::string::FromUtf8Error> for Error {
     fn from(e: std::string::FromUtf8Error) -> Error {
         Error::Utf8Error(e)
