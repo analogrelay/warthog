@@ -11,6 +11,7 @@ pub mod module;
 pub mod reader;
 pub mod runtime;
 pub mod synth;
+pub mod script;
 
 pub use crate::error::Error;
 pub use crate::memory::Memory;
