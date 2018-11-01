@@ -8,7 +8,7 @@ pub enum Token {
     RParen,
     Integer(i64),
     Float(f64),
-    Name(String),
+    Identifier(String),
     Str(String),
     Atom(String),
 }
@@ -40,6 +40,20 @@ impl<R: io::BufRead> Tokenizer<R> {
             Some(Err(e)) => Err(e.into()),
             None => Ok(None),
         }
+    }
+
+    #[inline]
+    pub fn consume_if(&mut self, expected: u8) -> Result<bool, ScriptError> {
+        let res = match self.bytes.peek() {
+            Some(Ok(b)) if *b == expected => true,
+            Some(Err(e)) => return Err(e.into()),
+            _ => false,
+        };
+
+        if res {
+            self.consume()?;
+        }
+        Ok(res)
     }
 
     #[inline]
@@ -99,15 +113,87 @@ impl<R: io::BufRead> Tokenizer<R> {
             b')' => self.consume_as(Token::RParen),
             b'a'...b'z' | b'A'...b'Z' | b'_' => self.read_atom(),
             b'+' | b'-' | b'0'...b'9' => self.read_num(),
+            b'$' => self.read_identifier(),
+            b'"' => self.read_string(),
             x => Err(ScriptError::UnexpectedCharacter(x)),
         })
     }
 
+    fn read_string(&mut self) -> Result<Token, ScriptError> {
+        self.consume()?;
+
+        let mut byts = Vec::new();
+        loop {
+            let chr = self.expect_any()?;
+            if chr == b'\"' {
+                break;
+            } else if chr == b'\\' {
+                match self.expect_any()? {
+                    b't' => byts.push(b'\t'),
+                    b'n' => byts.push(b'\n'),
+                    b'r' => byts.push(b'\r'),
+                    b'"' => byts.push(b'"'),
+                    b'\'' => byts.push(b'\''),
+                    b'\\' => byts.push(b'\\'),
+                    b'u' => self.read_unicode_escape(&mut byts)?,
+                    x @ b'0'...b'9' | x @ b'a'...b'f' | x @ b'A'...b'F' => {
+                        let y = self.expect_any()?;
+                        if !is_hex_digit(y) {
+                            return Err(ScriptError::InvalidEscape);
+                        }
+
+                        let val = (get_digit(x) << 4) + get_digit(y);
+                        if let Some(c) = std::char::from_u32(val as u32) {
+                            let mut buf = [0u8; 4];
+                            for b in c.encode_utf8(&mut buf).as_bytes().iter() {
+                                byts.push(*b);
+                            }
+                        } else {
+                            return Err(ScriptError::InvalidEscape);
+                        }
+                    }
+                    x => return Err(ScriptError::InvalidEscape),
+                };
+            } else {
+                byts.push(chr);
+            }
+        }
+
+        // We don't validate that we have ASCII strings here, so we can't unwrap
+        let s = String::from_utf8(byts)?;
+
+        Ok(Token::Str(s))
+    }
+
+    fn read_identifier(&mut self) -> Result<Token, ScriptError> {
+        let byts = self.consume_while(is_idchar)?;
+
+        // We can unwrap the from_utf8 result because we validated each char was ASCII
+        let s = String::from_utf8(byts).unwrap();
+
+        Ok(Token::Identifier(s))
+    }
+
+    fn read_atom(&mut self) -> Result<Token, ScriptError> {
+        let byts = self.consume_while(is_atomchar)?;
+
+        // We can unwrap the from_utf8 result because we validated each char was ASCII
+        let s = String::from_utf8(byts).unwrap();
+
+        Ok(Token::Atom(s))
+    }
+
     fn read_num(&mut self) -> Result<Token, ScriptError> {
         // Read the optional sign
-        let mut negate = match self.peek()? {
-            Some(b'+') => { self.consume()?; false },
-            Some(b'-') => { self.consume()?; true }
+        let negate = match self.peek()? {
+            Some(b'+') => {
+                self.consume()?;
+                false
+            }
+            Some(b'-') => {
+                self.consume()?;
+                true
+            }
             _ => false,
         };
 
@@ -117,10 +203,8 @@ impl<R: io::BufRead> Tokenizer<R> {
             return Err(ScriptError::UnexpectedCharacter(first_digit));
         }
 
-        // Prepare a place to store the running total.
-        let mut val: i64 = 0;
-
         // Check if we're a hex number
+        let mut nat = 0;
         let hex = if self.peek()? == Some(b'x') {
             // Ignore first_digit and this character
             self.expect_any()?;
@@ -128,48 +212,165 @@ impl<R: io::BufRead> Tokenizer<R> {
             // Mark the number as hex
             true
         } else {
-            // Process the first digit
-            val = first_digit as i64 - b'0' as i64;
+            // That was the first digit of the number
+            nat = (first_digit - b'0') as i64;
             false
         };
 
+        // Read the rest of the number
+        let (nat, _) = self.read_digits(nat, hex)?;
+
+        // Check if this is a float
+        match self.peek()? {
+            Some(b'.') | Some(b'E') | Some(b'e') => {
+                Ok(Token::Float(self.read_float(negate, nat, hex)?))
+            }
+            _ => Ok(Token::Integer(if negate { -nat } else { nat })),
+        }
+    }
+
+    fn read_float(&mut self, negate: bool, nat: i64, hex: bool) -> Result<f64, ScriptError> {
+        // Convert the natural number portion to a float
+        let mut val = nat as f64;
+
+        // Check for a dot segment
+        if self.consume_if(b'.')? {
+            let (frac, count) = self.read_digits(0, hex)?;
+            let divisor = (if hex { 16f64 } else { 10f64 }).powi(count);
+            let addend = frac as f64 / divisor;
+            val += addend
+        }
+
+        // Check for an exponent segment
+        match (hex, self.peek()?) {
+            (true, Some(b'p')) | (true, Some(b'P')) => {
+                self.consume()?;
+                let (exp, _) = self.read_digits(0, hex)?;
+                let multiplier = 2f64.powi(exp as i32);
+                val *= multiplier;
+            }
+            (false, Some(b'e')) | (false, Some(b'E')) => {
+                self.consume()?;
+                let (exp, _) = self.read_digits(0, hex)?;
+                let multiplier = 10f64.powi(exp as i32);
+                val *= multiplier;
+            }
+            _ => {}
+        }
+
+        Ok(if negate { -val } else { val })
+    }
+
+    fn read_digits(&mut self, mut start_val: i64, hex: bool) -> Result<(i64, i32), ScriptError> {
         // Iterate over remaining digits, shifting and adding
+        let mut count = 0;
         loop {
             let chr = match self.peek()? {
                 Some(c) => c,
-                None => break
+                None => break,
             };
-            if chr >= b'0' && chr <= b'9' {
-                if hex {
-                    val = (val << 4) + (chr - b'0') as i64;
-                } else {
-                    val = (val << 3) + (val << 1) + (chr - b'0') as i64;
-                }
+            if is_digit(chr) {
+                count += 1;
                 self.consume()?;
-            } else if hex && chr >= b'A' && chr <= b'F' {
-                val = (val << 4) + (chr - b'A' + 10) as i64;
+                start_val *= 10;
+                start_val += get_digit(chr) as i64;
+            } else if hex && is_hex_digit(chr) {
+                count += 1;
                 self.consume()?;
-            } else if hex && chr >= b'a' && chr <= b'f' {
-                val = (val << 4) + (chr - b'a' + 10) as i64;
+                start_val *= 16;
+                start_val += get_digit(chr) as i64;
+            } else if chr == b'_' {
                 self.consume()?;
             } else {
                 break;
             }
         }
-        Ok(Token::Integer(if negate { -val } else { val }))
+        Ok((start_val, count))
     }
 
-    fn read_atom(&mut self) -> Result<Token, ScriptError> {
-        let byts = self.consume_while(is_idchar)?;
+    fn read_unicode_escape(&mut self, v: &mut Vec<u8>) -> Result<(), ScriptError> {
+        let c = self.expect_any()?;
+        if c != b'{' {
+            return Err(ScriptError::UnexpectedCharacter(c));
+        }
 
-        // We can unwrap the from_utf8 result because we validated each char was ASCII
-        let s = String::from_utf8(byts).unwrap();
+        let mut val: u32 = 0;
+        loop {
+            let c = self.expect_any()?;
+            if c == b'}' {
+                break;
+            } else if !is_hex_digit(c) {
+                return Err(ScriptError::UnexpectedCharacter(c));
+            }
+            val = (val * 16) + get_digit(c) as u32;
+        }
 
-        Ok(Token::Atom(s))
+        let mut buf = [0u8; 4];
+        if let Some(c) = std::char::from_u32(val) {
+            for b in c.encode_utf8(&mut buf).as_bytes().iter() {
+                v.push(*b);
+            }
+
+            Ok(())
+        } else {
+            Err(ScriptError::InvalidEscape)
+        }
     }
 }
 
+#[inline]
+fn is_hex_digit(b: u8) -> bool {
+    is_digit(b) || (b >= b'a' && b <= b'f') || (b >= b'A' && b <= b'F')
+}
+
+#[inline]
+fn is_digit(b: u8) -> bool {
+    b >= b'0' && b <= b'9'
+}
+
+#[inline]
+fn get_digit(b: u8) -> usize {
+    if b >= b'0' && b <= b'9' {
+        (b - b'0') as usize
+    } else if b >= b'a' && b <= b'f' {
+        (b - b'a' + 0xA) as usize
+    } else if b >= b'A' && b <= b'F' {
+        (b - b'A' + 0xA) as usize
+    } else {
+        panic!("character is not a digit: {}", b);
+    }
+}
+
+#[inline]
 fn is_idchar(b: u8) -> bool {
+    is_atomchar(b)
+        || b == b'!'
+        || b == b'#'
+        || b == b'$'
+        || b == b'%'
+        || b == b'&'
+        || b == b'`'
+        || b == b'*'
+        || b == b'+'
+        || b == b'-'
+        || b == b'.'
+        || b == b'/'
+        || b == b':'
+        || b == b'<'
+        || b == b'='
+        || b == b'>'
+        || b == b'?'
+        || b == b'@'
+        || b == b'\\'
+        || b == b'^'
+        || b == b'_'
+        || b == b'\''
+        || b == b'|'
+        || b == b'~'
+}
+
+#[inline]
+fn is_atomchar(b: u8) -> bool {
     (b >= b'a' && b <= b'z') || (b >= b'A' && b <= b'Z') || (b >= b'0' && b <= b'9') || b == b'_'
 }
 
@@ -190,58 +391,125 @@ mod tests {
     #[test]
     pub fn single_token_atom() {
         assert_eq!(
-            Some(Token::Atom("h3ll0_h0r1d".to_owned())),
-            single_tok("h3ll0_h0r1d")
+            Some(Token::Atom("h3ll0_w0r1d".to_owned())),
+            single_tok("h3ll0_w0r1d")
+        );
+    }
+
+    #[test]
+    pub fn single_token_string() {
+        assert_eq!(
+            Some(Token::Str("this is a string".to_owned())),
+            single_tok("\"this is a string\"")
+        );
+        assert_eq!(
+            Some(Token::Str("some escape sequences: \t\n\r\"\'\\".to_owned())),
+            single_tok("\"some escape sequences: \\t\\n\\r\\\"\\\'\\\\\"")
+        );
+        assert_eq!(
+            Some(Token::Str("some escape sequences: +\u{d2}".to_owned())),
+            single_tok("\"some escape sequences: \\2B\\d2\"")
+        );
+        assert_eq!(
+            Some(Token::Str("some escape sequences: +\u{d2}ᚠ".to_owned())),
+            single_tok("\"some escape sequences: \\u{2B}\\u{d2}\\u{16A0}\"")
+        );
+    }
+
+    #[test]
+    pub fn single_token_identifier() {
+        assert_eq!(
+            Some(Token::Identifier("$007".to_owned())),
+            single_tok("$007")
+        );
+        assert_eq!(
+            Some(Token::Identifier("$007".to_owned())),
+            single_tok("$007;")
+        );
+        assert_eq!(
+            Some(Token::Identifier("$007".to_owned())),
+            single_tok("$007)")
+        );
+        assert_eq!(
+            Some(Token::Identifier("$007".to_owned())),
+            single_tok("$007(")
+        );
+        assert_eq!(
+            Some(Token::Identifier("$007".to_owned())),
+            single_tok("$007\"")
+        );
+        assert_eq!(
+            Some(Token::Identifier("$h3ll0_w0rld".to_owned())),
+            single_tok("$h3ll0_w0rld")
+        );
+        assert_eq!(
+            Some(Token::Identifier("$!#$%&`*+-./:<=>?@\\^_'|~wow".to_owned())),
+            single_tok("$!#$%&`*+-./:<=>?@\\^_'|~wow")
         );
     }
 
     #[test]
     pub fn single_token_int_hex() {
-        assert_eq!(
-            Some(Token::Integer(0xAB)),
-            single_tok("0xABgarbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(0xAB)),
-            single_tok("+0xABgarbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(-0xAB)),
-            single_tok("-0xABgarbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(0xAB)),
-            single_tok("0xAbgarbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(0xAB)),
-            single_tok("+0xAbgarbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(-0xAB)),
-            single_tok("-0xAbgarbage")
-        );
+        assert_eq!(Some(Token::Integer(0xA)), single_tok("0xA"));
+        assert_eq!(Some(Token::Integer(0xA)), single_tok("+0xA"));
+        assert_eq!(Some(Token::Integer(-0xA)), single_tok("-0xA"));
+        assert_eq!(Some(Token::Integer(0xA)), single_tok("0xa"));
+        assert_eq!(Some(Token::Integer(0xA)), single_tok("+0xa"));
+        assert_eq!(Some(Token::Integer(-0xA)), single_tok("-0xa"));
+        assert_eq!(Some(Token::Integer(0xAB)), single_tok("0xAB"));
+        assert_eq!(Some(Token::Integer(0xAB)), single_tok("+0xAB"));
+        assert_eq!(Some(Token::Integer(-0xAB)), single_tok("-0xAB"));
+        assert_eq!(Some(Token::Integer(0xAB)), single_tok("0xAb"));
+        assert_eq!(Some(Token::Integer(0xAB)), single_tok("+0xAb"));
+        assert_eq!(Some(Token::Integer(-0xAB)), single_tok("-0xAb"));
+        assert_eq!(Some(Token::Integer(0xAB)), single_tok("0xA_B"));
+        assert_eq!(Some(Token::Integer(0xAB)), single_tok("+0xA_B"));
+        assert_eq!(Some(Token::Integer(-0xAB)), single_tok("-0xA_B"));
     }
 
     #[test]
     pub fn single_token_int() {
+        assert_eq!(Some(Token::Integer(42)), single_tok("4_2"));
+        assert_eq!(Some(Token::Integer(42)), single_tok("+4_2"));
+        assert_eq!(Some(Token::Integer(-42)), single_tok("-4_2"));
+        assert_eq!(Some(Token::Integer(42)), single_tok("42"));
+        assert_eq!(Some(Token::Integer(42)), single_tok("+42"));
+        assert_eq!(Some(Token::Integer(-42)), single_tok("-42"));
+        assert_eq!(Some(Token::Integer(4)), single_tok("4"));
+        assert_eq!(Some(Token::Integer(4)), single_tok("+4"));
+        assert_eq!(Some(Token::Integer(-4)), single_tok("-4"));
+    }
+
+    #[test]
+    pub fn single_token_float() {
+        // Hex float to decimal float is weird,
+        // this value is "0xAB.CD" in float
+        let ab = 0xAB as f64;
+        let cd_frac = (0xC as f64 / 0x10 as f64) + (0xD as f64 / 0x10 as f64 / 0x10 as f64);
+        let ab_div_cd = ab + cd_frac;
+        let p5 = (2f64).powi(5);
+
+        assert_eq!(Some(Token::Float(4.2)), single_tok("4.2"));
+        assert_eq!(Some(Token::Float(-4.2)), single_tok("-4.2"));
+        assert_eq!(Some(Token::Float(4.2e5)), single_tok("4.2e5"));
+        assert_eq!(Some(Token::Float(-4.2e5)), single_tok("-4.2e5"));
+        assert_eq!(Some(Token::Float(4.2e5)), single_tok("4.2E5"));
+        assert_eq!(Some(Token::Float(-4.2e5)), single_tok("-4.2E5"));
+        assert_eq!(Some(Token::Float(ab_div_cd)), single_tok("0xAB.CD"));
+        assert_eq!(Some(Token::Float(-ab_div_cd)), single_tok("-0xAB.CD"));
+        assert_eq!(Some(Token::Float(ab_div_cd * p5)), single_tok("0xAB.CDp5"));
         assert_eq!(
-            Some(Token::Integer(42)),
-            single_tok("42garbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(42)),
-            single_tok("+42garbage")
-        );
-        assert_eq!(
-            Some(Token::Integer(-42)),
-            single_tok("-42garbage")
+            Some(Token::Float(-ab_div_cd * p5)),
+            single_tok("-0xAB.CDp5")
         );
     }
 
     fn single_tok(inp: &str) -> Option<Token> {
-        let tok = Tokenizer::new(inp.as_bytes());
+        let actual_str = format!("{} next_token", inp);
+        let tok = Tokenizer::new(actual_str.as_bytes());
         tok.map(|t| t.unwrap()).next()
+
+        // TODO: Check the second token is correct.
     }
 
     // fn parse_str(inp: &str) -> Vec<Token> {
