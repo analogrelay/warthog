@@ -1,6 +1,6 @@
 use std::io;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ScriptError(ScriptErrorKind, usize, Option<String>);
 
 impl ScriptError {
@@ -28,7 +28,7 @@ impl ScriptError {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ScriptErrorKind {
     InvalidUtf8,
     InvalidEscape,

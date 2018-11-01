@@ -3,10 +3,18 @@ use std::io;
 use crate::script::{ScriptError, ScriptErrorKind};
 
 macro_rules! err {
-    ($s: expr, $e: expr) => ( ScriptError::new($e, $s.position) );
-    ($s: expr, $e: expr,) => ( ScriptError::new($e, $s.position) );
-    ($s: expr, $e: expr, $det: expr) => ( ScriptError::detailed($e, $s.position, $det) );
-    ($s: expr, $e: expr, $det: expr,) => ( ScriptError::detailed($e, $s.position, $det) );
+    ($s: expr, $e: expr) => {
+        ScriptError::new($e, $s.position)
+    };
+    ($s: expr, $e: expr,) => {
+        ScriptError::new($e, $s.position)
+    };
+    ($s: expr, $e: expr, $det: expr) => {
+        ScriptError::detailed($e, $s.position, $det)
+    };
+    ($s: expr, $e: expr, $det: expr,) => {
+        ScriptError::detailed($e, $s.position, $det)
+    };
 }
 
 #[derive(Debug, PartialEq)]
@@ -18,6 +26,7 @@ pub enum Token {
     Identifier(String),
     Str(String),
     Atom(String),
+    Comment,
 }
 
 pub struct Tokenizer<R: io::BufRead> {
@@ -141,14 +150,65 @@ impl<R: io::BufRead> Tokenizer<R> {
         };
 
         Some(match byt {
-            b'(' => self.consume_as(Token::LParen),
+            b'(' => self.read_block_comment(),
             b')' => self.consume_as(Token::RParen),
             b'a'...b'z' | b'A'...b'Z' | b'_' => self.read_atom(),
             b'+' | b'-' | b'0'...b'9' => self.read_num(),
             b'$' => self.read_identifier(),
             b'"' => self.read_string(),
+            b';' => self.read_line_comment(),
             x => Err(err!(self, ScriptErrorKind::UnexpectedCharacter(x as char))),
         })
+    }
+
+    fn read_block_comment(&mut self) -> Result<Token, ScriptError> {
+        self.consume()?; // Consume the '('
+
+        if self.consume_if(b';')? {
+            // It's a block comment
+            let mut nesting_level = 1;
+            while nesting_level > 0 {
+                let chr = self.expect_any()?;
+
+                match (chr, self.peek()?) {
+                    (b'(', Some(b';')) => {
+                        self.consume()?;
+                        nesting_level += 1;
+                    }
+                    (b';', Some(b')')) => {
+                        self.consume()?;
+                        nesting_level -= 1;
+                    }
+
+                    // Skip everything else.
+                    _ => {}
+                }
+            }
+
+            Ok(Token::Comment)
+        } else {
+            // It's just an LParen
+            Ok(Token::LParen)
+        }
+    }
+
+    fn read_line_comment(&mut self) -> Result<Token, ScriptError> {
+        self.consume()?;
+
+        let next = self.expect_any()?;
+        if next != b';' {
+            return Err(err!(
+                self,
+                ScriptErrorKind::UnexpectedCharacter(next as char)
+            ));
+        }
+
+        // Both kinds of newline sequence end \n
+        self.skip_while(|c| c != b'\n')?;
+
+        // Eat the newline itself
+        self.consume()?;
+        Ok(Token::Comment)
     }
 
     fn read_string(&mut self) -> Result<Token, ScriptError> {
@@ -171,7 +231,8 @@ impl<R: io::BufRead> Tokenizer<R> {
                     x @ b'0'...b'9' | x @ b'a'...b'f' | x @ b'A'...b'F' => {
                         let y = self.expect_any()?;
                         if !is_hex_digit(y) {
-                            return Err(err!(self, 
+                            return Err(err!(
+                                self,
                                 ScriptErrorKind::UnexpectedCharacter(y as char),
                                 "Unexpected character in hex escape",
                             ));
@@ -184,16 +245,19 @@ impl<R: io::BufRead> Tokenizer<R> {
                                 byts.push(*b);
                             }
                         } else {
-                            return Err(err!(self, 
+                            return Err(err!(
+                                self,
                                 ScriptErrorKind::InvalidEscape,
                                 "Hex escape is not a valid character",
                             ));
                         }
                     }
                     x => {
-                        return Err(
-                            err!(self, ScriptErrorKind::InvalidEscape, "Unrecognized escape sequence")
-                        )
+                        return Err(err!(
+                            self,
+                            ScriptErrorKind::InvalidEscape,
+                            "Unrecognized escape sequence"
+                        ))
                     }
                 };
             } else {
@@ -245,7 +309,10 @@ impl<R: io::BufRead> Tokenizer<R> {
         // Read the first digit
         let first_digit = self.expect_any()?;
         if first_digit < b'0' || first_digit > b'9' {
-            return Err(err!(self, ScriptErrorKind::UnexpectedCharacter(first_digit as char)));
+            return Err(err!(
+                self,
+                ScriptErrorKind::UnexpectedCharacter(first_digit as char)
+            ));
         }
 
         // Check if we're a hex number
@@ -358,7 +425,8 @@ impl<R: io::BufRead> Tokenizer<R> {
 
             Ok(())
         } else {
-            Err(err!(self, 
+            Err(err!(
+                self,
                 ScriptErrorKind::InvalidEscape,
                 "Unicode escape is not a valid character",
             ))
@@ -542,11 +610,21 @@ mod tests {
     }
 
     #[test]
-    pub fn single_token_comment() {
-        assert_eq!(Some(Token::Comment(" Hello, World!")), single_tok(";; Hello, World!\n"));
-        assert_eq!(Some(Token::Comment(" Hello, World!")), single_tok(";; Hello, World!\r\n"));
-        assert_eq!(Some(Token::Comment("Hello, World!")), single_tok("(;Hello, World!;)"));
-        assert_eq!(Some(Token::Comment("Hello(;,;)World!")), single_tok("(;Hello(;,;)World!;)"));
+    pub fn single_token_line_comment() {
+        assert_eq!(Some(Token::Comment), single_tok(";; Hello, World!\n"));
+        assert_eq!(Some(Token::Comment), single_tok(";; Hello, World!\r\n"));
+
+        assert_eq!(vec![Token::Comment], parse_str(";; Hello").unwrap());
+    }
+
+    #[test]
+    pub fn single_token_block_comment() {
+        assert_eq!(Some(Token::Comment), single_tok("(;Hello, World!;)"));
+        assert_eq!(Some(Token::Comment), single_tok("(;Hello( World!;)"));
+        assert_eq!(Some(Token::Comment), single_tok("(;Hello; World!;)"));
+        assert_eq!(Some(Token::Comment), single_tok("(;Hello(;,;)World!;)"));
+
+        assert_eq!(Err(ScriptError::new(ScriptErrorKind::UnexpectedEof, 9)), parse_str("(; Hello"));
     }
 
     fn single_tok(inp: &str) -> Option<Token> {
@@ -562,8 +640,12 @@ mod tests {
         first
     }
 
-    // fn parse_str(inp: &str) -> Vec<Token> {
-    //     let tok = Tokenizer::new(inp.as_bytes());
-    //     tok.map(|t| t.unwrap()).collect()
-    // }
+    fn parse_str(inp: &str) -> Result<Vec<Token>, ScriptError> {
+         let tok = Tokenizer::new(inp.as_bytes());
+         let mut tokens = Vec::new();
+         for res in tok {
+             tokens.push(res?);
+         }
+         Ok(tokens)
+    }
 }
