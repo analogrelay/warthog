@@ -67,7 +67,7 @@ fn dump_funcs(host: &Host) {
             FuncImpl::Local { module: m, .. } => {
                 println!("  * {:04} {} {}", i, func_inst.typ(), m);
             }
-            FuncImpl::Synthetic(f) => println!("  * {:04} {} <Synthetic>", i, func_inst.typ()),
+            FuncImpl::Synthetic(_) => println!("  * {:04} {} <Synthetic>", i, func_inst.typ()),
         }
     }
 }
