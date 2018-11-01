@@ -541,6 +541,14 @@ mod tests {
         );
     }
 
+    #[test]
+    pub fn single_token_comment() {
+        assert_eq!(Some(Token::Comment(" Hello, World!")), single_tok(";; Hello, World!\n"));
+        assert_eq!(Some(Token::Comment(" Hello, World!")), single_tok(";; Hello, World!\r\n"));
+        assert_eq!(Some(Token::Comment("Hello, World!")), single_tok("(;Hello, World!;)"));
+        assert_eq!(Some(Token::Comment("Hello(;,;)World!")), single_tok("(;Hello(;,;)World!;)"));
+    }
+
     fn single_tok(inp: &str) -> Option<Token> {
         let actual_str = format!("{} next_token", inp);
         let tok = Tokenizer::new(actual_str.as_bytes());
