@@ -11,6 +11,13 @@ pub struct FuncType {
 }
 
 impl FuncType {
+    pub fn empty() -> FuncType {
+        FuncType {
+            parameters: Vec::new(),
+            results: Vec::new(),
+        }
+    }
+
     pub fn new<P: Into<Vec<ValType>>, R: Into<Vec<ValType>>>(
         parameters: P,
         results: R,

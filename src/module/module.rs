@@ -1,7 +1,8 @@
 use std::{fmt, io};
 
 use crate::{
-    module::{DataItem, Export, FuncBody, FuncType, Import, ModuleBuilder},
+    builder::ModuleBuilder,
+    module::{DataItem, Export, FuncBody, FuncType, Import},
     reader::{
         CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader, SectionId,
         TypeSection,
@@ -23,12 +24,12 @@ pub struct Module {
 impl Module {
     pub fn from_builder(builder: ModuleBuilder) -> Module {
         Module {
-            types: builder.types,
-            imports: builder.imports,
-            funcs: builder.funcs,
-            exports: builder.exports,
-            code: builder.code,
-            data: builder.data,
+            types: Vec::new(),
+            imports: Vec::new(),
+            funcs: Vec::new(),
+            exports: Vec::new(),
+            code: Vec::new(),
+            data: Vec::new(),
         }
     }
 

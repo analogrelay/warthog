@@ -42,7 +42,7 @@ pub enum ParserErrorKind {
     IoError(io::ErrorKind),
     UnexpectedCharacter(char),
     UnexpectedToken(TokenKind),
-    UnknownAtom(String),
+    UnexpectedAtom(String),
 }
 
 impl From<std::io::Error> for ParserErrorKind {

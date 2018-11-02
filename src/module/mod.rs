@@ -9,7 +9,6 @@ mod local;
 mod member_desc;
 mod memory_type;
 mod module;
-mod module_builder;
 mod table_type;
 mod val_type;
 
@@ -24,6 +23,5 @@ pub use self::local::Local;
 pub use self::member_desc::MemberDesc;
 pub use self::memory_type::MemoryType;
 pub use self::module::Module;
-pub use self::module_builder::ModuleBuilder;
 pub use self::table_type::TableType;
 pub use self::val_type::ValType;

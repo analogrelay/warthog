@@ -10,6 +10,7 @@ mod memory;
 mod utils;
 mod value;
 
+pub mod builder;
 pub mod interp;
 pub mod module;
 pub mod parser;

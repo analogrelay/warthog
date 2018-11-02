@@ -17,6 +17,17 @@ impl Token {
     pub fn range(&self) -> (usize, usize) {
         self.1
     }
+
+    /// Unwraps this token as a [`TokenKind::Atom`] and returns a tuple of the atom value and the range
+    ///
+    /// # Panics
+    /// If this token is not an atom.
+    pub fn atom(&self) -> (&str, (usize, usize)) {
+        match self {
+            Token(TokenKind::Atom(ref s), r) => (s, *r),
+            _ => panic!("Token is not an atom!"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
