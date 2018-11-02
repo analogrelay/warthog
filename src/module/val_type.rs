@@ -42,3 +42,9 @@ impl fmt::Display for ValType {
         write!(f, "{}", v)
     }
 }
+
+impl fmt::Debug for ValType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}

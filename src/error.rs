@@ -35,7 +35,7 @@ impl From<leb128::read::Error> for Error {
 }
 
 impl From<std::alloc::LayoutErr> for Error {
-    fn from(l: std::alloc::LayoutErr) -> Error {
+    fn from(_: std::alloc::LayoutErr) -> Error {
         Error::LayoutError
     }
 }

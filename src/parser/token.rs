@@ -1,24 +1,26 @@
 use std::io;
 
-use crate::script::{ScriptError, ScriptErrorKind};
+use crate::parser::{ParserError, ParserErrorKind};
 
-macro_rules! err {
-    ($s: expr, $e: expr) => {
-        ScriptError::new($e, $s.position)
-    };
-    ($s: expr, $e: expr,) => {
-        ScriptError::new($e, $s.position)
-    };
-    ($s: expr, $e: expr, $det: expr) => {
-        ScriptError::detailed($e, $s.position, $det)
-    };
-    ($s: expr, $e: expr, $det: expr,) => {
-        ScriptError::detailed($e, $s.position, $det)
-    };
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token(pub TokenKind, pub (usize, usize));
+
+impl Token {
+    pub fn new(kind: TokenKind, range: (usize, usize)) -> Token {
+        Token(kind, range)
+    }
+
+    pub fn kind(&self) -> &TokenKind {
+        &self.0
+    }
+
+    pub fn range(&self) -> (usize, usize) {
+        self.1
+    }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Token {
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenKind {
     LParen,
     RParen,
     Integer(i64),
@@ -29,42 +31,44 @@ pub enum Token {
     Comment,
 }
 
-pub struct Tokenizer<R: io::BufRead> {
+pub struct Tokenizer<R: io::Read> {
     bytes: std::iter::Peekable<io::Bytes<R>>,
-    position: usize,
+    pos: usize,
+    token_start: usize,
 }
 
-impl<R: io::BufRead> Iterator for Tokenizer<R> {
-    type Item = Result<Token, ScriptError>;
+impl<R: io::Read> Iterator for Tokenizer<R> {
+    type Item = Result<Token, ParserError>;
 
-    fn next(&mut self) -> Option<Result<Token, ScriptError>> {
+    fn next(&mut self) -> Option<Result<Token, ParserError>> {
         self.read_token()
     }
 }
 
-impl<R: io::BufRead> Tokenizer<R> {
+impl<R: io::Read> Tokenizer<R> {
     pub fn new(reader: R) -> Tokenizer<R> {
         Tokenizer {
             bytes: reader.bytes().peekable(),
-            position: 0,
+            pos: 0,
+            token_start: 0,
         }
     }
 
     // Inverts the Option and Result returned by `bytes.next` to make `?` work better
     #[inline]
-    fn peek(&mut self) -> Result<Option<u8>, ScriptError> {
+    fn peek(&mut self) -> Result<Option<u8>, ParserError> {
         match self.bytes.peek() {
             Some(Ok(b)) => Ok(Some(*b)),
-            Some(Err(e)) => Err(err!(self, e)),
+            Some(Err(e)) => Err(err!(self.pos, e)),
             None => Ok(None),
         }
     }
 
     #[inline]
-    pub fn consume_if(&mut self, expected: u8) -> Result<bool, ScriptError> {
+    pub fn consume_if(&mut self, expected: u8) -> Result<bool, ParserError> {
         let res = match self.bytes.peek() {
             Some(Ok(b)) if *b == expected => true,
-            Some(Err(e)) => return Err(err!(self, e)),
+            Some(Err(e)) => return Err(err!(self.pos, e)),
             _ => false,
         };
 
@@ -75,32 +79,26 @@ impl<R: io::BufRead> Tokenizer<R> {
     }
 
     #[inline]
-    fn consume(&mut self) -> Result<Option<u8>, ScriptError> {
-        self.position += 1;
+    fn consume(&mut self) -> Result<Option<u8>, ParserError> {
+        self.pos += 1;
         match self.bytes.next() {
             Some(Ok(b)) => Ok(Some(b)),
-            Some(Err(e)) => Err(err!(self, e)),
+            Some(Err(e)) => Err(err!(self.pos, e)),
             None => Ok(None),
         }
     }
 
     #[inline]
-    fn expect_any(&mut self) -> Result<u8, ScriptError> {
+    fn expect_any(&mut self) -> Result<u8, ParserError> {
         match self.consume() {
             Ok(Some(b)) => Ok(b),
-            Ok(None) => Err(err!(self, ScriptErrorKind::UnexpectedEof)),
+            Ok(None) => Err(err!(self.pos, ParserErrorKind::UnexpectedEof)),
             Err(e) => Err(e),
         }
     }
 
     #[inline]
-    fn consume_as(&mut self, token: Token) -> Result<Token, ScriptError> {
-        self.consume()?;
-        Ok(token)
-    }
-
-    #[inline]
-    fn skip_while<P: FnMut(u8) -> bool>(&mut self, mut predicate: P) -> Result<(), ScriptError> {
+    fn skip_while<P: FnMut(u8) -> bool>(&mut self, mut predicate: P) -> Result<(), ParserError> {
         loop {
             if let Some(byt) = self.peek()? {
                 if predicate(byt) {
@@ -119,7 +117,7 @@ impl<R: io::BufRead> Tokenizer<R> {
     fn consume_while<P: FnMut(u8) -> bool>(
         &mut self,
         mut predicate: P,
-    ) -> Result<Vec<u8>, ScriptError> {
+    ) -> Result<Vec<u8>, ParserError> {
         let mut vals = Vec::new();
         loop {
             if let Some(byt) = self.peek()? {
@@ -136,32 +134,47 @@ impl<R: io::BufRead> Tokenizer<R> {
         Ok(vals)
     }
 
-    fn read_token(&mut self) -> Option<Result<Token, ScriptError>> {
+    fn read_token(&mut self) -> Option<Result<Token, ParserError>> {
         // Skip whitespace
         match self.skip_while(is_whitespace) {
             Err(e) => return Some(Err(e)),
             Ok(()) => {}
         }
 
+        self.token_start = self.pos;
+
         let byt = match self.bytes.peek() {
             Some(Ok(b)) => *b,
-            Some(Err(e)) => return Some(Err(err!(self, e))),
+            Some(Err(e)) => return Some(Err(err!(self.pos, e))),
             None => return None,
         };
 
-        Some(match byt {
+        let kind = match byt {
             b'(' => self.read_block_comment(),
-            b')' => self.consume_as(Token::RParen),
+            b')' => {
+                if let Err(e) = self.consume() {
+                    return Some(Err(e.into()));
+                }
+                Ok(TokenKind::RParen)
+            }
             b'a'...b'z' | b'A'...b'Z' | b'_' => self.read_atom(),
             b'+' | b'-' | b'0'...b'9' => self.read_num(),
             b'$' => self.read_identifier(),
             b'"' => self.read_string(),
             b';' => self.read_line_comment(),
-            x => Err(err!(self, ScriptErrorKind::UnexpectedCharacter(x as char))),
-        })
+            x => Err(err!(
+                self.pos,
+                ParserErrorKind::UnexpectedCharacter(x as char)
+            )),
+        };
+
+        match kind {
+            Ok(k) => Some(Ok(Token::new(k, (self.token_start, self.pos)))),
+            Err(e) => Some(Err(e)),
+        }
     }
 
-    fn read_block_comment(&mut self) -> Result<Token, ScriptError> {
+    fn read_block_comment(&mut self) -> Result<TokenKind, ParserError> {
         self.consume()?; // Consume the '('
 
         if self.consume_if(b';')? {
@@ -185,21 +198,21 @@ impl<R: io::BufRead> Tokenizer<R> {
                 }
             }
 
-            Ok(Token::Comment)
+            Ok(TokenKind::Comment)
         } else {
             // It's just an LParen
-            Ok(Token::LParen)
+            Ok(TokenKind::LParen)
         }
     }
 
-    fn read_line_comment(&mut self) -> Result<Token, ScriptError> {
+    fn read_line_comment(&mut self) -> Result<TokenKind, ParserError> {
         self.consume()?;
 
         let next = self.expect_any()?;
         if next != b';' {
             return Err(err!(
-                self,
-                ScriptErrorKind::UnexpectedCharacter(next as char)
+                self.pos,
+                ParserErrorKind::UnexpectedCharacter(next as char)
             ));
         }
 
@@ -208,10 +221,10 @@ impl<R: io::BufRead> Tokenizer<R> {
 
         // Eat the newline itself
         self.consume()?;
-        Ok(Token::Comment)
+        Ok(TokenKind::Comment)
     }
 
-    fn read_string(&mut self) -> Result<Token, ScriptError> {
+    fn read_string(&mut self) -> Result<TokenKind, ParserError> {
         self.consume()?;
 
         let mut byts = Vec::new();
@@ -232,8 +245,8 @@ impl<R: io::BufRead> Tokenizer<R> {
                         let y = self.expect_any()?;
                         if !is_hex_digit(y) {
                             return Err(err!(
-                                self,
-                                ScriptErrorKind::UnexpectedCharacter(y as char),
+                                self.pos,
+                                ParserErrorKind::UnexpectedCharacter(y as char),
                                 "Unexpected character in hex escape",
                             ));
                         }
@@ -246,16 +259,16 @@ impl<R: io::BufRead> Tokenizer<R> {
                             }
                         } else {
                             return Err(err!(
-                                self,
-                                ScriptErrorKind::InvalidEscape,
+                                self.pos,
+                                ParserErrorKind::InvalidEscape,
                                 "Hex escape is not a valid character",
                             ));
                         }
                     }
-                    x => {
+                    _ => {
                         return Err(err!(
-                            self,
-                            ScriptErrorKind::InvalidEscape,
+                            self.pos,
+                            ParserErrorKind::InvalidEscape,
                             "Unrecognized escape sequence"
                         ))
                     }
@@ -268,31 +281,31 @@ impl<R: io::BufRead> Tokenizer<R> {
         // We don't validate that we have ASCII strings here, so we can't unwrap
         let s = match String::from_utf8(byts) {
             Ok(s) => s,
-            Err(e) => return Err(err!(self, e)),
+            Err(e) => return Err(err!(self.pos, e)),
         };
 
-        Ok(Token::Str(s))
+        Ok(TokenKind::Str(s))
     }
 
-    fn read_identifier(&mut self) -> Result<Token, ScriptError> {
+    fn read_identifier(&mut self) -> Result<TokenKind, ParserError> {
         let byts = self.consume_while(is_idchar)?;
 
         // We can unwrap the from_utf8 result because we validated each char was ASCII
         let s = String::from_utf8(byts).unwrap();
 
-        Ok(Token::Identifier(s))
+        Ok(TokenKind::Identifier(s))
     }
 
-    fn read_atom(&mut self) -> Result<Token, ScriptError> {
+    fn read_atom(&mut self) -> Result<TokenKind, ParserError> {
         let byts = self.consume_while(is_atomchar)?;
 
         // We can unwrap the from_utf8 result because we validated each char was ASCII
         let s = String::from_utf8(byts).unwrap();
 
-        Ok(Token::Atom(s))
+        Ok(TokenKind::Atom(s))
     }
 
-    fn read_num(&mut self) -> Result<Token, ScriptError> {
+    fn read_num(&mut self) -> Result<TokenKind, ParserError> {
         // Read the optional sign
         let negate = match self.peek()? {
             Some(b'+') => {
@@ -310,8 +323,8 @@ impl<R: io::BufRead> Tokenizer<R> {
         let first_digit = self.expect_any()?;
         if first_digit < b'0' || first_digit > b'9' {
             return Err(err!(
-                self,
-                ScriptErrorKind::UnexpectedCharacter(first_digit as char)
+                self.pos,
+                ParserErrorKind::UnexpectedCharacter(first_digit as char)
             ));
         }
 
@@ -335,13 +348,13 @@ impl<R: io::BufRead> Tokenizer<R> {
         // Check if this is a float
         match self.peek()? {
             Some(b'.') | Some(b'E') | Some(b'e') => {
-                Ok(Token::Float(self.read_float(negate, nat, hex)?))
+                Ok(TokenKind::Float(self.read_float(negate, nat, hex)?))
             }
-            _ => Ok(Token::Integer(if negate { -nat } else { nat })),
+            _ => Ok(TokenKind::Integer(if negate { -nat } else { nat })),
         }
     }
 
-    fn read_float(&mut self, negate: bool, nat: i64, hex: bool) -> Result<f64, ScriptError> {
+    fn read_float(&mut self, negate: bool, nat: i64, hex: bool) -> Result<f64, ParserError> {
         // Convert the natural number portion to a float
         let mut val = nat as f64;
 
@@ -373,7 +386,7 @@ impl<R: io::BufRead> Tokenizer<R> {
         Ok(if negate { -val } else { val })
     }
 
-    fn read_digits(&mut self, mut start_val: i64, hex: bool) -> Result<(i64, i32), ScriptError> {
+    fn read_digits(&mut self, mut start_val: i64, hex: bool) -> Result<(i64, i32), ParserError> {
         // Iterate over remaining digits, shifting and adding
         let mut count = 0;
         loop {
@@ -400,10 +413,13 @@ impl<R: io::BufRead> Tokenizer<R> {
         Ok((start_val, count))
     }
 
-    fn read_unicode_escape(&mut self, v: &mut Vec<u8>) -> Result<(), ScriptError> {
+    fn read_unicode_escape(&mut self, v: &mut Vec<u8>) -> Result<(), ParserError> {
         let c = self.expect_any()?;
         if c != b'{' {
-            return Err(err!(self, ScriptErrorKind::UnexpectedCharacter(c as char)));
+            return Err(err!(
+                self.pos,
+                ParserErrorKind::UnexpectedCharacter(c as char)
+            ));
         }
 
         let mut val: u32 = 0;
@@ -412,7 +428,10 @@ impl<R: io::BufRead> Tokenizer<R> {
             if c == b'}' {
                 break;
             } else if !is_hex_digit(c) {
-                return Err(err!(self, ScriptErrorKind::UnexpectedCharacter(c as char)));
+                return Err(err!(
+                    self.pos,
+                    ParserErrorKind::UnexpectedCharacter(c as char)
+                ));
             }
             val = (val * 16) + get_digit(c) as u32;
         }
@@ -426,8 +445,8 @@ impl<R: io::BufRead> Tokenizer<R> {
             Ok(())
         } else {
             Err(err!(
-                self,
-                ScriptErrorKind::InvalidEscape,
+                self.pos,
+                ParserErrorKind::InvalidEscape,
                 "Unicode escape is not a valid character",
             ))
         }
@@ -501,18 +520,18 @@ mod tests {
 
     #[test]
     pub fn single_token_lparen() {
-        assert_eq!(Some(Token::LParen), single_tok("("));
+        assert_eq!(TokenKind::LParen, single_tok("("));
     }
 
     #[test]
     pub fn single_token_rparen() {
-        assert_eq!(Some(Token::RParen), single_tok(")"));
+        assert_eq!(TokenKind::RParen, single_tok(")"));
     }
 
     #[test]
     pub fn single_token_atom() {
         assert_eq!(
-            Some(Token::Atom("h3ll0_w0r1d".to_owned())),
+            TokenKind::Atom("h3ll0_w0r1d".to_owned()),
             single_tok("h3ll0_w0r1d")
         );
     }
@@ -520,69 +539,66 @@ mod tests {
     #[test]
     pub fn single_token_string() {
         assert_eq!(
-            Some(Token::Str("this is a string".to_owned())),
+            TokenKind::Str("this is a string".to_owned()),
             single_tok("\"this is a string\"")
         );
         assert_eq!(
-            Some(Token::Str("some escape sequences: \t\n\r\"\'\\".to_owned())),
+            TokenKind::Str("some escape sequences: \t\n\r\"\'\\".to_owned()),
             single_tok("\"some escape sequences: \\t\\n\\r\\\"\\\'\\\\\"")
         );
         assert_eq!(
-            Some(Token::Str("some escape sequences: +\u{d2}".to_owned())),
+            TokenKind::Str("some escape sequences: +\u{d2}".to_owned()),
             single_tok("\"some escape sequences: \\2B\\d2\"")
         );
         assert_eq!(
-            Some(Token::Str("some escape sequences: +\u{d2}ᚠ".to_owned())),
+            TokenKind::Str("some escape sequences: +\u{d2}ᚠ".to_owned()),
             single_tok("\"some escape sequences: \\u{2B}\\u{d2}\\u{16A0}\"")
         );
     }
 
     #[test]
     pub fn single_token_identifier() {
+        assert_eq!(TokenKind::Identifier("$007".to_owned()), single_tok("$007"));
         assert_eq!(
-            Some(Token::Identifier("$007".to_owned())),
-            single_tok("$007")
-        );
-        assert_eq!(
-            Some(Token::Identifier("$h3ll0_w0rld".to_owned())),
+            TokenKind::Identifier("$h3ll0_w0rld".to_owned()),
             single_tok("$h3ll0_w0rld")
         );
         assert_eq!(
-            Some(Token::Identifier("$!#$%&`*+-./:<=>?@\\^_'|~wow".to_owned())),
+            TokenKind::Identifier("$!#$%&`*+-./:<=>?@\\^_'|~wow".to_owned()),
             single_tok("$!#$%&`*+-./:<=>?@\\^_'|~wow")
         );
     }
 
     #[test]
     pub fn single_token_int_hex() {
-        assert_eq!(Some(Token::Integer(0xA)), single_tok("0xA"));
-        assert_eq!(Some(Token::Integer(0xA)), single_tok("+0xA"));
-        assert_eq!(Some(Token::Integer(-0xA)), single_tok("-0xA"));
-        assert_eq!(Some(Token::Integer(0xA)), single_tok("0xa"));
-        assert_eq!(Some(Token::Integer(0xA)), single_tok("+0xa"));
-        assert_eq!(Some(Token::Integer(-0xA)), single_tok("-0xa"));
-        assert_eq!(Some(Token::Integer(0xAB)), single_tok("0xAB"));
-        assert_eq!(Some(Token::Integer(0xAB)), single_tok("+0xAB"));
-        assert_eq!(Some(Token::Integer(-0xAB)), single_tok("-0xAB"));
-        assert_eq!(Some(Token::Integer(0xAB)), single_tok("0xAb"));
-        assert_eq!(Some(Token::Integer(0xAB)), single_tok("+0xAb"));
-        assert_eq!(Some(Token::Integer(-0xAB)), single_tok("-0xAb"));
-        assert_eq!(Some(Token::Integer(0xAB)), single_tok("0xA_B"));
-        assert_eq!(Some(Token::Integer(0xAB)), single_tok("+0xA_B"));
-        assert_eq!(Some(Token::Integer(-0xAB)), single_tok("-0xA_B"));
+        assert_eq!(TokenKind::Integer(0xA), single_tok("0xA"));
+        assert_eq!(TokenKind::Integer(0xA), single_tok("+0xA"));
+        assert_eq!(TokenKind::Integer(-0xA), single_tok("-0xA"));
+        assert_eq!(TokenKind::Integer(0xA), single_tok("0xa"));
+        assert_eq!(TokenKind::Integer(0xA), single_tok("+0xa"));
+        assert_eq!(TokenKind::Integer(-0xA), single_tok("-0xa"));
+        assert_eq!(TokenKind::Integer(0xAB), single_tok("0xAB"));
+        assert_eq!(TokenKind::Integer(0xAB), single_tok("+0xAB"));
+        assert_eq!(TokenKind::Integer(-0xAB), single_tok("-0xAB"));
+        assert_eq!(TokenKind::Integer(0xAB), single_tok("0xAb"));
+        assert_eq!(TokenKind::Integer(0xAB), single_tok("+0xAb"));
+        assert_eq!(TokenKind::Integer(-0xAB), single_tok("-0xAb"));
+        assert_eq!(TokenKind::Integer(0xAB), single_tok("0xA_B"));
+        assert_eq!(TokenKind::Integer(0xAB), single_tok("+0xA_B"));
+        assert_eq!(TokenKind::Integer(-0xAB), single_tok("-0xA_B"));
     }
 
     #[test]
     pub fn single_token_int() {
-        assert_eq!(Some(Token::Integer(42)), single_tok("4_2"));
-        assert_eq!(Some(Token::Integer(42)), single_tok("+4_2"));
-        assert_eq!(Some(Token::Integer(-42)), single_tok("-4_2"));
-        assert_eq!(Some(Token::Integer(42)), single_tok("42"));
-        assert_eq!(Some(Token::Integer(42)), single_tok("+42"));
-        assert_eq!(Some(Token::Integer(-42)), single_tok("-42"));
-        assert_eq!(Some(Token::Integer(4)), single_tok("4"));
-        assert_eq!(Some(Token::Integer(4)), single_tok("+4"));
-        assert_eq!(Some(Token::Integer(-4)), single_tok("-4"));
+        assert_eq!(TokenKind::Integer(42), single_tok("4_2"));
+        assert_eq!(TokenKind::Integer(42), single_tok("+4_2"));
+        assert_eq!(TokenKind::Integer(-42), single_tok("-4_2"));
+        assert_eq!(TokenKind::Integer(42), single_tok("42"));
+        assert_eq!(TokenKind::Integer(42), single_tok("+42"));
+        assert_eq!(TokenKind::Integer(-42), single_tok("-42"));
+        assert_eq!(TokenKind::Integer(4), single_tok("4"));
+        assert_eq!(TokenKind::Integer(4), single_tok("+4"));
+        assert_eq!(TokenKind::Integer(-4), single_tok("-4"));
     }
 
     #[test]
@@ -594,58 +610,84 @@ mod tests {
         let ab_div_cd = ab + cd_frac;
         let p5 = (2f64).powi(5);
 
-        assert_eq!(Some(Token::Float(4.2)), single_tok("4.2"));
-        assert_eq!(Some(Token::Float(-4.2)), single_tok("-4.2"));
-        assert_eq!(Some(Token::Float(4.2e5)), single_tok("4.2e5"));
-        assert_eq!(Some(Token::Float(-4.2e5)), single_tok("-4.2e5"));
-        assert_eq!(Some(Token::Float(4.2e5)), single_tok("4.2E5"));
-        assert_eq!(Some(Token::Float(-4.2e5)), single_tok("-4.2E5"));
-        assert_eq!(Some(Token::Float(ab_div_cd)), single_tok("0xAB.CD"));
-        assert_eq!(Some(Token::Float(-ab_div_cd)), single_tok("-0xAB.CD"));
-        assert_eq!(Some(Token::Float(ab_div_cd * p5)), single_tok("0xAB.CDp5"));
-        assert_eq!(
-            Some(Token::Float(-ab_div_cd * p5)),
-            single_tok("-0xAB.CDp5")
-        );
+        assert_eq!(TokenKind::Float(4.2), single_tok("4.2"));
+        assert_eq!(TokenKind::Float(-4.2), single_tok("-4.2"));
+        assert_eq!(TokenKind::Float(4.2e5), single_tok("4.2e5"));
+        assert_eq!(TokenKind::Float(-4.2e5), single_tok("-4.2e5"));
+        assert_eq!(TokenKind::Float(4.2e5), single_tok("4.2E5"));
+        assert_eq!(TokenKind::Float(-4.2e5), single_tok("-4.2E5"));
+        assert_eq!(TokenKind::Float(ab_div_cd), single_tok("0xAB.CD"));
+        assert_eq!(TokenKind::Float(-ab_div_cd), single_tok("-0xAB.CD"));
+        assert_eq!(TokenKind::Float(ab_div_cd * p5), single_tok("0xAB.CDp5"));
+        assert_eq!(TokenKind::Float(-ab_div_cd * p5), single_tok("-0xAB.CDp5"));
     }
 
     #[test]
     pub fn single_token_line_comment() {
-        assert_eq!(Some(Token::Comment), single_tok(";; Hello, World!\n"));
-        assert_eq!(Some(Token::Comment), single_tok(";; Hello, World!\r\n"));
+        assert_eq!(TokenKind::Comment, single_tok(";; Hello, World!\n"));
+        assert_eq!(TokenKind::Comment, single_tok(";; Hello, World!\r\n"));
 
-        assert_eq!(vec![Token::Comment], parse_str(";; Hello").unwrap());
+        assert_eq!(vec![TokenKind::Comment], tokenize_str(";; Hello").unwrap());
     }
 
     #[test]
     pub fn single_token_block_comment() {
-        assert_eq!(Some(Token::Comment), single_tok("(;Hello, World!;)"));
-        assert_eq!(Some(Token::Comment), single_tok("(;Hello( World!;)"));
-        assert_eq!(Some(Token::Comment), single_tok("(;Hello; World!;)"));
-        assert_eq!(Some(Token::Comment), single_tok("(;Hello(;,;)World!;)"));
+        assert_eq!(TokenKind::Comment, single_tok("(;Hello, World!;)"));
+        assert_eq!(TokenKind::Comment, single_tok("(;Hello( World!;)"));
+        assert_eq!(TokenKind::Comment, single_tok("(;Hello; World!;)"));
+        assert_eq!(TokenKind::Comment, single_tok("(;Hello(;,;)World!;)"));
 
-        assert_eq!(Err(ScriptError::new(ScriptErrorKind::UnexpectedEof, 9)), parse_str("(; Hello"));
+        assert_eq!(
+            Err(ParserError::new(ParserErrorKind::UnexpectedEof, (9, 9))),
+            tokenize_str("(; Hello")
+        );
     }
 
-    fn single_tok(inp: &str) -> Option<Token> {
+    #[test]
+    pub fn simple_doc() {
+        let doc = ";; This is a simple WAST document
+
+(atom 1.45 \"f\\too\" (; goop ;) $id -24)";
+        let toks = tokenize_str(doc).unwrap();
+
+        assert_eq!(
+            vec![
+                TokenKind::Comment,
+                TokenKind::LParen,
+                TokenKind::Atom("atom".to_owned()),
+                TokenKind::Float(1.45),
+                TokenKind::Str("f\too".to_owned()),
+                TokenKind::Comment,
+                TokenKind::Identifier("$id".to_owned()),
+                TokenKind::Integer(-24),
+                TokenKind::RParen,
+            ],
+            toks
+        );
+    }
+
+    fn single_tok(inp: &str) -> TokenKind {
         let actual_str = format!("{} next_token", inp);
         let tok = Tokenizer::new(actual_str.as_bytes());
         let mut iter = tok.map(|t| t.unwrap());
-        let first = iter.next();
+        let first = iter.next().unwrap().kind().clone();
 
         // Check the second token to make sure the parser didn't get greedy
-        assert_eq!(Some(Token::Atom("next_token".to_owned())), iter.next());
+        assert_eq!(
+            Some(TokenKind::Atom("next_token".to_owned())),
+            iter.next().map(|t| t.kind().clone())
+        );
         assert_eq!(None, iter.next());
 
         first
     }
 
-    fn parse_str(inp: &str) -> Result<Vec<Token>, ScriptError> {
-         let tok = Tokenizer::new(inp.as_bytes());
-         let mut tokens = Vec::new();
-         for res in tok {
-             tokens.push(res?);
-         }
-         Ok(tokens)
+    fn tokenize_str(inp: &str) -> Result<Vec<TokenKind>, ParserError> {
+        let tok = Tokenizer::new(inp.as_bytes());
+        let mut tokens = Vec::new();
+        for res in tok {
+            tokens.push(res?.kind().clone());
+        }
+        Ok(tokens)
     }
 }

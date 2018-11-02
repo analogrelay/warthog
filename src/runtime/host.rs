@@ -5,7 +5,7 @@ use crate::{
     runtime::{
         ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
     },
-    synth::ModuleBuilder,
+    synth::SyntheticModule,
     Error, Value,
 };
 
@@ -79,7 +79,11 @@ impl Host {
     }
 
     /// Synthesizes a module from the provided [`ModuleBuilder`], consuming it in the process.
-    pub fn synthesize(&mut self, module: ModuleBuilder) -> Result<ModuleAddr, Error> {
+    pub fn synthesize<S: Into<String>>(
+        &mut self,
+        name: S,
+        module: SyntheticModule,
+    ) -> Result<ModuleAddr, Error> {
         let module_addr = ModuleAddr::new(self.modules.len());
 
         let mut funcs = Vec::new();
@@ -96,7 +100,7 @@ impl Host {
 
         // Register the module and return
         self.modules.push(Arc::new(ModuleInst::new(
-            module.name,
+            name.into(),
             funcs,
             Vec::new(),
             exports,
@@ -105,7 +109,11 @@ impl Host {
     }
 
     /// Instantiates the provided [`Module`], consuming it in the process.
-    pub fn instantiate(&mut self, module: Module) -> Result<ModuleAddr, Error> {
+    pub fn instantiate<S: Into<String>>(
+        &mut self,
+        name: S,
+        module: Module,
+    ) -> Result<ModuleAddr, Error> {
         let module_addr = ModuleAddr::new(self.modules.len());
 
         let mut funcs = Vec::new();
@@ -117,12 +125,8 @@ impl Host {
 
         let exports = self.export_module(&funcs, module.exports())?;
 
-        self.modules.push(Arc::new(ModuleInst::new(
-            module.name(),
-            funcs,
-            mems,
-            exports,
-        )));
+        self.modules
+            .push(Arc::new(ModuleInst::new(name.into(), funcs, mems, exports)));
         Ok(module_addr)
     }
 

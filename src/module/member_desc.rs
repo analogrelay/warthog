@@ -1,5 +1,4 @@
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
@@ -8,7 +7,7 @@ use crate::{
     utils, Error,
 };
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub enum MemberDesc {
     Function(u32),
     Table(TableType),
@@ -40,5 +39,11 @@ impl fmt::Display for MemberDesc {
             MemberDesc::Memory(x) => write!(f, "{}", x),
             MemberDesc::Global(x) => write!(f, "{}", x),
         }
+    }
+}
+
+impl fmt::Debug for MemberDesc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

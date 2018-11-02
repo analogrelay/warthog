@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{utils, Error};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct TableType {
     pub elem_type: u8,
     pub min: u32,
@@ -34,5 +34,11 @@ impl fmt::Display for TableType {
             write!(f, " {}", max)?;
         }
         write!(f, " anyfunc)")
+    }
+}
+
+impl fmt::Debug for TableType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

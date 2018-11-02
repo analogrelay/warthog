@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use crate::{module::MemberDesc, utils, Error};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Import {
     pub module: String,
     pub name: String,
@@ -29,5 +29,11 @@ impl fmt::Display for Import {
             "(import \"{}\" \"{}\" {})",
             self.module, self.name, self.description
         )
+    }
+}
+
+impl fmt::Debug for Import {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

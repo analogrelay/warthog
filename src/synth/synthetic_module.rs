@@ -1,19 +1,16 @@
 use crate::{
     module::{Export, FuncType, MemoryType},
     synth::{HostFunc, SyntheticFunc},
-    Value,
 };
 
-pub struct ModuleBuilder {
-    pub name: String,
+pub struct SyntheticModule {
     pub funcs: Vec<SyntheticFunc>,
     pub exports: Vec<Export>,
 }
 
-impl ModuleBuilder {
-    pub fn new<S: Into<String>>(name: S) -> ModuleBuilder {
-        ModuleBuilder {
-            name: name.into(),
+impl SyntheticModule {
+    pub fn new() -> SyntheticModule {
+        SyntheticModule {
             funcs: Vec::new(),
             exports: Vec::new(),
         }

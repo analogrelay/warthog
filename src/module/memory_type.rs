@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use crate::{utils, Error};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct MemoryType {
     pub min: u32,
     pub max: Option<u32>,
@@ -26,5 +26,11 @@ impl fmt::Display for MemoryType {
             write!(f, " {}", max)?;
         }
         write!(f, ")")
+    }
+}
+
+impl fmt::Debug for MemoryType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

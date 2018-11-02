@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::ValType, Error};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct GlobalType {
     pub valtype: ValType,
     pub mutable: bool,
@@ -31,5 +31,11 @@ impl fmt::Display for GlobalType {
             write!(f, "{}", self.valtype)?;
         }
         write!(f, ")")
+    }
+}
+
+impl fmt::Debug for GlobalType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

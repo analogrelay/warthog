@@ -5,7 +5,7 @@ use crate::{
     utils, Error,
 };
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Export {
     pub name: String,
     pub description: MemberDesc,
@@ -36,5 +36,11 @@ impl Export {
 impl fmt::Display for Export {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "(export \"{}\" {})", self.name, self.description)
+    }
+}
+
+impl fmt::Debug for Export {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

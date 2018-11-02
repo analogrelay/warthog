@@ -4,7 +4,7 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::Instruction, utils, Error};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct DataItem {
     pub index: u32,
     pub expr: Vec<Instruction>,
@@ -54,5 +54,11 @@ impl fmt::Display for DataItem {
             }
         }
         write!(f, "\")")
+    }
+}
+
+impl fmt::Debug for DataItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

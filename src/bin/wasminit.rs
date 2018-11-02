@@ -6,7 +6,7 @@ use warthog::{
     module::{FuncType, Module, ValType},
     reader::Reader,
     runtime::{FuncImpl, Host, MemInst, ModuleAddr, ModuleInst},
-    synth::ModuleBuilder,
+    synth::SyntheticModule,
 };
 
 fn main() {
@@ -38,20 +38,20 @@ pub fn run(file: &Path) {
         // Close the file once we're done loading
         let file = fs::File::open(file).unwrap();
         let reader = Reader::new(file);
-        Module::load(name, reader).unwrap()
+        Module::load(reader).unwrap()
     };
 
     // Synthesize the 'env' module
-    let env = ModuleBuilder::new("env")
+    let env = SyntheticModule::new()
         .func(
             "print",
             FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            |_, _| panic!("'print' function not implemented"))
-        .mem("memory", 256, Some(256));
-    host.synthesize(env).unwrap();
+            |_, _| panic!("'print' function not implemented"),
+        ).mem("memory", 256, Some(256));
+    host.synthesize("env", env).unwrap();
 
     // Instantiate the module
-    let entry_point = host.instantiate(module).unwrap();
+    let entry_point = host.instantiate(name, module).unwrap();
 
     // Dump the host
     println!("Host information:");

@@ -1,7 +1,7 @@
-use std::io;
+use std::{fmt, io};
 
 use crate::{
-    module::{DataItem, Export, FuncBody, FuncType, Import},
+    module::{DataItem, Export, FuncBody, FuncType, Import, ModuleBuilder},
     reader::{
         CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader, SectionId,
         TypeSection,
@@ -10,8 +10,8 @@ use crate::{
 };
 
 /// Represents the static information associated with a WebAssembly Module
+#[derive(PartialEq)]
 pub struct Module {
-    name: String,
     types: Vec<FuncType>,
     imports: Vec<Import>,
     funcs: Vec<u32>,
@@ -21,11 +21,19 @@ pub struct Module {
 }
 
 impl Module {
+    pub fn from_builder(builder: ModuleBuilder) -> Module {
+        Module {
+            types: builder.types,
+            imports: builder.imports,
+            funcs: builder.funcs,
+            exports: builder.exports,
+            code: builder.code,
+            data: builder.data,
+        }
+    }
+
     /// Loads a module up from the provided reader, consuming the reader in the process
-    pub fn load<R: io::Read + io::Seek, S: Into<String>>(
-        name: S,
-        mut r: Reader<R>,
-    ) -> Result<Module, Error> {
+    pub fn load<R: io::Read + io::Seek>(mut r: Reader<R>) -> Result<Module, Error> {
         // Read and validate the header
         let header = r.read_module_header()?;
 
@@ -60,7 +68,6 @@ impl Module {
         }
 
         Ok(Module {
-            name: name.into(),
             types: types.unwrap_or_else(|| Vec::new()),
             imports: imports.unwrap_or_else(|| Vec::new()),
             funcs: funcs.unwrap_or_else(|| Vec::new()),
@@ -68,10 +75,6 @@ impl Module {
             code: code.unwrap_or_else(|| Vec::new()),
             data: data.unwrap_or_else(|| Vec::new()),
         })
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
     }
 
     pub fn types(&self) -> &Vec<FuncType> {
@@ -127,4 +130,33 @@ fn load_code<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<FuncBody>, Error> {
 fn load_data<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<DataItem>, Error> {
     let section: DataSection = r.read_section()?;
     Ok(section.data)
+}
+
+impl fmt::Display for Module {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(module")?;
+        for typ in self.types().iter() {
+            write!(f, " (type {})", typ);
+        }
+        for (func_idx, code) in self.funcs().iter().zip(self.code().iter()) {
+            let func_typ = &self.types()[*func_idx as usize];
+            write!(f, " (func {} {})", func_typ, code);
+        }
+        for import in self.imports().iter() {
+            write!(f, " {}", import);
+        }
+        for export in self.exports().iter() {
+            write!(f, " {}", export);
+        }
+        for data in self.data().iter() {
+            write!(f, " {}", data);
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Module {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
 }

@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use crate::{module::ValType, utils, Error};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Local {
     pub count: u32,
     pub typ: ValType,
@@ -24,5 +24,11 @@ impl fmt::Display for Local {
             write!(f, " {}", self.typ)?;
         }
         write!(f, ")")
+    }
+}
+
+impl fmt::Debug for Local {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

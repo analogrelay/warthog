@@ -38,21 +38,32 @@ impl FuncType {
 
 impl fmt::Display for FuncType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(func")?;
+        let mut start = true;
         if self.parameters.len() > 0 {
-            write!(f, " (param")?;
+            write!(f, "(param")?;
+            start = false;
             for param in self.parameters.iter() {
                 write!(f, " {}", param)?;
             }
             write!(f, ")")?;
         }
         if self.results.len() > 0 {
-            write!(f, " (result")?;
+            if start {
+                write!(f, "(result")?;
+            } else {
+                write!(f, " (result")?;
+            }
             for res in self.results.iter() {
                 write!(f, " {}", res)?;
             }
             write!(f, ")")?;
         }
-        write!(f, ")")
+        Ok(())
+    }
+}
+
+impl fmt::Debug for FuncType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

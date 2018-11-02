@@ -3,7 +3,7 @@ use crate::{runtime::ModuleAddr, Value};
 pub struct StackFrame {
     values: Vec<Value>,
     module: ModuleAddr,
-    locals: Vec<Value>,
+    _locals: Vec<Value>,
 }
 
 impl StackFrame {
@@ -11,7 +11,7 @@ impl StackFrame {
         StackFrame {
             values: Vec::new(),
             module,
-            locals,
+            _locals: locals,
         }
     }
 

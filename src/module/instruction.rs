@@ -27,11 +27,14 @@ impl Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
-            Instruction::Const(Value::Integer64(x)) => write!(f, "i64.const {}", x),
-            Instruction::Const(Value::Float32(x)) => write!(f, "f32.const {}", x),
-            Instruction::Const(Value::Float64(x)) => write!(f, "f64.const {}", x),
-            Instruction::Call(x) => write!(f, "call {}", x),
+            Instruction::Const(x) => write!(f, "({}.const {})", x.typ(), x),
+            Instruction::Call(x) => write!(f, "(call {})", x),
         }
+    }
+}
+
+impl fmt::Debug for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
