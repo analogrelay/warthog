@@ -1,7 +1,5 @@
 use std::io;
 
-use crate::parser::TokenKind;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParserError(ParserErrorKind, (usize, usize), Option<String>);
 
@@ -41,7 +39,6 @@ pub enum ParserErrorKind {
     UnexpectedEof,
     IoError(io::ErrorKind),
     UnexpectedCharacter(char),
-    UnexpectedToken(TokenKind),
     UnexpectedAtom(String),
 }
 

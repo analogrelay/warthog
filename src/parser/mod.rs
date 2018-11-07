@@ -13,14 +13,12 @@ macro_rules! err {
     };
 }
 
-mod parser;
 mod parser_error;
 mod script_command;
-mod token;
+mod sexpr;
 
 pub use self::parser_error::{ParserError, ParserErrorKind};
 pub use self::script_command::ScriptCommand;
-pub use self::token::{Token, TokenKind};
 
 trait ToRange {
     fn into_range(self) -> (usize, usize);
