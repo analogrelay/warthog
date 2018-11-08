@@ -1,7 +1,7 @@
 use std::io;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ParserError(ParserErrorKind, (usize, usize), Option<String>);
+pub struct ParserError(pub ParserErrorKind, pub (usize, usize), pub Option<String>);
 
 impl ParserError {
     pub fn new<I: Into<ParserErrorKind>>(err: I, range: (usize, usize)) -> ParserError {
