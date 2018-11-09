@@ -31,5 +31,18 @@
             "environment": [],
             "externalConsole": true
         },
+        {
+            "name": "(Windows; Debug) ad-hoc test",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/debug/warthog-fbb90d5e1badeeb4.exe",
+            "args": [
+                "parser::parser::test::error_bare_int"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true
+        },
     ]
 }

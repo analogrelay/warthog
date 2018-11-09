@@ -8,12 +8,12 @@ pub struct MemInst {
 
 impl MemInst {
     pub fn from_type(mem_type: &MemoryType) -> Result<MemInst, Error> {
-        match mem_type.max {
+        match mem_type.max() {
             Some(max) => MemInst::new(
-                mem_type.min as usize * PAGE_SIZE,
+                mem_type.min() as usize * PAGE_SIZE,
                 Some(max as usize * PAGE_SIZE),
             ),
-            None => MemInst::new(mem_type.min as usize * PAGE_SIZE, None),
+            None => MemInst::new(mem_type.min() as usize * PAGE_SIZE, None),
         }
     }
 

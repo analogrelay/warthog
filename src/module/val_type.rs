@@ -4,13 +4,14 @@ use byteorder::ReadBytesExt;
 
 use crate::Error;
 
-#[derive(Clone, PartialEq, Eq)]
+#[repr(u8)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum ValType {
-    Nil,
-    Integer32,
-    Integer64,
-    Float32,
-    Float64,
+    Nil = 0x00,
+    Integer32 = 0x7F,
+    Integer64 = 0x7E,
+    Float32 = 0x7D,
+    Float64 = 0x7C,
 }
 
 impl ValType {

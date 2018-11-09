@@ -4,11 +4,17 @@ use byteorder::ReadBytesExt;
 
 use crate::{utils, Error};
 
+#[repr(u8)]
+#[derive(Copy, PartialEq, Clone)]
+pub enum ElemType {
+    AnyFunc = 0x70,
+}
+
 #[derive(PartialEq, Clone)]
 pub struct TableType {
-    pub elem_type: u8,
-    pub min: u32,
-    pub max: Option<u32>,
+    elem_type: ElemType,
+    min: usize,
+    max: Option<usize>,
 }
 
 impl TableType {
@@ -19,11 +25,23 @@ impl TableType {
         } else {
             let (min, max) = utils::read_limits(reader)?;
             Ok(TableType {
-                elem_type,
+                elem_type: ElemType::AnyFunc,
                 min,
                 max,
             })
         }
+    }
+
+    pub fn elem_type(&self) -> ElemType {
+        self.elem_type
+    }
+
+    pub fn min(&self) -> usize {
+        self.min
+    }
+
+    pub fn max(&self) -> Option<usize> {
+        self.max
     }
 }
 

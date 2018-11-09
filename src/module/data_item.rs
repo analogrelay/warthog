@@ -6,17 +6,29 @@ use crate::{module::Instruction, utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct DataItem {
-    pub index: u32,
-    pub expr: Vec<Instruction>,
-    pub init: Vec<u8>,
+    index: usize,
+    expr: Vec<Instruction>,
+    init: Vec<u8>,
 }
 
 impl DataItem {
     pub fn read<R: io::Read>(reader: &mut R) -> Result<DataItem, Error> {
-        let index = utils::read_leb128_u32(reader)?;
+        let index = utils::read_leb128_u32(reader)? as usize;
         let expr = utils::read_instructions(reader)?;
         let init = utils::read_vec(reader, |r| Ok(r.read_u8()?))?;
         Ok(DataItem { index, expr, init })
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn expr(&self) -> &[Instruction] {
+        &self.expr
+    }
+
+    pub fn init(&self) -> &[u8] {
+        &self.init
     }
 }
 

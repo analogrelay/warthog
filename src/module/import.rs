@@ -4,9 +4,9 @@ use crate::{module::MemberDesc, utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct Import {
-    pub module: String,
-    pub name: String,
-    pub description: MemberDesc,
+    module: String,
+    name: String,
+    description: MemberDesc,
 }
 
 impl Import {
@@ -19,6 +19,18 @@ impl Import {
             name,
             description,
         })
+    }
+
+    pub fn module(&self) -> &str {
+        &self.module
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn description(&self) -> &MemberDesc {
+        &self.description
     }
 }
 

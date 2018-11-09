@@ -19,11 +19,11 @@ impl SyntheticModule {
     pub fn func<S: Into<String>>(mut self, name: S, typ: FuncType, imp: HostFunc) -> Self {
         let idx = self.funcs.len();
         self.funcs.push(SyntheticFunc::new(typ, imp));
-        self.exports.push(Export::func(name, idx as u32));
+        self.exports.push(Export::func(name, idx));
         self
     }
 
-    pub fn mem<S: Into<String>>(mut self, name: S, min_size: u32, max_size: Option<u32>) -> Self {
+    pub fn mem<S: Into<String>>(mut self, name: S, min_size: usize, max_size: Option<usize>) -> Self {
         self.exports
             .push(Export::mem(name, MemoryType::new(min_size, max_size)));
         self

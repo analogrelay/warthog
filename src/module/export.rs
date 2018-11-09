@@ -7,12 +7,12 @@ use crate::{
 
 #[derive(PartialEq, Clone)]
 pub struct Export {
-    pub name: String,
-    pub description: MemberDesc,
+    name: String,
+    description: MemberDesc,
 }
 
 impl Export {
-    pub fn func<S: Into<String>>(name: S, idx: u32) -> Export {
+    pub fn func<S: Into<String>>(name: S, idx: usize) -> Export {
         Export {
             name: name.into(),
             description: MemberDesc::Function(idx),
@@ -30,6 +30,14 @@ impl Export {
         let name = utils::read_name(reader)?;
         let description = MemberDesc::read(reader)?;
         Ok(Export { name, description })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn description(&self) -> &MemberDesc {
+        &self.description
     }
 }
 

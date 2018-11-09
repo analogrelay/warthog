@@ -6,26 +6,20 @@ use crate::{module::ValType, utils, Error};
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct FuncType {
-    pub parameters: Vec<ValType>,
-    pub results: Vec<ValType>,
+    params: Vec<ValType>,
+    results: Vec<ValType>,
 }
 
 impl FuncType {
     pub fn empty() -> FuncType {
         FuncType {
-            parameters: Vec::new(),
+            params: Vec::new(),
             results: Vec::new(),
         }
     }
 
-    pub fn new<P: Into<Vec<ValType>>, R: Into<Vec<ValType>>>(
-        parameters: P,
-        results: R,
-    ) -> FuncType {
-        FuncType {
-            parameters: parameters.into(),
-            results: results.into(),
-        }
+    pub fn new(params: Vec<ValType>, results: Vec<ValType>) -> FuncType {
+        FuncType { params, results }
     }
 
     pub fn read<R: io::Read>(reader: &mut R) -> Result<FuncType, Error> {
@@ -33,23 +27,28 @@ impl FuncType {
         if type_code != 0x60 {
             Err(Error::InvalidModule)
         } else {
-            let parameters = utils::read_vec(reader, |r| ValType::read(r))?;
+            let params = utils::read_vec(reader, |r| ValType::read(r))?;
             let results = utils::read_vec(reader, |r| ValType::read(r))?;
-            Ok(FuncType {
-                parameters,
-                results,
-            })
+            Ok(FuncType { params, results })
         }
+    }
+
+    pub fn params(&self) -> &[ValType] {
+        &self.params
+    }
+
+    pub fn results(&self) -> &[ValType] {
+        &self.results
     }
 }
 
 impl fmt::Display for FuncType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut start = true;
-        if self.parameters.len() > 0 {
+        if self.params().len() > 0 {
             write!(f, "(param")?;
             start = false;
-            for param in self.parameters.iter() {
+            for param in self.params().iter() {
                 write!(f, " {}", param)?;
             }
             write!(f, ")")?;
@@ -60,7 +59,7 @@ impl fmt::Display for FuncType {
             } else {
                 write!(f, " (result")?;
             }
-            for res in self.results.iter() {
+            for res in self.results().iter() {
                 write!(f, " {}", res)?;
             }
             write!(f, ")")?;

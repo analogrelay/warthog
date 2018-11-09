@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, collections::VecDeque};
 
 use crate::parser::{ParserError, ParserErrorKind};
 
@@ -19,7 +19,14 @@ impl SExpr {
     }
 
     pub fn end(&self) -> usize {
-        self.1
+        self.2
+    }
+
+    pub fn keyword(&self) -> Option<&str> {
+        match self {
+            SExpr(SVal::Atom(ref s), _, _) => Some(s),
+            _ => None,
+        }
     }
 }
 
@@ -30,7 +37,13 @@ pub enum SVal {
     Identifier(String),
     Str(String),
     Atom(String),
-    Expr(Vec<SExpr>),
+    Expr(VecDeque<SExpr>),
+}
+
+impl SVal {
+    pub fn new_expr<I: IntoIterator<Item=SExpr>>(content: I) -> SVal {
+        SVal::Expr(content.into_iter().collect())
+    }
 }
 
 pub struct SExprParser<R: io::Read> {
@@ -84,11 +97,10 @@ impl<R: io::Read> SExprParser<R> {
     fn read_expr(&mut self) -> Result<SExpr, ParserError> {
         // NOTE: The '(' has already been consumed!
         let start = self.pos - 1;
-        let mut exprs = Vec::new();
+        let mut exprs = VecDeque::new();
         loop {
-            // This is a very cheat-y way to do this...
             if let Some(exp) = self.parse_expr(true)? {
-                exprs.push(exp);
+                exprs.push_back(exp);
             } else {
                 // End of the expression
                 self.consume()?;
@@ -544,7 +556,7 @@ fn is_idchar(b: u8) -> bool {
 
 #[inline]
 fn is_atomchar(b: u8) -> bool {
-    (b >= b'a' && b <= b'z') || (b >= b'A' && b <= b'Z') || (b >= b'0' && b <= b'9') || b == b'_'
+    (b >= b'a' && b <= b'z') || (b >= b'A' && b <= b'Z') || (b >= b'0' && b <= b'9') || b == b'_' || b == b'.'
 }
 
 #[inline]
@@ -561,6 +573,10 @@ mod tests {
         assert_eq!(
             SExpr::new(SVal::Atom("h3ll0_w0r1d".to_owned()), 0, 10),
             single_expr("h3ll0_w0r1d")
+        );
+        assert_eq!(
+            SExpr::new(SVal::Atom("a.b.c.d".to_owned()), 0, 6),
+            single_expr("a.b.c.d")
         );
     }
 
@@ -688,17 +704,17 @@ mod tests {
 
     #[test]
     pub fn exprs() {
-        assert_eq!(SExpr::new(SVal::Expr(vec![]), 0, 1), single_expr("()"));
+        assert_eq!(SExpr::new(SVal::new_expr(vec![]), 0, 1), single_expr("()"));
         assert_eq!(
-            SExpr::new(SVal::Expr(vec![SExpr::new(SVal::Integer(42), 1, 2)]), 0, 3),
+            SExpr::new(SVal::new_expr(vec![SExpr::new(SVal::Integer(42), 1, 2)]), 0, 3),
             single_expr("(42)")
         );
         assert_eq!(
             SExpr::new(
-                SVal::Expr(vec![
+                SVal::new_expr(vec![
                     SExpr::new(SVal::Atom("module".to_owned()), 1, 6),
                     SExpr::new(
-                        SVal::Expr(vec![
+                        SVal::new_expr(vec![
                             SExpr::new(SVal::Atom("func".to_owned()), 9, 12),
                             SExpr::new(SVal::Identifier("$abc".to_owned()), 43, 46),
                             SExpr::new(SVal::Float(4.2), 48, 50)

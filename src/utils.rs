@@ -33,14 +33,14 @@ pub fn read_name<R: io::Read>(r: &mut R) -> Result<String, Error> {
     Ok(String::from_utf8(byts)?)
 }
 
-pub fn read_limits<R: io::Read>(r: &mut R) -> Result<(u32, Option<u32>), Error> {
+pub fn read_limits<R: io::Read>(r: &mut R) -> Result<(usize, Option<usize>), Error> {
     let kind = r.read_u8()?;
-    let min = read_leb128_u32(r)?;
+    let min = read_leb128_u32(r)? as usize;
 
     match kind {
         0x00 => Ok((min, None)),
         0x01 => {
-            let max = read_leb128_u32(r)?;
+            let max = read_leb128_u32(r)? as usize;
             Ok((min, Some(max)))
         }
         _ => Err(Error::InvalidModule),

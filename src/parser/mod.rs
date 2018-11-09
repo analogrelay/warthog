@@ -16,9 +16,11 @@ macro_rules! err {
 mod parser_error;
 mod script_command;
 mod sexpr;
+mod parser;
 
 pub use self::parser_error::{ParserError, ParserErrorKind};
 pub use self::script_command::ScriptCommand;
+pub use self::parser::parse;
 
 trait ToRange {
     fn into_range(self) -> (usize, usize);

@@ -137,16 +137,16 @@ impl Host {
     ) -> Result<Vec<ExportInst>, Error> {
         let mut exports = Vec::new();
         for export in module_exports {
-            match export.description {
+            match export.description() {
                 MemberDesc::Function(func_idx) => {
-                    let func_addr = funcs[func_idx as usize];
-                    let inst = ExportInst::func(export.name.as_str(), func_addr);
+                    let func_addr = funcs[*func_idx as usize];
+                    let inst = ExportInst::func(export.name(), func_addr);
                     exports.push(inst);
                 }
                 MemberDesc::Memory(ref mem_type) => {
                     let mem_addr = MemAddr::new(self.mems.len());
                     self.mems.push(Arc::new(MemInst::from_type(mem_type)?));
-                    let inst = ExportInst::mem(export.name.as_str(), mem_addr);
+                    let inst = ExportInst::mem(export.name(), mem_addr);
                     exports.push(inst);
                 }
                 _ => { /* skip */ }
@@ -184,15 +184,15 @@ impl Host {
         mems: &mut Vec<MemAddr>,
     ) -> Result<(), Error> {
         for import in module.imports() {
-            if let Some(module_addr) = self.find_module(&import.module) {
-                let export = self.resolve_import(module_addr, &import.name)?;
+            if let Some(module_addr) = self.find_module(&import.module()) {
+                let export = self.resolve_import(module_addr, &import.name())?;
                 match export.value() {
                     ExternVal::Func(func_addr) => funcs.push(func_addr.clone()),
                     ExternVal::Mem(mem_addr) => mems.push(mem_addr.clone()),
                 }
             } else {
                 return Err(Error::ModuleNotFound {
-                    module: import.module.to_owned(),
+                    module: import.module().to_owned(),
                 });
             }
         }
@@ -202,25 +202,25 @@ impl Host {
     fn instantiate_data(&mut self, module: &Module, mems: &Vec<MemAddr>) -> Result<(), Error> {
         for data in module.data() {
             // Offset must be a constant expression
-            let offset = match data.expr.as_slice() {
+            let offset = match data.expr() {
                 [Instruction::Const(Value::Integer32(val))] => *val as usize,
                 _ => return Err(Error::InvalidModule),
             };
 
             // Find an initialize the memory
-            let mem_addr = mems[data.index as usize];
+            let mem_addr = mems[data.index() as usize];
             let mem_inst = &mut self.mems[mem_addr.val()];
             let mut mem = mem_inst.memory();
 
             // Bounds check
-            let end = offset + data.init.len();
+            let end = offset + data.init().len();
             if (offset + end) > mem.len() {
                 return Err(Error::InvalidModule);
             }
 
             // Safe because instatiation is single-threaded.
             unsafe {
-                mem.data()[offset..end].copy_from_slice(&data.init);
+                mem.data()[offset..end].copy_from_slice(data.init());
             }
         }
         Ok(())

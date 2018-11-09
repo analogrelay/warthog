@@ -24,12 +24,12 @@ pub struct Module {
 impl Module {
     pub fn from_builder(builder: ModuleBuilder) -> Module {
         Module {
-            types: Vec::new(),
-            imports: Vec::new(),
-            funcs: Vec::new(),
-            exports: Vec::new(),
-            code: Vec::new(),
-            data: Vec::new(),
+            types: builder.types,
+            imports: builder.imports,
+            funcs: builder.funcs,
+            exports: builder.exports,
+            code: builder.code,
+            data: builder.data,
         }
     }
 

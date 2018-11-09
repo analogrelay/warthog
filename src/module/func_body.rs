@@ -1,23 +1,50 @@
 use std::{fmt, io};
 
 use crate::{
-    module::{Instruction, Local},
+    module::{Instruction, ValType},
     utils, Error,
 };
 
 #[derive(PartialEq, Clone)]
 pub struct FuncBody {
-    pub locals: Vec<Local>,
-    pub body: Vec<Instruction>,
+    locals: Vec<ValType>,
+    body: Vec<Instruction>,
 }
 
 impl FuncBody {
+    pub fn new(locals: Vec<ValType>, body: Vec<Instruction>) -> FuncBody {
+        FuncBody {
+            locals,
+            body,
+        }
+    }
+
     pub fn read<R: io::Read>(reader: &mut R) -> Result<FuncBody, Error> {
+        utils::read_leb128_u32(reader)?;
+
+        // Locals is a vec, but each item also indicates repeated locals, so we
+        // don't use read_vec because we want the expanded form
         let size = utils::read_leb128_u32(reader)?;
-        let locals = utils::read_vec(reader, |r| Local::read(r))?;
+        let mut locals = Vec::new();
+        for _ in 0..size {
+            let count = utils::read_leb128_u32(reader)?;
+            let typ = ValType::read(reader)?;
+            for _ in 0..count {
+                locals.push(typ);
+            }
+        }
+
         let body = utils::read_instructions(reader)?;
 
         Ok(FuncBody { locals, body })
+    }
+
+    pub fn locals(&self) -> &[ValType] {
+        &self.locals
+    }
+
+    pub fn body(&self) -> &[Instruction] {
+        &self.body
     }
 }
 

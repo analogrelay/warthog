@@ -17,7 +17,7 @@ impl SyntheticFunc {
         let values: Vec<_> = {
             let stack = thread.stack_mut();
             self.typ
-                .parameters
+                .params()
                 .iter()
                 .rev()
                 .map(|t| {

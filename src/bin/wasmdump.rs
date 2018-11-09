@@ -81,11 +81,11 @@ fn dump_code_section<R: io::Read>(r: &mut Reader<R>) {
     let section: CodeSection = r.read_section().unwrap();
     for (i, item) in section.code.iter().enumerate() {
         print!("* {:04}", i);
-        for local in item.locals.iter() {
+        for local in item.locals().iter() {
             print!(" {}", local);
         }
         println!();
-        for inst in item.body.iter() {
+        for inst in item.body().iter() {
             println!("     {}", inst);
         }
     }

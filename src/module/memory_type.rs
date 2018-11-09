@@ -4,18 +4,26 @@ use crate::{utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct MemoryType {
-    pub min: u32,
-    pub max: Option<u32>,
+    min: usize,
+    max: Option<usize>,
 }
 
 impl MemoryType {
-    pub fn new(min: u32, max: Option<u32>) -> MemoryType {
+    pub fn new(min: usize, max: Option<usize>) -> MemoryType {
         MemoryType { min, max }
     }
 
     pub fn read<R: io::Read>(reader: &mut R) -> Result<MemoryType, Error> {
         let (min, max) = utils::read_limits(reader)?;
         Ok(MemoryType { min, max })
+    }
+
+    pub fn min(&self) -> usize {
+        self.min
+    }
+
+    pub fn max(&self) -> Option<usize> {
+        self.max
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(PartialEq, Clone)]
 pub enum MemberDesc {
-    Function(u32),
+    Function(usize),
     Table(TableType),
     Memory(MemoryType),
     Global(GlobalType),
@@ -20,7 +20,7 @@ impl MemberDesc {
         let code = reader.read_u8()?;
         match code {
             0x00 => {
-                let type_id = utils::read_leb128_u32(reader)?;
+                let type_id = utils::read_leb128_u32(reader)? as usize;
                 Ok(MemberDesc::Function(type_id))
             }
             0x01 => Ok(MemberDesc::Table(TableType::read(reader)?)),

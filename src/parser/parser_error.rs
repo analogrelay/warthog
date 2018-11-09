@@ -37,9 +37,10 @@ pub enum ParserErrorKind {
     InvalidUtf8,
     InvalidEscape,
     UnexpectedEof,
+    UnexpectedToken,
     IoError(io::ErrorKind),
-    UnexpectedCharacter(char),
     UnexpectedAtom(String),
+    UnexpectedCharacter(char),
 }
 
 impl From<std::io::Error> for ParserErrorKind {

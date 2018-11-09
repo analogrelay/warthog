@@ -37,7 +37,7 @@ impl Thread {
             FuncImpl::Local { module, code, .. } => {
                 // TODO: Initialize locals
                 self.stack.enter(module.clone(), Vec::new());
-                self.run(code.body.as_slice());
+                self.run(code.body());
             }
         };
     }
