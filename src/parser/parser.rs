@@ -2,7 +2,7 @@ use std::{collections::VecDeque, io};
 
 use crate::{
     builder::{FuncBuilder, ModuleBuilder},
-    module::ValType,
+    module::{Instruction, ValType},
     parser::{
         sexpr::{SExpr, SExprParser, SVal},
         ParserError, ParserErrorKind, ScriptCommand,
@@ -87,7 +87,18 @@ fn parse_typeuse(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(
     parse_func_type_segment(rest, "param", &mut func.params);
     parse_func_type_segment(rest, "result", &mut func.results);
 
+    // TODO: Locals
+
+    parse_instructions(rest, &mut func.body)?;
+
     Ok(())
+}
+
+fn parse_instructions(
+    rest: &mut VecDeque<SExpr>,
+    list: &mut Vec<Instruction>,
+) -> Result<(), ParserError> {
+    unimplemented!();
 }
 
 fn parse_func_type_segment(
@@ -111,13 +122,13 @@ fn parse_func_type_segment(
                         (start, end),
                         ParserErrorKind::UnexpectedAtom(typ),
                         msg
-                    ))
+                    ));
                 }
             };
             list.push(valtyp);
         }
     }
-    
+
     Ok(())
 }
 
