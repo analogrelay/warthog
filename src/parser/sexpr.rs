@@ -28,6 +28,50 @@ impl SExpr {
             _ => None,
         }
     }
+
+    pub fn consume_atom(self) -> Result<(String, usize, usize), ParserError> {
+        match self {
+            SExpr(SVal::Atom(a), start, end) => Ok((a, start, end)),
+            SExpr(ref x, start, end) => Err(err!(
+                (start, end),
+                ParserErrorKind::UnexpectedToken,
+                format!("Expected an Atom, but found: '{:?}'", x)
+            ))
+        }
+    }
+
+    pub fn consume_int(self) -> Result<(i64, usize, usize), ParserError> {
+        match self {
+            SExpr(SVal::Integer(i), start, end) => Ok((i, start, end)),
+            SExpr(ref x, start, end) => Err(err!(
+                (start, end),
+                ParserErrorKind::UnexpectedToken,
+                format!("Expected an Integer, but found: '{:?}'", x)
+            ))
+        }
+    }
+
+    pub fn consume_str(self) -> Result<(String, usize, usize), ParserError> {
+        match self {
+            SExpr(SVal::Str(s), start, end) => Ok((s, start, end)),
+            SExpr(ref x, start, end) => Err(err!(
+                (start, end),
+                ParserErrorKind::UnexpectedToken,
+                format!("Expected a Str, but found: '{:?}'", x)
+            ))
+        }
+    }
+
+    pub fn consume_expr(self) -> Result<(VecDeque<SExpr>, usize, usize), ParserError> {
+        match self {
+            SExpr(SVal::Expr(items), start, end) => Ok((items, start, end)),
+            SExpr(ref x, start, end) => Err(err!(
+                (start, end),
+                ParserErrorKind::UnexpectedToken,
+                format!("Expected an Expr, but found: '{:?}'", x)
+            ))
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

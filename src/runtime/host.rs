@@ -56,14 +56,14 @@ impl Host {
             .map(|a| ModuleAddr::new(a))
     }
 
-    pub fn resolve_mem(&self, module: ModuleAddr, mem_idx: u32) -> MemAddr {
+    pub fn resolve_mem(&self, module: ModuleAddr, mem_idx: usize) -> MemAddr {
         let module_inst = &self.modules[module.val()];
-        module_inst.get_mem(mem_idx as usize)
+        module_inst.get_mem(mem_idx)
     }
 
-    pub fn resolve_func(&self, module: ModuleAddr, func_idx: u32) -> FuncAddr {
+    pub fn resolve_func(&self, module: ModuleAddr, func_idx: usize) -> FuncAddr {
         let module_inst = &self.modules[module.val()];
-        module_inst.get_func(func_idx as usize)
+        module_inst.get_func(func_idx)
     }
 
     pub fn resolve_import(&self, module: ModuleAddr, name: &str) -> Result<&ExportInst, Error> {

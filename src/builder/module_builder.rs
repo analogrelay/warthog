@@ -1,12 +1,12 @@
 use crate::{
-    builder::{BuilderError, FuncBuilder, TypeUse},
+    builder::FuncBuilder,
     module::{DataItem, Export, FuncBody, FuncType, Import, Module},
 };
 
 pub struct ModuleBuilder {
     pub types: Vec<FuncType>,
     pub imports: Vec<Import>,
-    pub funcs: Vec<u32>,
+    pub funcs: Vec<usize>,
     pub exports: Vec<Export>,
     pub code: Vec<FuncBody>,
     pub data: Vec<DataItem>,
@@ -24,18 +24,25 @@ impl ModuleBuilder {
         }
     }
 
-    pub fn func(mut self, mut func: FuncBuilder) -> Result<Self, BuilderError> {
+    pub fn add_func(&mut self, mut func: FuncBuilder) {
         // Check if we need to add a type and get the type id
-        let typ = func.typ.take().ok_or(BuilderError::IncompleteFunction(
-            "Function is missing a type.".into(),
-        ))?;
-        let type_id = match typ {
-            TypeUse::Inline(typ) => {
-                let id = self.types.len();
-                self.types.push(typ);
-                id as u32
+        let type_id = match func.type_id {
+            Some(id) => id,
+            None => {
+                // Create a functype
+                let typ = FuncType::new(func.params, func.results);
+
+                // Check if a matching one already exists
+                match self.types.iter().position(|f| f == &typ) {
+                    Some(id) => id,
+                    None => {
+                        // If not, add one
+                        let id = self.types.len();
+                        self.types.push(typ);
+                        id
+                    }
+                }
             }
-            TypeUse::Ref(x) => x as u32,
         };
 
         // Add the func to the list
@@ -51,11 +58,15 @@ impl ModuleBuilder {
         if let Some(export) = func.export {
             self.exports.push(Export::func(export, func_id));
         }
-
-        Ok(self)
     }
 
-    pub fn build(mut self) -> Module {
+    /// Adds a function to the builder (chaining variant)
+    pub fn func(mut self, mut func: FuncBuilder) -> Self {
+        self.add_func(func);
+        self
+    }
+
+    pub fn build(self) -> Module {
         Module::from_builder(self)
     }
 }

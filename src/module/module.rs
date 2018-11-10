@@ -15,7 +15,7 @@ use crate::{
 pub struct Module {
     types: Vec<FuncType>,
     imports: Vec<Import>,
-    funcs: Vec<u32>,
+    funcs: Vec<usize>,
     exports: Vec<Export>,
     code: Vec<FuncBody>,
     data: Vec<DataItem>,
@@ -86,7 +86,7 @@ impl Module {
         &self.imports
     }
 
-    pub fn funcs(&self) -> &Vec<u32> {
+    pub fn funcs(&self) -> &Vec<usize> {
         &self.funcs
     }
 
@@ -113,7 +113,7 @@ fn load_imports<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<Import>, Error> {
     Ok(section.imports)
 }
 
-fn load_functions<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<u32>, Error> {
+fn load_functions<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<usize>, Error> {
     let section: FunctionSection = r.read_section()?;
     Ok(section.funcs)
 }
@@ -137,11 +137,18 @@ impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "(module")?;
         for typ in self.types().iter() {
-            write!(f, " (type {})", typ);
+            if typ.params().len() > 0 || typ.results().len() > 0 {
+                write!(f, " (type {})", typ);
+            } else {
+                write!(f, " (type)");
+            }
         }
         for (func_idx, code) in self.funcs().iter().zip(self.code().iter()) {
-            let func_typ = &self.types()[*func_idx as usize];
-            write!(f, " (func {} {})", func_typ, code);
+            if code.locals().len() > 0 || code.body().len() > 0 {
+                write!(f, " (func (type {}) {})", func_idx, code);
+            } else {
+                write!(f, " (func (type {}))", func_idx);
+            }
         }
         for import in self.imports().iter() {
             write!(f, " {}", import);
@@ -152,7 +159,7 @@ impl fmt::Display for Module {
         for data in self.data().iter() {
             write!(f, " {}", data);
         }
-        Ok(())
+        write!(f, ")")
     }
 }
 
