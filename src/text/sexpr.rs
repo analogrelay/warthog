@@ -10,10 +10,6 @@ impl SExpr {
         SExpr(kind, start, end)
     }
 
-    pub fn val(&self) -> &SVal {
-        &self.0
-    }
-
     pub fn start(&self) -> usize {
         self.1
     }
@@ -85,6 +81,7 @@ pub enum SVal {
 }
 
 impl SVal {
+    #[cfg(test)]
     pub fn new_expr<I: IntoIterator<Item=SExpr>>(content: I) -> SVal {
         SVal::Expr(content.into_iter().collect())
     }

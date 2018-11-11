@@ -5,7 +5,23 @@ use crate::text::{
     ParserError, ParserErrorKind,
 };
 
-pub fn pop_keyword_expr(
+pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<i64, ParserError> {
+    match body.pop_front() {
+        Some(SExpr(SVal::Integer(i), _, _)) => Ok(i),
+        Some(SExpr(x, start, end)) => Err(err!(
+            (start, end),
+            ParserErrorKind::UnexpectedToken,
+            format!("Expected an Integer but found: {:?}", x)
+        )),
+        None => Err(err!(
+            0, // TODO: Figure out the start point?
+            ParserErrorKind::UnexpectedEof,
+            format!("Unexpected end-of-file when attempting to read an integer")
+        )),
+    }
+}
+
+pub fn try_pop_keyword_expr(
     body: &mut VecDeque<SExpr>,
     keyword: &str,
 ) -> Option<(VecDeque<SExpr>, usize, usize)> {

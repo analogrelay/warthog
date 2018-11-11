@@ -22,7 +22,7 @@ pub fn parse_func(mut body: VecDeque<SExpr>) -> Result<FuncBuilder, ParserError>
 }
 
 fn parse_export(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(), ParserError> {
-    if let Some((mut body, start, end)) = utils::pop_keyword_expr(rest, "export") {
+    if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "export") {
         // Read the name
         match body.pop_front() {
             Some(ex) => {
@@ -53,7 +53,7 @@ fn parse_export(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<()
 }
 
 fn parse_typeuse(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(), ParserError> {
-    if let Some((mut body, start, end)) = utils::pop_keyword_expr(rest, "type") {
+    if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "type") {
         // Read the ID
         match body.pop_front() {
             Some(ex) => {
@@ -86,7 +86,7 @@ fn parse_func_type_segment(
     list: &mut Vec<ValType>,
 ) -> Result<(), ParserError> {
     // Read while we have the specified keyword
-    while let Some((mut body, _, _)) = utils::pop_keyword_expr(rest, keyword) {
+    while let Some((mut body, _, _)) = utils::try_pop_keyword_expr(rest, keyword) {
         // TODO: Support identifiers
         for expr in body.drain(..) {
             let (typ, start, end) = expr.consume_atom()?;
