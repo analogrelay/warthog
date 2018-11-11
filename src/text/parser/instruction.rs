@@ -43,12 +43,47 @@ fn parse_instruction(name: String, rest: &mut VecDeque<SExpr>) -> Result<Instruc
             // Next token should be the constant value
             let val = utils::pop_int(rest)?;
             Ok(Instruction::Const(Value::Integer32(val as i32)))
-        },
+        }
         "call" => {
             // Next token should be the callee
             let func_id = utils::pop_int(rest)?;
             Ok(Instruction::Call(func_id as usize))
-        },
+        }
         x => panic!("Instruction not yet implemented: {}", x),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::{module::Instruction, text::sexpr::SExprParser};
+
+    macro_rules! test_inst {
+        ($name: ident: $s: expr => $vec:expr) => {
+            #[test]
+            pub fn $name() {
+                assert_eq!(
+                    $vec,
+                    parse_instrs($s)
+                );
+            }
+        };
+    }
+
+    test_inst!(i32_const: "i32.const 42" => vec![Instruction::Const(Value::Integer32(42))]);
+    test_inst!(call: "call 42" => vec![Instruction::Call(42)]);
+
+    fn parse_instrs(inp: &str) -> Vec<Instruction> {
+        let bytes = inp.as_bytes();
+        let mut parser = SExprParser::new(bytes);
+        let mut tokens = VecDeque::new();
+        while let Some(sexpr) = parser.parse().unwrap() {
+            tokens.push_back(sexpr);
+        }
+
+        let mut instrs = Vec::new();
+        parse_instructions(&mut tokens, &mut instrs).unwrap();
+        instrs
     }
 }
