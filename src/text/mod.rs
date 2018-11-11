@@ -1,15 +1,15 @@
 macro_rules! err {
     ($p: expr, $e: expr) => {
-        ParserError::new($e, crate::parser::ToRange::into_range($p))
+        ParserError::new($e, crate::text::ToRange::into_range($p))
     };
     ($p: expr, $e: expr,) => {
-        ParserError::new($e, crate::parser::ToRange::into_range($p))
+        ParserError::new($e, crate::text::ToRange::into_range($p))
     };
     ($p: expr, $e: expr, $det: expr) => {
-        ParserError::detailed($e, crate::parser::ToRange::into_range($p), $det)
+        ParserError::detailed($e, crate::text::ToRange::into_range($p), $det)
     };
     ($p: expr, $e: expr, $det: expr,) => {
-        ParserError::detailed($e, crate::parser::ToRange::into_range($p), $det)
+        ParserError::detailed($e, crate::text::ToRange::into_range($p), $det)
     };
 }
 

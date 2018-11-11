@@ -1,6 +1,6 @@
 use std::{io, collections::VecDeque};
 
-use crate::parser::{ParserError, ParserErrorKind};
+use crate::text::{ParserError, ParserErrorKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SExpr(pub SVal, pub usize, pub usize);

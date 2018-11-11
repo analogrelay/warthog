@@ -24,7 +24,7 @@ impl ModuleBuilder {
         }
     }
 
-    pub fn add_func(&mut self, mut func: FuncBuilder) {
+    pub fn add_func(&mut self, func: FuncBuilder) {
         // Check if we need to add a type and get the type id
         let type_id = match func.type_id {
             Some(id) => id,
@@ -61,7 +61,7 @@ impl ModuleBuilder {
     }
 
     /// Adds a function to the builder (chaining variant)
-    pub fn func(mut self, mut func: FuncBuilder) -> Self {
+    pub fn func(mut self, func: FuncBuilder) -> Self {
         self.add_func(func);
         self
     }
