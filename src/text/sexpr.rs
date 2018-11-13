@@ -1,4 +1,4 @@
-use std::{io, collections::VecDeque};
+use std::{collections::VecDeque, io};
 
 use crate::text::{ParserError, ParserErrorKind};
 
@@ -32,7 +32,7 @@ impl SExpr {
                 (start, end),
                 ParserErrorKind::UnexpectedToken,
                 format!("Expected an Atom, but found: '{:?}'", x)
-            ))
+            )),
         }
     }
 
@@ -43,7 +43,7 @@ impl SExpr {
                 (start, end),
                 ParserErrorKind::UnexpectedToken,
                 format!("Expected an Integer, but found: '{:?}'", x)
-            ))
+            )),
         }
     }
 
@@ -54,7 +54,7 @@ impl SExpr {
                 (start, end),
                 ParserErrorKind::UnexpectedToken,
                 format!("Expected a Str, but found: '{:?}'", x)
-            ))
+            )),
         }
     }
 
@@ -65,7 +65,7 @@ impl SExpr {
                 (start, end),
                 ParserErrorKind::UnexpectedToken,
                 format!("Expected an Expr, but found: '{:?}'", x)
-            ))
+            )),
         }
     }
 }
@@ -82,7 +82,7 @@ pub enum SVal {
 
 impl SVal {
     #[cfg(test)]
-    pub fn new_expr<I: IntoIterator<Item=SExpr>>(content: I) -> SVal {
+    pub fn new_expr<I: IntoIterator<Item = SExpr>>(content: I) -> SVal {
         SVal::Expr(content.into_iter().collect())
     }
 }
@@ -108,7 +108,7 @@ impl<R: io::Read> SExprParser<R> {
         while let Some(byt) = self.skip_to_token()? {
             match byt {
                 b'(' => return self.read_expr().map(|x| Some(x)),
-                b'a'...b'z' | b'A'...b'Z' | b'_' => return self.read_atom().map(|x| Some(x)),
+                b'a'...b'z' => return self.read_atom().map(|x| Some(x)),
                 b'+' | b'-' | b'0'...b'9' => return self.read_num().map(|x| Some(x)),
                 b'$' => return self.read_identifier().map(|x| Some(x)),
                 b'"' => return self.read_string().map(|x| Some(x)),
@@ -152,7 +152,7 @@ impl<R: io::Read> SExprParser<R> {
 
     fn read_atom(&mut self) -> Result<SExpr, ParserError> {
         let start = self.pos;
-        let byts = self.consume_while(is_atomchar)?;
+        let byts = self.consume_while(is_idchar)?;
 
         // We can unwrap the from_utf8 result because we validated each char was ASCII
         let s = String::from_utf8(byts).unwrap();
@@ -201,7 +201,9 @@ impl<R: io::Read> SExprParser<R> {
                         let val = (get_digit(x) << 4) + get_digit(y);
 
                         // We know that the hex escape is between 0x00 and 0xFF, so it's legal.
-                        let c = std::char::from_u32(val as u32).expect("Expected that the hex escape would be a legal Unicode character!");
+                        let c = std::char::from_u32(val as u32).expect(
+                            "Expected that the hex escape would be a legal Unicode character!",
+                        );
                         let mut buf = [0u8; 4];
                         for b in c.encode_utf8(&mut buf).as_bytes().iter() {
                             byts.push(*b);
@@ -569,7 +571,7 @@ fn get_digit(b: u8) -> usize {
 
 #[inline]
 fn is_idchar(b: u8) -> bool {
-    is_atomchar(b)
+    is_alphanum(b)
         || b == b'!'
         || b == b'#'
         || b == b'$'
@@ -596,8 +598,12 @@ fn is_idchar(b: u8) -> bool {
 }
 
 #[inline]
-fn is_atomchar(b: u8) -> bool {
-    (b >= b'a' && b <= b'z') || (b >= b'A' && b <= b'Z') || (b >= b'0' && b <= b'9') || b == b'_' || b == b'.'
+fn is_alphanum(b: u8) -> bool {
+    (b >= b'a' && b <= b'z')
+        || (b >= b'A' && b <= b'Z')
+        || (b >= b'0' && b <= b'9')
+        || b == b'_'
+        || b == b'.'
 }
 
 #[inline]
@@ -618,6 +624,10 @@ mod tests {
         assert_eq!(
             SExpr::new(SVal::Atom("a.b.c.d".to_owned()), 0, 6),
             single_expr("a.b.c.d")
+        );
+        assert_eq!(
+            SExpr::new(SVal::Atom("ab/trunc_f/2/d$".to_owned()), 0, 14),
+            single_expr("ab/trunc_f/2/d$")
         );
     }
 
@@ -747,7 +757,11 @@ mod tests {
     pub fn exprs() {
         assert_eq!(SExpr::new(SVal::new_expr(vec![]), 0, 1), single_expr("()"));
         assert_eq!(
-            SExpr::new(SVal::new_expr(vec![SExpr::new(SVal::Integer(42), 1, 2)]), 0, 3),
+            SExpr::new(
+                SVal::new_expr(vec![SExpr::new(SVal::Integer(42), 1, 2)]),
+                0,
+                3
+            ),
             single_expr("(42)")
         );
         assert_eq!(

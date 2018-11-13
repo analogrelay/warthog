@@ -51,7 +51,7 @@ pub enum Instruction {
     Neg(ValType),
     Ceil(ValType),
     Floor(ValType),
-    Trunc(ValType),
+    FTrunc(ValType),
     Nearest(ValType),
     Sqrt(ValType),
     FDiv(ValType),
@@ -70,6 +70,14 @@ pub enum Instruction {
     FGt(ValType),
     FLe(ValType),
     FGe(ValType),
+
+    Wrap,
+    Extend(Signedness),
+    Demote,
+    Promote,
+    Reinterpret(ValType),
+    Convert(ValType, Signedness, ValType),
+    Trunc(ValType, Signedness, ValType),
 }
 
 impl Instruction {
@@ -114,7 +122,7 @@ impl fmt::Display for Instruction {
             Instruction::Neg(x) => write!(f, "{}.neg", x),
             Instruction::Ceil(x) => write!(f, "{}.ceil", x),
             Instruction::Floor(x) => write!(f, "{}.floor", x),
-            Instruction::Trunc(x) => write!(f, "{}.trunc", x),
+            Instruction::FTrunc(x) => write!(f, "{}.trunc", x),
             Instruction::Nearest(x) => write!(f, "{}.nearest", x),
             Instruction::Sqrt(x) => write!(f, "{}.sqrt", x),
             Instruction::FDiv(x) => write!(f, "{}.div", x),
@@ -134,6 +142,14 @@ impl fmt::Display for Instruction {
             Instruction::FGt(x) => write!(f, "{}.gt", x),
             Instruction::FLe(x) => write!(f, "{}.le", x),
             Instruction::FGe(x) => write!(f, "{}.ge", x),
+
+            Instruction::Wrap => write!(f, "i32.wrap/i64"),
+            Instruction::Extend(s) => write!(f, "i64.extend_{}/i32", s),
+            Instruction::Demote => write!(f, "f32.demote/f64"),
+            Instruction::Promote => write!(f, "f64.promote/f32"),
+            Instruction::Reinterpret(x) => write!(f, "{}.reinterpret/{}", x, reinterpreted(x)),
+            Instruction::Convert(x, s, y) => write!(f, "{}.convert_{}/{}", x, s, y),
+            Instruction::Trunc(x, s, y) => write!(f, "{}.trunc_{}/{}", x, s, y),
         }
     }
 }
@@ -141,5 +157,15 @@ impl fmt::Display for Instruction {
 impl fmt::Debug for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
+    }
+}
+
+fn reinterpreted(v: &ValType) -> ValType {
+    match v {
+        ValType::Nil => ValType::Nil,
+        ValType::Integer32 => ValType::Float32,
+        ValType::Integer64 => ValType::Float64,
+        ValType::Float32 => ValType::Integer32,
+        ValType::Float64 => ValType::Integer64,
     }
 }

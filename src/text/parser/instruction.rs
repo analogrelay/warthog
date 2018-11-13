@@ -138,7 +138,7 @@ fn parse_numeric_instruction(
         (_, false, "neg") => Ok(Instruction::Neg(valtyp)),
         (_, false, "ceil") => Ok(Instruction::Ceil(valtyp)),
         (_, false, "floor") => Ok(Instruction::Floor(valtyp)),
-        (_, false, "trunc") => Ok(Instruction::Trunc(valtyp)),
+        (_, false, "trunc") => Ok(Instruction::FTrunc(valtyp)),
         (_, false, "nearest") => Ok(Instruction::Nearest(valtyp)),
         (_, false, "sqrt") => Ok(Instruction::Sqrt(valtyp)),
         (_, false, "div") => Ok(Instruction::FDiv(valtyp)),
@@ -161,6 +161,52 @@ fn parse_numeric_instruction(
         (_, false, "gt") => Ok(Instruction::FGt(valtyp)),
         (_, false, "le") => Ok(Instruction::FLe(valtyp)),
         (_, false, "ge") => Ok(Instruction::FGe(valtyp)),
+
+        (ValType::Integer32, _, "wrap/i64") => Ok(Instruction::Wrap),
+        (x, true, "trunc_s/f32") => Ok(Instruction::Trunc(x, Signedness::Signed, ValType::Float32)),
+        (x, true, "trunc_u/f32") => Ok(Instruction::Trunc(
+            x,
+            Signedness::Unsigned,
+            ValType::Float32,
+        )),
+        (x, true, "trunc_s/f64") => Ok(Instruction::Trunc(x, Signedness::Signed, ValType::Float64)),
+        (x, true, "trunc_u/f64") => Ok(Instruction::Trunc(
+            x,
+            Signedness::Unsigned,
+            ValType::Float64,
+        )),
+        (ValType::Integer64, _, "extend_s/i32") => Ok(Instruction::Extend(Signedness::Signed)),
+        (ValType::Integer64, _, "extend_u/i32") => Ok(Instruction::Extend(Signedness::Unsigned)),
+        (x, false, "convert_s/i32") => Ok(Instruction::Convert(
+            x,
+            Signedness::Signed,
+            ValType::Integer32,
+        )),
+        (x, false, "convert_u/i32") => Ok(Instruction::Convert(
+            x,
+            Signedness::Unsigned,
+            ValType::Integer32,
+        )),
+        (x, false, "convert_s/i64") => Ok(Instruction::Convert(
+            x,
+            Signedness::Signed,
+            ValType::Integer64,
+        )),
+        (x, false, "convert_u/i64") => Ok(Instruction::Convert(
+            x,
+            Signedness::Unsigned,
+            ValType::Integer64,
+        )),
+        (ValType::Float32, _, "demote/f64") => Ok(Instruction::Demote),
+        (ValType::Float64, _, "promote/f32") => Ok(Instruction::Promote),
+        (ValType::Integer32, _, "reinterpret/f32") => {
+            Ok(Instruction::Reinterpret(ValType::Integer32))
+        }
+        (ValType::Integer64, _, "reinterpret/f64") => {
+            Ok(Instruction::Reinterpret(ValType::Integer64))
+        }
+        (ValType::Float32, _, "reinterpret/i32") => Ok(Instruction::Reinterpret(ValType::Float32)),
+        (ValType::Float64, _, "reinterpret/i64") => Ok(Instruction::Reinterpret(ValType::Float64)),
         (_, _, x) => panic!("Instruction not yet implemented: '{}.{}'.", valtyp, x),
     }
 }
@@ -254,8 +300,8 @@ mod tests {
                 );
                 test_inst!(rotl, $p, ".rotl", Rotl(ValType::$valtyp));
                 test_inst!(rotr, $p, ".rotr", Rotr(ValType::$valtyp));
-                test_inst!(eq, $p, ".eq", Copysign(ValType::$valtyp));
-                test_inst!(ne, $p, ".ne", Copysign(ValType::$valtyp));
+                test_inst!(eq, $p, ".eq", Eq(ValType::$valtyp));
+                test_inst!(ne, $p, ".ne", Ne(ValType::$valtyp));
                 test_inst!(lt_s, $p, ".lt_s", Lt(ValType::$valtyp, Signedness::Signed));
                 test_inst!(
                     lt_u,
@@ -321,7 +367,7 @@ mod tests {
                 test_inst!(neg, $p, ".neg", Neg(ValType::$valtyp));
                 test_inst!(ceil, $p, ".ceil", Ceil(ValType::$valtyp));
                 test_inst!(floor, $p, ".floor", Floor(ValType::$valtyp));
-                test_inst!(trunc, $p, ".trunc", Trunc(ValType::$valtyp));
+                test_inst!(trunc, $p, ".trunc", FTrunc(ValType::$valtyp));
                 test_inst!(nearest, $p, ".nearest", Nearest(ValType::$valtyp));
                 test_inst!(sqrt, $p, ".sqrt", Sqrt(ValType::$valtyp));
                 test_inst!(add, $p, ".add", Add(ValType::$valtyp));
@@ -331,9 +377,8 @@ mod tests {
                 test_inst!(min, $p, ".min", Min(ValType::$valtyp));
                 test_inst!(max, $p, ".max", Max(ValType::$valtyp));
                 test_inst!(copysign, $p, ".copysign", Copysign(ValType::$valtyp));
-                test_inst!(eqz, $p, ".eqz", Copysign(ValType::$valtyp));
-                test_inst!(eq, $p, ".eq", Copysign(ValType::$valtyp));
-                test_inst!(ne, $p, ".ne", Copysign(ValType::$valtyp));
+                test_inst!(eq, $p, ".eq", Eq(ValType::$valtyp));
+                test_inst!(ne, $p, ".ne", Ne(ValType::$valtyp));
                 test_inst!(lt, $p, ".lt", FLt(ValType::$valtyp));
                 test_inst!(gt, $p, ".gt", FGt(ValType::$valtyp));
                 test_inst!(le, $p, ".le", FLe(ValType::$valtyp));
@@ -376,10 +421,26 @@ mod tests {
     test_inst!(extend_u, "i64.extend_u/i32", Extend(Signedness::Unsigned));
     test_inst!(demote, "f32.demote/f64", Demote);
     test_inst!(promote, "f64.promote/f32", Promote);
-    test_inst!(i32_reinterpet, "i32.reinterpret/f32", Reinterpret(ValType::Integer32));
-    test_inst!(i64_reinterpet, "i64.reinterpret/f64", Reinterpret(ValType::Integer64));
-    test_inst!(f32_reinterpet, "f32.reinterpret/i32", Reinterpret(ValType::Float32));
-    test_inst!(f64_reinterpet, "f64.reinterpret/i64", Reinterpret(ValType::Float64));
+    test_inst!(
+        i32_reinterpet,
+        "i32.reinterpret/f32",
+        Reinterpret(ValType::Integer32)
+    );
+    test_inst!(
+        i64_reinterpet,
+        "i64.reinterpret/f64",
+        Reinterpret(ValType::Integer64)
+    );
+    test_inst!(
+        f32_reinterpet,
+        "f32.reinterpret/i32",
+        Reinterpret(ValType::Float32)
+    );
+    test_inst!(
+        f64_reinterpet,
+        "f64.reinterpret/i64",
+        Reinterpret(ValType::Float64)
+    );
 
     test_inst!(call, "call 42", Call(42));
     test_inst!(get_local, "get_local 42", GetLocal(42));
