@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-    module::{Instruction, ValType},
+    module::{Instruction, Signedness, ValType},
     text::{
         parser::{symbol_table::SymbolTable, utils},
         sexpr::{SExpr, SVal},
@@ -18,7 +18,9 @@ pub fn parse_instructions(
     loop {
         match rest.pop_front() {
             Some(SExpr(SVal::Expr(body), _, _)) => unfold_instructions(body, list, locals)?,
-            Some(SExpr(SVal::Atom(inst), _, _)) => list.push(parse_instruction(inst, rest, locals)?),
+            Some(SExpr(SVal::Atom(inst), start, end)) => {
+                list.push(parse_instruction(inst, start, end, rest, locals)?)
+            }
             Some(SExpr(val, start, end)) => {
                 return Err(err!(
                     (start, end),
@@ -38,7 +40,9 @@ fn unfold_instructions(
 ) -> Result<(), ParserError> {
     // Parse the current instruction and stash it away.
     let first = match body.pop_front() {
-        Some(SExpr(SVal::Atom(inst), _, _)) => parse_instruction(inst, &mut body, locals)?,
+        Some(SExpr(SVal::Atom(inst), start, end)) => {
+            parse_instruction(inst, start, end, &mut body, locals)?
+        }
         Some(SExpr(val, start, end)) => {
             return Err(err!(
                 (start, end),
@@ -58,16 +62,106 @@ fn unfold_instructions(
     Ok(())
 }
 
-fn parse_instruction(name: String, rest: &mut VecDeque<SExpr>, locals: &SymbolTable) -> Result<Instruction, ParserError> {
-    match name.as_str() {
-        "i32.const" => Ok(Instruction::Const(Value::Integer32(
-            utils::pop_int(rest)? as i32
-        ))),
-        "call" => Ok(Instruction::Call(utils::pop_int(rest)? as usize)),
-        "get_local" => Ok(Instruction::GetLocal(utils::pop_id(rest, locals)? as usize)),
-        "i32.mul" => Ok(Instruction::Mul(ValType::Integer32)),
-        "i32.add" => Ok(Instruction::Add(ValType::Integer32)),
-        x => panic!("Instruction not yet implemented: {}.", x),
+fn parse_instruction(
+    name: String,
+    start: usize,
+    end: usize,
+    rest: &mut VecDeque<SExpr>,
+    locals: &SymbolTable,
+) -> Result<Instruction, ParserError> {
+    // Check if this is a numeric instruction
+    if let Some(idx) = name.find('.') {
+        match name.split_at(idx) {
+            ("i32", x) => parse_numeric_instruction(ValType::Integer32, &x[1..], start, end, rest),
+            ("i64", x) => parse_numeric_instruction(ValType::Integer64, &x[1..], start, end, rest),
+            ("f32", x) => parse_numeric_instruction(ValType::Float32, &x[1..], start, end, rest),
+            ("f64", x) => parse_numeric_instruction(ValType::Float64, &x[1..], start, end, rest),
+            (x, _) => Err(err!(
+                (start, end),
+                ParserErrorKind::UnknownInstruction(name.to_owned()),
+                format!("Unknown instruction: {}", name)
+            )),
+        }
+    } else {
+        match name.as_str() {
+            "call" => Ok(Instruction::Call(utils::pop_int(rest)? as usize)),
+            "get_local" => Ok(Instruction::GetLocal(utils::pop_id(rest, locals)? as usize)),
+            x => panic!("Instruction not yet implemented: {}.", x),
+        }
+    }
+}
+
+fn parse_numeric_instruction(
+    valtyp: ValType,
+    suffix: &str,
+    _start: usize,
+    _end: usize,
+    rest: &mut VecDeque<SExpr>,
+) -> Result<Instruction, ParserError> {
+    let is_int = match valtyp {
+        ValType::Integer32 | ValType::Integer64 => true,
+        _ => false,
+    };
+
+    match (valtyp, is_int, suffix) {
+        (_, _, "const") => {
+            let val = match valtyp {
+                ValType::Nil => unreachable!(),
+                ValType::Integer32 => Value::Integer32(utils::pop_int(rest)? as i32),
+                ValType::Integer64 => Value::Integer64(utils::pop_int(rest)?),
+                ValType::Float32 => Value::Float32(utils::pop_float(rest)? as f32),
+                ValType::Float64 => Value::Float64(utils::pop_float(rest)?),
+            };
+            Ok(Instruction::Const(val))
+        }
+
+        (_, true, "clz") => Ok(Instruction::Clz(valtyp)),
+        (_, true, "ctz") => Ok(Instruction::Ctz(valtyp)),
+        (_, true, "popcnt") => Ok(Instruction::Popcnt(valtyp)),
+        (_, _, "add") => Ok(Instruction::Add(valtyp)),
+        (_, _, "sub") => Ok(Instruction::Sub(valtyp)),
+        (_, _, "mul") => Ok(Instruction::Mul(valtyp)),
+        (_, true, "div_u") => Ok(Instruction::Div(valtyp, Signedness::Unsigned)),
+        (_, true, "div_s") => Ok(Instruction::Div(valtyp, Signedness::Signed)),
+        (_, true, "rem_u") => Ok(Instruction::Rem(valtyp, Signedness::Unsigned)),
+        (_, true, "rem_s") => Ok(Instruction::Rem(valtyp, Signedness::Signed)),
+        (_, true, "and") => Ok(Instruction::And(valtyp)),
+        (_, true, "or") => Ok(Instruction::Or(valtyp)),
+        (_, true, "xor") => Ok(Instruction::Xor(valtyp)),
+        (_, true, "shl") => Ok(Instruction::Shl(valtyp)),
+        (_, true, "shr_u") => Ok(Instruction::Shr(valtyp, Signedness::Unsigned)),
+        (_, true, "shr_s") => Ok(Instruction::Shr(valtyp, Signedness::Signed)),
+        (_, true, "rotl") => Ok(Instruction::Rotl(valtyp)),
+        (_, true, "rotr") => Ok(Instruction::Rotr(valtyp)),
+
+        (_, false, "abs") => Ok(Instruction::Abs(valtyp)),
+        (_, false, "neg") => Ok(Instruction::Neg(valtyp)),
+        (_, false, "ceil") => Ok(Instruction::Ceil(valtyp)),
+        (_, false, "floor") => Ok(Instruction::Floor(valtyp)),
+        (_, false, "trunc") => Ok(Instruction::Trunc(valtyp)),
+        (_, false, "nearest") => Ok(Instruction::Nearest(valtyp)),
+        (_, false, "sqrt") => Ok(Instruction::Sqrt(valtyp)),
+        (_, false, "div") => Ok(Instruction::FDiv(valtyp)),
+        (_, false, "min") => Ok(Instruction::Min(valtyp)),
+        (_, false, "max") => Ok(Instruction::Max(valtyp)),
+        (_, false, "copysign") => Ok(Instruction::Copysign(valtyp)),
+
+        (_, true, "eqz") => Ok(Instruction::Eqz(valtyp)),
+        (_, _, "eq") => Ok(Instruction::Eq(valtyp)),
+        (_, _, "ne") => Ok(Instruction::Ne(valtyp)),
+        (_, true, "lt_s") => Ok(Instruction::Lt(valtyp, Signedness::Signed)),
+        (_, true, "lt_u") => Ok(Instruction::Lt(valtyp, Signedness::Unsigned)),
+        (_, true, "gt_s") => Ok(Instruction::Gt(valtyp, Signedness::Signed)),
+        (_, true, "gt_u") => Ok(Instruction::Gt(valtyp, Signedness::Unsigned)),
+        (_, true, "le_s") => Ok(Instruction::Le(valtyp, Signedness::Signed)),
+        (_, true, "le_u") => Ok(Instruction::Le(valtyp, Signedness::Unsigned)),
+        (_, true, "ge_s") => Ok(Instruction::Ge(valtyp, Signedness::Signed)),
+        (_, true, "ge_u") => Ok(Instruction::Ge(valtyp, Signedness::Unsigned)),
+        (_, false, "lt") => Ok(Instruction::FLt(valtyp)),
+        (_, false, "gt") => Ok(Instruction::FGt(valtyp)),
+        (_, false, "le") => Ok(Instruction::FLe(valtyp)),
+        (_, false, "ge") => Ok(Instruction::FGe(valtyp)),
+        (_, _, x) => panic!("Instruction not yet implemented: '{}.{}'.", valtyp, x),
     }
 }
 
@@ -76,50 +170,239 @@ mod tests {
     use super::*;
 
     use crate::{
-        module::{Instruction, ValType},
+        module::{Instruction, Signedness, ValType},
         text::sexpr::SExprParser,
     };
 
     macro_rules! test_inst {
-        ($name: ident, $s: expr, $vec:expr) => {
+        ($name: ident, $s: expr, $($inst: ident),+) => {
             #[test]
             pub fn $name() {
-                assert_eq!($vec, parse_instrs($s));
+                assert_eq!(vec![$(Instruction::$inst),+], parse_instrs($s));
+            }
+        };
+        ($name: ident, $s: expr, $($inst: ident($($e: expr),+)),+) => {
+            #[test]
+            pub fn $name() {
+                assert_eq!(vec![$(Instruction::$inst($($e),+)),+], parse_instrs($s));
+            }
+        };
+        ($name: ident, $p: expr, $s: expr, $($inst: ident),+) => {
+            #[test]
+            pub fn $name() {
+                assert_eq!(vec![$(Instruction::$inst),+], parse_instrs(concat!($p, $s)));
+            }
+        };
+        ($name: ident, $p: expr, $s: expr, $($inst: ident($($e: expr),+)),+) => {
+            #[test]
+            pub fn $name() {
+                assert_eq!(vec![$(Instruction::$inst($($e),+)),+], parse_instrs(concat!($p, $s)));
             }
         };
     }
 
-    test_inst!(
-        i32_const,
-        "i32.const 42",
-        vec![Instruction::Const(Value::Integer32(42))]
-    );
-    test_inst!(call, "call 42", vec![Instruction::Call(42)]);
-    test_inst!(i32_mul, "i32.mul", vec![Instruction::Mul(ValType::Integer32)]);
-    test_inst!(i32_add, "i32.add", vec![Instruction::Add(ValType::Integer32)]);
-    test_inst!(get_local, "get_local 42", vec![Instruction::GetLocal(42)]);
-    test_inst!(named_get_local, "get_local $0", vec![Instruction::GetLocal(0)]);
+    macro_rules! int_insts {
+        ($name: ident, $p: expr, $valtyp: ident) => {
+            mod $name {
+                use super::*;
+                test_inst!(constant, $p, ".const 42", Const(Value::$valtyp(42)));
+                test_inst!(clz, $p, ".clz", Clz(ValType::$valtyp));
+                test_inst!(ctz, $p, ".ctz", Ctz(ValType::$valtyp));
+                test_inst!(popcnt, $p, ".popcnt", Popcnt(ValType::$valtyp));
+                test_inst!(add, $p, ".add", Add(ValType::$valtyp));
+                test_inst!(sub, $p, ".sub", Sub(ValType::$valtyp));
+                test_inst!(mul, $p, ".mul", Mul(ValType::$valtyp));
+                test_inst!(
+                    div_u,
+                    $p,
+                    ".div_u",
+                    Div(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(
+                    div_s,
+                    $p,
+                    ".div_s",
+                    Div(ValType::$valtyp, Signedness::Signed)
+                );
+                test_inst!(
+                    rem_u,
+                    $p,
+                    ".rem_u",
+                    Rem(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(
+                    rem_s,
+                    $p,
+                    ".rem_s",
+                    Rem(ValType::$valtyp, Signedness::Signed)
+                );
+                test_inst!(and, $p, ".and", And(ValType::$valtyp));
+                test_inst!(or, $p, ".or", Or(ValType::$valtyp));
+                test_inst!(xor, $p, ".xor", Xor(ValType::$valtyp));
+                test_inst!(shl, $p, ".shl", Shl(ValType::$valtyp));
+                test_inst!(
+                    shr_u,
+                    $p,
+                    ".shr_u",
+                    Shr(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(
+                    shr_s,
+                    $p,
+                    ".shr_s",
+                    Shr(ValType::$valtyp, Signedness::Signed)
+                );
+                test_inst!(rotl, $p, ".rotl", Rotl(ValType::$valtyp));
+                test_inst!(rotr, $p, ".rotr", Rotr(ValType::$valtyp));
+                test_inst!(eq, $p, ".eq", Copysign(ValType::$valtyp));
+                test_inst!(ne, $p, ".ne", Copysign(ValType::$valtyp));
+                test_inst!(lt_s, $p, ".lt_s", Lt(ValType::$valtyp, Signedness::Signed));
+                test_inst!(
+                    lt_u,
+                    $p,
+                    ".lt_u",
+                    Lt(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(gt_s, $p, ".gt_s", Gt(ValType::$valtyp, Signedness::Signed));
+                test_inst!(
+                    gt_u,
+                    $p,
+                    ".gt_u",
+                    Gt(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(le_s, $p, ".le_s", Le(ValType::$valtyp, Signedness::Signed));
+                test_inst!(
+                    le_u,
+                    $p,
+                    ".le_u",
+                    Le(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(ge_s, $p, ".ge_s", Ge(ValType::$valtyp, Signedness::Signed));
+                test_inst!(
+                    ge_u,
+                    $p,
+                    ".ge_u",
+                    Ge(ValType::$valtyp, Signedness::Unsigned)
+                );
+                test_inst!(
+                    trunc_s_f32,
+                    $p,
+                    ".trunc_s/f32",
+                    Trunc(ValType::$valtyp, Signedness::Signed, ValType::Float32)
+                );
+                test_inst!(
+                    trunc_u_f32,
+                    $p,
+                    ".trunc_u/f32",
+                    Trunc(ValType::$valtyp, Signedness::Unsigned, ValType::Float32)
+                );
+                test_inst!(
+                    trunc_s_f64,
+                    $p,
+                    ".trunc_s/f64",
+                    Trunc(ValType::$valtyp, Signedness::Signed, ValType::Float64)
+                );
+                test_inst!(
+                    trunc_u_f64,
+                    $p,
+                    ".trunc_u/f64",
+                    Trunc(ValType::$valtyp, Signedness::Unsigned, ValType::Float64)
+                );
+            }
+        };
+    }
+
+    macro_rules! float_insts {
+        ($name: ident, $p: expr, $valtyp: ident) => {
+            mod $name {
+                use super::*;
+                test_inst!(constant, $p, ".const 42.0", Const(Value::$valtyp(42.0)));
+                test_inst!(abs, $p, ".abs", Abs(ValType::$valtyp));
+                test_inst!(neg, $p, ".neg", Neg(ValType::$valtyp));
+                test_inst!(ceil, $p, ".ceil", Ceil(ValType::$valtyp));
+                test_inst!(floor, $p, ".floor", Floor(ValType::$valtyp));
+                test_inst!(trunc, $p, ".trunc", Trunc(ValType::$valtyp));
+                test_inst!(nearest, $p, ".nearest", Nearest(ValType::$valtyp));
+                test_inst!(sqrt, $p, ".sqrt", Sqrt(ValType::$valtyp));
+                test_inst!(add, $p, ".add", Add(ValType::$valtyp));
+                test_inst!(sub, $p, ".sub", Sub(ValType::$valtyp));
+                test_inst!(mul, $p, ".mul", Mul(ValType::$valtyp));
+                test_inst!(div, $p, ".div", FDiv(ValType::$valtyp));
+                test_inst!(min, $p, ".min", Min(ValType::$valtyp));
+                test_inst!(max, $p, ".max", Max(ValType::$valtyp));
+                test_inst!(copysign, $p, ".copysign", Copysign(ValType::$valtyp));
+                test_inst!(eqz, $p, ".eqz", Copysign(ValType::$valtyp));
+                test_inst!(eq, $p, ".eq", Copysign(ValType::$valtyp));
+                test_inst!(ne, $p, ".ne", Copysign(ValType::$valtyp));
+                test_inst!(lt, $p, ".lt", FLt(ValType::$valtyp));
+                test_inst!(gt, $p, ".gt", FGt(ValType::$valtyp));
+                test_inst!(le, $p, ".le", FLe(ValType::$valtyp));
+                test_inst!(ge, $p, ".ge", FGe(ValType::$valtyp));
+                test_inst!(
+                    convert_s_i32,
+                    $p,
+                    ".convert_s/i32",
+                    Convert(ValType::$valtyp, Signedness::Signed, ValType::Integer32)
+                );
+                test_inst!(
+                    convert_u_i32,
+                    $p,
+                    ".convert_u/i32",
+                    Convert(ValType::$valtyp, Signedness::Unsigned, ValType::Integer32)
+                );
+                test_inst!(
+                    convert_s_i64,
+                    $p,
+                    ".convert_s/i64",
+                    Convert(ValType::$valtyp, Signedness::Signed, ValType::Integer64)
+                );
+                test_inst!(
+                    convert_u_i64,
+                    $p,
+                    ".convert_u/i64",
+                    Convert(ValType::$valtyp, Signedness::Unsigned, ValType::Integer64)
+                );
+            }
+        };
+    }
+
+    int_insts!(int32, "i32", Integer32);
+    int_insts!(int64, "i64", Integer64);
+    float_insts!(float32, "f32", Float32);
+    float_insts!(float64, "f64", Float64);
+
+    test_inst!(wrap, "i32.wrap/i64", Wrap);
+    test_inst!(extend_s, "i64.extend_s/i32", Extend(Signedness::Signed));
+    test_inst!(extend_u, "i64.extend_u/i32", Extend(Signedness::Unsigned));
+    test_inst!(demote, "f32.demote/f64", Demote);
+    test_inst!(promote, "f64.promote/f32", Promote);
+    test_inst!(i32_reinterpet, "i32.reinterpret/f32", Reinterpret(ValType::Integer32));
+    test_inst!(i64_reinterpet, "i64.reinterpret/f64", Reinterpret(ValType::Integer64));
+    test_inst!(f32_reinterpet, "f32.reinterpret/i32", Reinterpret(ValType::Float32));
+    test_inst!(f64_reinterpet, "f64.reinterpret/i64", Reinterpret(ValType::Float64));
+
+    test_inst!(call, "call 42", Call(42));
+    test_inst!(get_local, "get_local 42", GetLocal(42));
+
+    test_inst!(named_get_local, "get_local $0", GetLocal(0));
 
     // Folded instructions
     test_inst!(
         folded_call,
         "(call 42 (i32.const 1) (i32.const 2))",
-        vec![
-            Instruction::Const(Value::Integer32(1)),
-            Instruction::Const(Value::Integer32(2)),
-            Instruction::Call(42)
-        ]
+        Const(Value::Integer32(1)),
+        Const(Value::Integer32(2)),
+        Call(42)
     );
+
     test_inst!(
         complex_fold,
         "(i32.mul (i32.add (get_local 0) (i32.const 2)) (i32.const 3))",
-        vec![
-            Instruction::GetLocal(0),
-            Instruction::Const(Value::Integer32(2)),
-            Instruction::Add(ValType::Integer32),
-            Instruction::Const(Value::Integer32(3)),
-            Instruction::Mul(ValType::Integer32),
-        ]
+        GetLocal(0),
+        Const(Value::Integer32(2)),
+        Add(ValType::Integer32),
+        Const(Value::Integer32(3)),
+        Mul(ValType::Integer32)
     );
 
     fn parse_instrs(inp: &str) -> Vec<Instruction> {

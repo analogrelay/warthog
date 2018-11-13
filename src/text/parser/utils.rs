@@ -32,6 +32,22 @@ pub fn pop_id(body: &mut VecDeque<SExpr>, symbol_table: &SymbolTable) -> Result<
     }
 }
 
+pub fn pop_float(body: &mut VecDeque<SExpr>) -> Result<f64, ParserError> {
+    match body.pop_front() {
+        Some(SExpr(SVal::Float(i), _, _)) => Ok(i),
+        Some(SExpr(x, start, end)) => Err(err!(
+            (start, end),
+            ParserErrorKind::UnexpectedToken,
+            format!("Expected a Float but found: {:?}", x)
+        )),
+        None => Err(err!(
+            0, // TODO: Figure out the start point?
+            ParserErrorKind::UnexpectedEof,
+            format!("Unexpected end-of-file when attempting to read a float")
+        )),
+    }
+}
+
 pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<i64, ParserError> {
     match body.pop_front() {
         Some(SExpr(SVal::Integer(i), _, _)) => Ok(i),

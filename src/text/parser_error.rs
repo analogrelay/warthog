@@ -42,6 +42,7 @@ pub enum ParserErrorKind {
     IoError(io::ErrorKind),
     UnexpectedAtom(String),
     UnexpectedCharacter(char),
+    UnknownInstruction(String),
     UndeclaredIdentifier(String),
 }
 

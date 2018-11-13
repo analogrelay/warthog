@@ -5,12 +5,71 @@ use byteorder::ReadBytesExt;
 use crate::{module::ValType, utils, Error, Value};
 
 #[derive(Clone, PartialEq)]
+pub enum Signedness {
+    Unsigned,
+    Signed,
+}
+
+impl fmt::Display for Signedness {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Signedness::Unsigned => write!(f, "u"),
+            Signedness::Signed => write!(f, "s"),
+        }
+    }
+}
+
+impl fmt::Debug for Signedness {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, PartialEq)]
 pub enum Instruction {
-    Const(Value),
     Call(usize),
+    GetLocal(usize),
+
+    Const(Value),
+    Clz(ValType),
+    Ctz(ValType),
+    Popcnt(ValType),
     Add(ValType),
     Mul(ValType),
-    GetLocal(usize),
+    Sub(ValType),
+    Div(ValType, Signedness),
+    Rem(ValType, Signedness),
+    And(ValType),
+    Or(ValType),
+    Xor(ValType),
+    Shl(ValType),
+    Shr(ValType, Signedness),
+    Rotl(ValType),
+    Rotr(ValType),
+
+    Abs(ValType),
+    Neg(ValType),
+    Ceil(ValType),
+    Floor(ValType),
+    Trunc(ValType),
+    Nearest(ValType),
+    Sqrt(ValType),
+    FDiv(ValType),
+    Min(ValType),
+    Max(ValType),
+    Copysign(ValType),
+
+    Eqz(ValType),
+    Eq(ValType),
+    Ne(ValType),
+    Lt(ValType, Signedness),
+    Gt(ValType, Signedness),
+    Le(ValType, Signedness),
+    Ge(ValType, Signedness),
+    FLt(ValType),
+    FGt(ValType),
+    FLe(ValType),
+    FGe(ValType),
 }
 
 impl Instruction {
@@ -32,11 +91,49 @@ impl Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
             Instruction::Call(x) => write!(f, "call {}", x),
             Instruction::GetLocal(x) => write!(f, "get_local {}", x),
+            Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
+            Instruction::Clz(x) => write!(f, "{}.clz", x),
+            Instruction::Ctz(x) => write!(f, "{}.ctz", x),
+            Instruction::Popcnt(x) => write!(f, "{}.popcnt", x),
             Instruction::Add(x) => write!(f, "{}.add", x),
             Instruction::Mul(x) => write!(f, "{}.mul", x),
+            Instruction::Sub(x) => write!(f, "{}.sub", x),
+            Instruction::Div(x, s) => write!(f, "{}.div_{}", x, s),
+            Instruction::Rem(x, s) => write!(f, "{}.rem_{}", x, s),
+            Instruction::And(x) => write!(f, "{}.and", x),
+            Instruction::Or(x) => write!(f, "{}.or", x),
+            Instruction::Xor(x) => write!(f, "{}.xor", x),
+            Instruction::Shl(x) => write!(f, "{}.shl", x),
+            Instruction::Shr(x, s) => write!(f, "{}.shr_{}", x, s),
+            Instruction::Rotl(x) => write!(f, "{}.rotl", x),
+            Instruction::Rotr(x) => write!(f, "{}.rotr", x),
+
+            Instruction::Abs(x) => write!(f, "{}.abs", x),
+            Instruction::Neg(x) => write!(f, "{}.neg", x),
+            Instruction::Ceil(x) => write!(f, "{}.ceil", x),
+            Instruction::Floor(x) => write!(f, "{}.floor", x),
+            Instruction::Trunc(x) => write!(f, "{}.trunc", x),
+            Instruction::Nearest(x) => write!(f, "{}.nearest", x),
+            Instruction::Sqrt(x) => write!(f, "{}.sqrt", x),
+            Instruction::FDiv(x) => write!(f, "{}.div", x),
+            Instruction::Min(x) => write!(f, "{}.min", x),
+            Instruction::Max(x) => write!(f, "{}.max", x),
+            Instruction::Copysign(x) => write!(f, "{}.copysign", x),
+
+            Instruction::Eqz(x) => write!(f, "{}.eqz", x),
+            Instruction::Eq(x) => write!(f, "{}.eq", x),
+            Instruction::Ne(x) => write!(f, "{}.ne", x),
+            Instruction::Lt(x, s) => write!(f, "{}.lt_{}", x, s),
+            Instruction::Gt(x, s) => write!(f, "{}.gt_{}", x, s),
+            Instruction::Le(x, s) => write!(f, "{}.le_{}", x, s),
+            Instruction::Ge(x, s) => write!(f, "{}.ge_{}", x, s),
+
+            Instruction::FLt(x) => write!(f, "{}.lt", x),
+            Instruction::FGt(x) => write!(f, "{}.gt", x),
+            Instruction::FLe(x) => write!(f, "{}.le", x),
+            Instruction::FGe(x) => write!(f, "{}.ge", x),
         }
     }
 }

@@ -17,7 +17,7 @@ pub use self::func_body::FuncBody;
 pub use self::func_type::FuncType;
 pub use self::global_type::GlobalType;
 pub use self::import::Import;
-pub use self::instruction::Instruction;
+pub use self::instruction::{Signedness, Instruction};
 pub use self::member_desc::MemberDesc;
 pub use self::memory_type::MemoryType;
 pub use self::module::Module;
