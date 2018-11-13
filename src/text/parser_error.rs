@@ -38,7 +38,7 @@ pub enum ParserErrorKind {
     InvalidEscape,
     UnexpectedEof,
     UnexpectedToken,
-    IncompleteFunction,
+    IncompleteDeclaration,
     IoError(io::ErrorKind),
     UnexpectedAtom(String),
     UnexpectedCharacter(char),

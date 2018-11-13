@@ -1,11 +1,13 @@
 use std::fmt;
 
-use crate::module::Module;
+use crate::module::{Expr, Module};
 
 #[derive(PartialEq)]
 pub enum ScriptCommand {
     Nil,
     Module(Module),
+    AssertReturn(ScriptAction, Expr),
+    AssertTrap(ScriptAction, String),
 }
 
 impl ScriptCommand {
@@ -22,11 +24,44 @@ impl fmt::Display for ScriptCommand {
         match self {
             ScriptCommand::Nil => write!(f, "(nil)"),
             ScriptCommand::Module(m) => write!(f, "{}", m),
+            ScriptCommand::AssertReturn(action, expr) => {
+                write!(f, "(assert_return {} {})", action, expr)
+            }
+            ScriptCommand::AssertTrap(action, failure) => {
+                write!(f, "(assert_trap {} \"{}\")", action, failure)
+            }
         }
     }
 }
 
 impl fmt::Debug for ScriptCommand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(PartialEq)]
+pub enum ScriptAction {
+    Get(String),
+    Invoke(String, Vec<Expr>),
+}
+
+impl fmt::Display for ScriptAction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ScriptAction::Get(s) => write!(f, "(get \"{}\")", s),
+            ScriptAction::Invoke(s, exprs) => {
+                write!(f, "(invoke \"{}\"", s);
+                for expr in exprs {
+                    write!(f, " {}", expr);
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl fmt::Debug for ScriptAction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }

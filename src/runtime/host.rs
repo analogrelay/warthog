@@ -202,7 +202,7 @@ impl Host {
     fn instantiate_data(&mut self, module: &Module, mems: &Vec<MemAddr>) -> Result<(), Error> {
         for data in module.data() {
             // Offset must be a constant expression
-            let offset = match data.expr() {
+            let offset = match data.expr().instructions() {
                 [Instruction::Const(Value::Integer32(val))] => *val as usize,
                 _ => return Err(Error::InvalidModule),
             };

@@ -2,19 +2,19 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{module::Instruction, utils, Error};
+use crate::{module::Expr, utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct DataItem {
     index: usize,
-    expr: Vec<Instruction>,
+    expr: Expr,
     init: Vec<u8>,
 }
 
 impl DataItem {
     pub fn read<R: io::Read>(reader: &mut R) -> Result<DataItem, Error> {
         let index = utils::read_leb128_u32(reader)? as usize;
-        let expr = utils::read_instructions(reader)?;
+        let expr = Expr::new(utils::read_instructions(reader)?);
         let init = utils::read_vec(reader, |r| Ok(r.read_u8()?))?;
         Ok(DataItem { index, expr, init })
     }
@@ -23,7 +23,7 @@ impl DataItem {
         self.index
     }
 
-    pub fn expr(&self) -> &[Instruction] {
+    pub fn expr(&self) -> &Expr {
         &self.expr
     }
 

@@ -1,5 +1,6 @@
 mod data_item;
 mod export;
+mod expr;
 mod func_body;
 mod func_type;
 mod global_type;
@@ -13,11 +14,12 @@ mod val_type;
 
 pub use self::data_item::DataItem;
 pub use self::export::Export;
+pub use self::expr::Expr;
 pub use self::func_body::FuncBody;
 pub use self::func_type::FuncType;
 pub use self::global_type::GlobalType;
 pub use self::import::Import;
-pub use self::instruction::{Signedness, Instruction};
+pub use self::instruction::{Instruction, Signedness};
 pub use self::member_desc::MemberDesc;
 pub use self::memory_type::MemoryType;
 pub use self::module::Module;

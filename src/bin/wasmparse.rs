@@ -21,5 +21,7 @@ fn main() {
 pub fn run(file: &str) {
     let mut file = fs::File::open(file).unwrap();
     let commands = text::parse(&mut file).unwrap();
-    println!("{:?}", commands);
+    for command in commands {
+        println!("{:?}", command);
+    }
 }

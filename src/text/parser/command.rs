@@ -1,5 +1,5 @@
 use crate::text::{
-    parser::{module, utils},
+    parser::{assert, module, utils},
     sexpr::SExpr,
     ParserError, ParserErrorKind, ScriptCommand,
 };
@@ -9,6 +9,8 @@ pub fn parse_command(sexpr: SExpr) -> Result<ScriptCommand, ParserError> {
 
     match kwd.keyword().unwrap() {
         "module" => Ok(module::parse_module(body)?),
+        "assert_return" => Ok(assert::parse_assert_return(body, kwd.start(), kwd.end())?),
+        "assert_trap" => Ok(assert::parse_assert_trap(body, kwd.start(), kwd.end())?),
         x => Err(err!(
             (kwd.start(), kwd.end()),
             ParserErrorKind::UnexpectedAtom(x.to_string()),

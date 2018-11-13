@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-    module::{Instruction, Signedness, ValType},
+    module::{Expr, Instruction, Signedness, ValType},
     text::{
         parser::{symbol_table::SymbolTable, utils},
         sexpr::{SExpr, SVal},
@@ -9,6 +9,21 @@ use crate::{
     },
     Value,
 };
+
+pub fn parse_expr(token: SExpr, locals: &SymbolTable) -> Result<Expr, ParserError> {
+    match token {
+        SExpr(SVal::Expr(mut expr_body), start, end) => {
+            let mut instrs = Vec::new();
+            parse_instructions(&mut expr_body, &mut instrs, locals)?;
+            Ok(Expr::new(instrs))
+        }
+        SExpr(x, start, end) => Err(err!(
+            (start, end),
+            ParserErrorKind::UnexpectedToken,
+            format!("Expected an Expr but found: {:?}", x)
+        )),
+    }
+}
 
 pub fn parse_instructions(
     rest: &mut VecDeque<SExpr>,
