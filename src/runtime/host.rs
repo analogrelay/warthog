@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    module::{Export, Instruction, MemberDesc, Module},
+    module::{Expr, Export, Instruction, MemberDesc, Module},
     runtime::{
         ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
     },
@@ -9,6 +9,7 @@ use crate::{
     Error, Value,
 };
 
+#[derive(Clone)]
 pub struct Host {
     modules: Vec<Arc<ModuleInst>>,
     funcs: Vec<Arc<FuncInst>>,
@@ -75,6 +76,15 @@ impl Host {
                 module: module_inst.name().to_owned(),
                 name: name.to_owned(),
             })
+        }
+    }
+
+    /// Evaluates an expression at the module scope.
+    pub fn eval_expr(&mut self, expr: &Expr) -> Result<Value, Error> {
+        // Offset must be a constant expression
+        match expr.instructions() {
+            [Instruction::Const(v)] => Ok(*v),
+            x => panic!("expr not implemented!"),
         }
     }
 
@@ -201,10 +211,9 @@ impl Host {
 
     fn instantiate_data(&mut self, module: &Module, mems: &Vec<MemAddr>) -> Result<(), Error> {
         for data in module.data() {
-            // Offset must be a constant expression
-            let offset = match data.expr().instructions() {
-                [Instruction::Const(Value::Integer32(val))] => *val as usize,
-                _ => return Err(Error::InvalidModule),
+            let offset = match self.eval_expr(data.expr())? {
+                Value::Integer32(i) => i as usize,
+                _ => return Err(Error::InvalidModule)
             };
 
             // Find an initialize the memory

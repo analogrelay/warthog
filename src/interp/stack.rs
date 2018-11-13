@@ -3,7 +3,7 @@ use crate::{runtime::ModuleAddr, Value};
 pub struct StackFrame {
     values: Vec<Value>,
     module: ModuleAddr,
-    _locals: Vec<Value>,
+    locals: Vec<Value>,
 }
 
 impl StackFrame {
@@ -11,7 +11,7 @@ impl StackFrame {
         StackFrame {
             values: Vec::new(),
             module,
-            _locals: locals,
+            locals: locals,
         }
     }
 
@@ -28,6 +28,18 @@ impl StackFrame {
 
     pub fn pop(&mut self) -> Option<Value> {
         self.values.pop()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    pub fn local(&self, idx: usize) -> Option<Value> {
+        if idx < self.locals.len() {
+            Some(self.locals[idx])
+        } else {
+            None
+        }
     }
 }
 
@@ -77,5 +89,15 @@ impl Stack {
     /// Gets the address of the module currently at the top of the stack.
     pub fn module(&self) -> ModuleAddr {
         self.frame().module()
+    }
+
+    /// Returns a boolean indicating if the current frame's stack is empty
+    pub fn frame_empty(&self) -> bool {
+        self.frame().is_empty()
+    }
+
+    /// Gets the value of the local with the specified ID, if any
+    pub fn local(&self, idx: usize) -> Option<Value> {
+        self.frame().local(idx)
     }
 }

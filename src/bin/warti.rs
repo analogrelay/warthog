@@ -3,7 +3,7 @@ extern crate warthog;
 use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
-    interp::Thread,
+    interp::{InvokeResult, Thread},
     module::{FuncType, Module, ValType},
     reader::Reader,
     runtime::{ExternVal, Host},
@@ -48,7 +48,7 @@ pub fn run(file: &Path) {
         .func(
             "print",
             FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            |thread, values| print(thread, values),
+            |host, thread, values| print(host, thread, values),
         ).mem("memory", 256, Some(256));
     host.synthesize("env", env).unwrap();
 
@@ -62,13 +62,13 @@ pub fn run(file: &Path) {
     };
 
     // Create a thread
-    let mut thread = Thread::new(host);
+    let mut thread = Thread::new();
 
     // Invoke the entry point
-    thread.invoke(main_func);
+    thread.invoke(&mut host, main_func);
 }
 
-fn print(thread: &mut Thread, values: &[Value]) -> Value {
+fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> InvokeResult {
     let (count, start) = (
         values[0].unwrap_i32() as usize,
         values[1].unwrap_i32() as usize,
@@ -77,7 +77,6 @@ fn print(thread: &mut Thread, values: &[Value]) -> Value {
     let end = start + count;
 
     // Get memory 0 for the current frame
-    let host = thread.host_mut();
     let mem_addr = host.resolve_mem(module, 0);
     let mem_inst = host.get_mem(mem_addr);
     let mem = mem_inst.memory();
@@ -91,5 +90,5 @@ fn print(thread: &mut Thread, values: &[Value]) -> Value {
         println!("{}", s);
     }
 
-    Value::Nil
+    InvokeResult::empty()
 }

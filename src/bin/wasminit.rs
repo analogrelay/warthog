@@ -46,7 +46,7 @@ pub fn run(file: &Path) {
         .func(
             "print",
             FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            |_, _| panic!("'print' function not implemented"),
+            |_, _, _| panic!("'print' function not implemented"),
         ).mem("memory", 256, Some(256));
     host.synthesize("env", env).unwrap();
 

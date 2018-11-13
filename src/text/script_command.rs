@@ -6,7 +6,7 @@ use crate::module::{Expr, Module};
 pub enum ScriptCommand {
     Nil,
     Module(Module),
-    AssertReturn(ScriptAction, Expr),
+    AssertReturn(ScriptAction, Option<Expr>),
     AssertTrap(ScriptAction, String),
 }
 
@@ -24,9 +24,12 @@ impl fmt::Display for ScriptCommand {
         match self {
             ScriptCommand::Nil => write!(f, "(nil)"),
             ScriptCommand::Module(m) => write!(f, "{}", m),
-            ScriptCommand::AssertReturn(action, expr) => {
-                write!(f, "(assert_return {} {})", action, expr)
-            }
+            ScriptCommand::AssertReturn(action, Some(e)) => {
+                write!(f, "(assert_return {} {})", action, e)
+            },
+            ScriptCommand::AssertReturn(action, None) => {
+                write!(f, "(assert_return {})", action)
+            },
             ScriptCommand::AssertTrap(action, failure) => {
                 write!(f, "(assert_trap {} \"{}\")", action, failure)
             }
@@ -55,7 +58,7 @@ impl fmt::Display for ScriptAction {
                 for expr in exprs {
                     write!(f, " {}", expr);
                 }
-                Ok(())
+                write!(f, ")")
             }
         }
     }

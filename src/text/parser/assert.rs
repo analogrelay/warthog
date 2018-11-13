@@ -50,13 +50,9 @@ pub fn parse_assert_return(
     // Parse the result
     if let Some(expr_body) = body.pop_front() {
         let expr = instruction::parse_expr(expr_body, SymbolTable::empty())?;
-        Ok(ScriptCommand::AssertReturn(action, expr))
+        Ok(ScriptCommand::AssertReturn(action, Some(expr)))
     } else {
-        Err(err!(
-            (start, end),
-            ParserErrorKind::IncompleteDeclaration,
-            "Expected 'assert_return' declaration to have a result."
-        ))
+        Ok(ScriptCommand::AssertReturn(action, None))
     }
 }
 

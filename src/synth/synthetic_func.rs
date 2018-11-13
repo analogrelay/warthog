@@ -1,6 +1,11 @@
-use crate::{interp::Thread, module::FuncType, Value};
+use crate::{
+    interp::{InvokeResult, Thread},
+    module::FuncType,
+    runtime::Host,
+    Value,
+};
 
-pub type HostFunc = fn(thread: &mut Thread, values: &[Value]) -> Value;
+pub type HostFunc = fn(host: &mut Host, thread: &mut Thread, values: &[Value]) -> InvokeResult;
 
 pub struct SyntheticFunc {
     pub typ: FuncType,
@@ -12,7 +17,7 @@ impl SyntheticFunc {
         SyntheticFunc { typ, imp }
     }
 
-    pub fn invoke(&self, thread: &mut Thread) -> Value {
+    pub fn invoke(&self, host: &mut Host, thread: &mut Thread) -> InvokeResult {
         // Pop values off the stack
         let values: Vec<_> = {
             let stack = thread.stack_mut();
@@ -32,6 +37,6 @@ impl SyntheticFunc {
                 }).collect()
         };
 
-        (self.imp)(thread, &values)
+        (self.imp)(host, thread, &values)
     }
 }
