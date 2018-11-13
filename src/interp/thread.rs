@@ -54,7 +54,8 @@ impl Thread {
             Instruction::Call(func_idx) => {
                 let func = self.host.resolve_func(self.stack.module(), *func_idx);
                 self.invoke(func);
-            }
+            },
+            x => panic!("Instruction not implemented: {}", x),
         }
     }
 }

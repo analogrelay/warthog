@@ -1,9 +1,36 @@
 use std::collections::VecDeque;
 
 use crate::text::{
+    parser::symbol_table::SymbolTable,
     sexpr::{SExpr, SVal},
     ParserError, ParserErrorKind,
 };
+
+pub fn pop_id(body: &mut VecDeque<SExpr>, symbol_table: &SymbolTable) -> Result<usize, ParserError> {
+    match body.pop_front() {
+        Some(SExpr(SVal::Integer(i), _, _)) => Ok(i as usize),
+        Some(SExpr(SVal::Identifier(id), start, end)) => {
+            match symbol_table.get(id.as_str()) {
+                Some(x) => Ok(x),
+                None => Err(err!(
+                    (start, end),
+                    ParserErrorKind::UndeclaredIdentifier(id.clone()),
+                    format!("Use of undeclared identifier: {}", id)
+                ))
+            }
+        },
+        Some(SExpr(x, start, end)) => Err(err!(
+            (start, end),
+            ParserErrorKind::UnexpectedToken,
+            format!("Expected an Integer or Identifier but found: {:?}", x)
+        )),
+        None => Err(err!(
+            0, // TODO: Figure out the start point?
+            ParserErrorKind::UnexpectedEof,
+            format!("Unexpected end-of-file when attempting to read an integer")
+        )),
+    }
+}
 
 pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<i64, ParserError> {
     match body.pop_front() {

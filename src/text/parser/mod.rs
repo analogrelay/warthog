@@ -3,6 +3,7 @@ mod func;
 mod instruction;
 mod module;
 mod utils;
+mod symbol_table;
 
 use std::io;
 

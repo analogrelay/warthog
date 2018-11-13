@@ -2,12 +2,15 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{utils, Error, Value};
+use crate::{module::ValType, utils, Error, Value};
 
 #[derive(Clone, PartialEq)]
 pub enum Instruction {
     Const(Value),
     Call(usize),
+    Add(ValType),
+    Mul(ValType),
+    GetLocal(usize),
 }
 
 impl Instruction {
@@ -18,7 +21,9 @@ impl Instruction {
             0x41 => Ok(Some(Instruction::Const(Value::Integer32(
                 utils::read_leb128_i32(reader)?,
             )))),
-            0x10 => Ok(Some(Instruction::Call(utils::read_leb128_u32(reader)? as usize))),
+            0x10 => Ok(Some(Instruction::Call(
+                utils::read_leb128_u32(reader)? as usize
+            ))),
             x => panic!("Instruction not implemented: 0x{:X}", x),
         }
     }
@@ -27,8 +32,11 @@ impl Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Instruction::Const(x) => write!(f, "({}.const {})", x.typ(), x),
-            Instruction::Call(x) => write!(f, "(call {})", x),
+            Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
+            Instruction::Call(x) => write!(f, "call {}", x),
+            Instruction::GetLocal(x) => write!(f, "get_local {}", x),
+            Instruction::Add(x) => write!(f, "{}.add", x),
+            Instruction::Mul(x) => write!(f, "{}.mul", x),
         }
     }
 }
