@@ -1,34 +1,24 @@
 macro_rules! addr_type {
     ($name: ident) => {
         #[derive(Clone, Copy)]
-        pub struct $name(usize);
+        pub struct $name(::std::num::NonZeroUsize);
         
         impl $name {
-            pub const NULL: $name = $name(0);
-        
-            pub fn new(id: usize) -> $name {
-                $name(id + 1)
-            }
-        
-            pub fn is_null(&self) -> bool {
-                self.0 == 0
+            pub fn new(id: usize) -> Option<$name> {
+                match ::std::num::NonZeroUsize::new(id) {
+                    Some(id) => Some($name(id)),
+                    None => None,
+                }
             }
         
             pub fn val(&self) -> usize {
-                if self.is_null() {
-                    panic!("attempted to dereference a null address");
-                }
-                self.0 - 1
+                self.0.get() - 1
             }
         }
         
         impl ::std::fmt::Display for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                if self.is_null() {
-                    write!(f, concat!("[", stringify!($name), "]null"))
-                } else {
-                    write!(f, concat!("[", stringify!($name), "]0x{:04X}"), self.0)
-                }
+                write!(f, concat!("[", stringify!($name), "]0x{:04X}"), self.0)
             }
         }
     };

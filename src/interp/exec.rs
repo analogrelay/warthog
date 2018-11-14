@@ -1,5 +1,3 @@
-// use std::borrow::Cow;
-
 use crate::{
     interp::{Thread, Trap},
     module::{Instruction, Signedness, ValType},
@@ -11,10 +9,14 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     match inst {
         Instruction::Const(val) => thread.push(val.clone()),
         Instruction::Call(func_idx) => {
-            let func = host.resolve_func(thread.stack().module(), func_idx);
+            let module_addr = match thread.stack().module() {
+                Some(m) => m,
+                None => return Err(thread.throw("no module in scope"))
+            };
+            let func = host.resolve_func(module_addr, func_idx);
             thread.invoke(host, func)?;
             panic!("Call instruction needs to handle return values");
-        }
+        },
         Instruction::GetLocal(local_idx) => {
             let val = match thread.stack().local(local_idx) {
                 Some(l) => l,
@@ -51,6 +53,8 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Ge(t, Signedness::Unsigned) => ge_u(thread, t)?,
         Instruction::Lt(t, Signedness::Unsigned) => lt_u(thread, t)?,
         Instruction::Le(t, Signedness::Unsigned) => le_u(thread, t)?,
+
+        Instruction::Drop => { thread.pop()?; },
         x => return Err(thread.throw(format!("Instruction not implemented: {}", x))),
     };
 

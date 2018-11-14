@@ -54,7 +54,7 @@ impl Host {
         self.modules
             .iter()
             .position(|m| m.name() == name)
-            .map(|a| ModuleAddr::new(a))
+            .map(|a| ModuleAddr::new(a + 1).expect("Searched module address should be non-zero!"))
     }
 
     pub fn resolve_mem(&self, module: ModuleAddr, mem_idx: usize) -> MemAddr {
@@ -94,12 +94,12 @@ impl Host {
         name: S,
         module: SyntheticModule,
     ) -> Result<ModuleAddr, Error> {
-        let module_addr = ModuleAddr::new(self.modules.len());
+        let module_addr = ModuleAddr::new(self.modules.len() + 1).expect("New module address should be non-zero!");
 
         let mut funcs = Vec::new();
         for func in module.funcs {
             // Allocate a func in the host
-            let func_addr = FuncAddr::new(self.funcs.len());
+            let func_addr = FuncAddr::new(self.funcs.len() + 1).expect("New function address should be non-zero!");
             let func_inst = FuncInst::synthetic(func);
             self.funcs.push(Arc::new(func_inst));
             funcs.push(func_addr);
@@ -124,7 +124,7 @@ impl Host {
         name: S,
         module: Module,
     ) -> Result<ModuleAddr, Error> {
-        let module_addr = ModuleAddr::new(self.modules.len());
+        let module_addr = ModuleAddr::new(self.modules.len() + 1).expect("New module address should be non-zero!");
 
         let mut funcs = Vec::new();
         let mut mems = Vec::new();
@@ -154,7 +154,7 @@ impl Host {
                     exports.push(inst);
                 }
                 MemberDesc::Memory(ref mem_type) => {
-                    let mem_addr = MemAddr::new(self.mems.len());
+                    let mem_addr = MemAddr::new(self.mems.len() + 1).expect("New memory address should be non-zero!");
                     self.mems.push(Arc::new(MemInst::from_type(mem_type)?));
                     let inst = ExportInst::mem(export.name(), mem_addr);
                     exports.push(inst);
@@ -174,7 +174,7 @@ impl Host {
         // Instantiate functions
         for (code_idx, type_id) in module.funcs().iter().enumerate() {
             // Assign an address
-            let func_addr = FuncAddr::new(self.funcs.len());
+            let func_addr = FuncAddr::new(self.funcs.len() + 1).expect("New function address should be non-zero!");
             funcs.push(func_addr);
 
             // Get the function body and type

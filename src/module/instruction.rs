@@ -78,6 +78,8 @@ pub enum Instruction {
     Reinterpret(ValType),
     Convert(ValType, Signedness, ValType),
     Trunc(ValType, Signedness, ValType),
+
+    Drop,
 }
 
 impl Instruction {
@@ -85,12 +87,14 @@ impl Instruction {
         let opcode = reader.read_u8()?;
         match opcode {
             0x0B => Ok(None),
-            0x41 => Ok(Some(Instruction::Const(Value::Integer32(
-                utils::read_leb128_u32(reader)?,
-            )))),
             0x10 => Ok(Some(Instruction::Call(
                 utils::read_leb128_u32(reader)? as usize
             ))),
+            0x1A => Ok(Some(Instruction::Drop)),
+            0x41 => Ok(Some(Instruction::Const(Value::Integer32(
+                utils::read_leb128_u32(reader)?,
+            )))),
+            0x6E => Ok(Some(Instruction::Div(ValType::Integer32, Signedness::Unsigned))),
             x => panic!("Instruction not implemented: 0x{:X}", x),
         }
     }
@@ -150,6 +154,8 @@ impl fmt::Display for Instruction {
             Instruction::Reinterpret(x) => write!(f, "{}.reinterpret/{}", x, reinterpreted(x)),
             Instruction::Convert(x, s, y) => write!(f, "{}.convert_{}/{}", x, s, y),
             Instruction::Trunc(x, s, y) => write!(f, "{}.trunc_{}/{}", x, s, y),
+
+            Instruction::Drop => write!(f, "drop"),
         }
     }
 }

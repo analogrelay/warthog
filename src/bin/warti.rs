@@ -67,7 +67,9 @@ pub fn run(file: &Path) {
     let mut thread = Thread::new();
 
     // Invoke the entry point
-    thread.invoke(&mut host, main_func).unwrap();
+    if let Err(trap) = thread.invoke(&mut host, main_func) {
+        eprintln!("trap! {}", trap);
+    }
 }
 
 fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
@@ -75,7 +77,10 @@ fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<V
         values[0].unwrap_u32() as usize,
         values[1].unwrap_u32() as usize,
     );
-    let module = thread.stack_mut().module();
+    let module = match thread.stack_mut().module() {
+        Some(m) => m,
+        None => return Err(thread.throw("no module in scope"))
+    };
     let end = start + count;
 
     // Get memory 0 for the current frame
