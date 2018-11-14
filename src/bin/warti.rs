@@ -77,9 +77,10 @@ fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<V
         values[0].unwrap_u32() as usize,
         values[1].unwrap_u32() as usize,
     );
+
     let module = match thread.stack_mut().module() {
         Some(m) => m,
-        None => return Err(thread.throw("no module in scope"))
+        None => return Err(thread.throw("No module in scope."))
     };
     let end = start + count;
 

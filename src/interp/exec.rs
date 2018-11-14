@@ -11,11 +11,15 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Call(func_idx) => {
             let module_addr = match thread.stack().module() {
                 Some(m) => m,
-                None => return Err(thread.throw("no module in scope"))
+                None => return Err(thread.throw("No module in scope."))
             };
             let func = host.resolve_func(module_addr, func_idx);
-            thread.invoke(host, func)?;
-            panic!("Call instruction needs to handle return values");
+            let values = thread.invoke(host, func)?;
+
+            // Push the result values on to the stack
+            for value in values {
+                thread.push(value)
+            }
         },
         Instruction::GetLocal(local_idx) => {
             let val = match thread.stack().local(local_idx) {

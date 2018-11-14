@@ -67,9 +67,9 @@ fn dump_funcs(host: &Host) {
     for (i, func_inst) in host.funcs().enumerate() {
         match func_inst.imp() {
             FuncImpl::Local { module: m, .. } => {
-                println!("  * {:04} {} {}", i, func_inst.typ(), m);
+                println!("  * {:04} {} {}", i + 1, func_inst.typ(), m);
             }
-            FuncImpl::Synthetic(_) => println!("  * {:04} {} <Synthetic>", i, func_inst.typ()),
+            FuncImpl::Synthetic(_) => println!("  * {:04} {} <Synthetic>", i + 1, func_inst.typ()),
         }
     }
 }
@@ -79,7 +79,7 @@ fn dump_mems(host: &Host) {
     for (i, mem_inst) in host.mems().enumerate() {
         println!(
             "  * {:04} {} {}",
-            i,
+            i + 1,
             mem_inst.memory().len(),
             match mem_inst.memory().max_size() {
                 Some(max) => format!("{}", max),
@@ -119,7 +119,7 @@ fn dump_initialized_ranges(mem: &MemInst) {
 
 fn dump_instances(entry_point: ModuleAddr, host: &Host) {
     for (i, module_inst) in host.modules().enumerate() {
-        println!("Instance '{}':", module_inst.name());
+        println!("{:04} Instance '{}':", i + 1, module_inst.name());
         if i == entry_point.val() {
             println!("  Entry Point");
         }
