@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 extern crate warthog;
 
 use std::{borrow::Cow, env, fs, path::Path, process};
@@ -65,7 +67,7 @@ pub fn run(file: &Path) {
     let mut thread = Thread::new();
 
     // Invoke the entry point
-    thread.invoke(&mut host, main_func);
+    thread.invoke(&mut host, main_func).unwrap();
 }
 
 fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {

@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 extern crate warthog;
 
 use std::{env, fs, process};
