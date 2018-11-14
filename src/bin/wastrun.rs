@@ -63,33 +63,33 @@ pub fn run(file: &str) {
                 println!("Instatiated Module: {}", module_addr);
             }
             ScriptCommand::AssertReturn(action, expr) => {
-                match expr {
-                    Some(ref e) => print!("* {} = {} ... ", action, e),
-                    None => print!("* {} ...", action),
-                }
-
-                if let Some(module_addr) = last_module {
+                let result = if let Some(module_addr) = last_module {
                     let mut thread = Thread::new();
-                    let result = run_action(&mut thread, action, module_addr, &mut host);
+                    let result = run_action(&mut thread, &action, module_addr, &mut host);
                     let expected = match expr {
                         Some(ref e) => thread.eval(module_addr, e, &mut host),
                         None => Ok(Value::Nil),
                     };
 
-                    println!(" {}", evaluate_assertion(expected, result));
+                    evaluate_assertion(expected, result)
                 } else {
-                    println!(" {}", AssertionResult::Failure("no active module".into()));
+                    AssertionResult::Failure("no active module".into())
                 };
+
+                match expr {
+                    Some(ref e) => println!("* [{}] {} = {} ... ", result, action, e),
+                    None => println!("* [{}] {} ...", result, action),
+                }
             }
             ScriptCommand::AssertTrap(action, failure) => {
-                print!("* {} trap '{}' ...", action, failure);
-                if let Some(module_addr) = last_module {
+                let result = if let Some(module_addr) = last_module {
                     let mut thread = Thread::new();
-                    let result = run_action(&mut thread, action, module_addr, &mut host);
-                    println!(" {}", evaluate_assertion(Err(Trap::new(failure)), result));
+                    let result = run_action(&mut thread, &action, module_addr, &mut host);
+                    evaluate_assertion(Err(Trap::new(failure.clone())), result)
                 } else {
-                    println!(" {}", AssertionResult::Failure("no active module".into()));
+                    AssertionResult::Failure("no active module".into())
                 };
+                println!("* [{}] {} trap '{}' ...", result, action, failure);
             }
         }
     }
@@ -131,7 +131,7 @@ fn format_vals(vals: &Vec<Value>) -> String {
 
 fn run_action(
     thread: &mut Thread,
-    action: ScriptAction,
+    action: &ScriptAction,
     module: ModuleAddr,
     host: &mut Host,
 ) -> Result<Vec<Value>, Trap> {
