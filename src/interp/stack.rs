@@ -3,14 +3,16 @@ use crate::{runtime::{FuncAddr, ModuleAddr}, Value};
 pub struct StackFrame {
     values: Vec<Value>,
     module: Option<ModuleAddr>,
+    _func: Option<FuncAddr>,
     locals: Vec<Value>,
 }
 
 impl StackFrame {
-    pub fn new(module: Option<ModuleAddr>, locals: Vec<Value>) -> StackFrame {
+    pub fn new(module: Option<ModuleAddr>, func: Option<FuncAddr>, locals: Vec<Value>) -> StackFrame {
         StackFrame {
             values: Vec::new(),
             module,
+            _func: func,
             locals: locals,
         }
     }
@@ -47,12 +49,12 @@ pub struct Stack(Vec<StackFrame>);
 
 impl Stack {
     pub fn new() -> Stack {
-        Stack(vec![StackFrame::new(None, Vec::new())])
+        Stack(vec![StackFrame::new(None, None, Vec::new())])
     }
 
     /// Pushes a new stack frame on to the stack
-    pub fn enter(&mut self, module: ModuleAddr, locals: Vec<Value>) {
-        self.0.push(StackFrame::new(Some(module), locals))
+    pub fn enter(&mut self, module: ModuleAddr, func: Option<FuncAddr>, locals: Vec<Value>) {
+        self.0.push(StackFrame::new(Some(module), func, locals))
     }
 
     /// Gets the active stack frame

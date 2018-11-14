@@ -47,42 +47,42 @@ pub fn run(file: &str) {
 fn dump_type_section<R: io::Read>(r: &mut Reader<R>) {
     let section: TypeSection = r.read_section().unwrap();
     for (i, typ) in section.types.iter().enumerate() {
-        println!("* {:04} {}", i + 1, typ);
+        println!("* {:04} {}", i, typ);
     }
 }
 
 fn dump_import_section<R: io::Read>(r: &mut Reader<R>) {
     let section: ImportSection = r.read_section().unwrap();
     for (i, import) in section.imports.iter().enumerate() {
-        println!("* {:04} {}", i + 1, import);
+        println!("* {:04} {}", i, import);
     }
 }
 
 fn dump_function_section<R: io::Read>(r: &mut Reader<R>) {
     let section: FunctionSection = r.read_section().unwrap();
     for (i, func) in section.funcs.iter().enumerate() {
-        println!("* {:04} (func {})", i + 1, func);
+        println!("* {:04} (func {})", i, func);
     }
 }
 
 fn dump_export_section<R: io::Read>(r: &mut Reader<R>) {
     let section: ExportSection = r.read_section().unwrap();
     for (i, export) in section.exports.iter().enumerate() {
-        println!("* {:04} {}", i + 1, export);
+        println!("* {:04} {}", i, export);
     }
 }
 
 fn dump_data_section<R: io::Read>(r: &mut Reader<R>) {
     let section: DataSection = r.read_section().unwrap();
     for (i, item) in section.data.iter().enumerate() {
-        println!("* {:04} {}", i + 1, item);
+        println!("* {:04} {}", i, item);
     }
 }
 
 fn dump_code_section<R: io::Read>(r: &mut Reader<R>) {
     let section: CodeSection = r.read_section().unwrap();
     for (i, item) in section.code.iter().enumerate() {
-        print!("* {:04}", i + 1);
+        print!("* {:04}", i);
         for local in item.locals().iter() {
             print!(" {}", local);
         }

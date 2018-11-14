@@ -34,7 +34,7 @@ impl Thread {
         host: &mut Host,
     ) -> Result<Value, Trap> {
         // Push a stack frame
-        self.stack.enter(module, Vec::new());
+        self.stack.enter(module, None, Vec::new());
 
         // Evaluate the expression
         // Don't use '?' here because we need to clear the stack frame first
@@ -95,7 +95,7 @@ impl Thread {
                     locals.push(v);
                 }
 
-                self.stack.enter(module.clone(), locals);
+                self.stack.enter(module.clone(), Some(func), locals);
                 if let Err(e) = self.run(host, code.body()) {
                     self.stack.exit();
                     return Err(e);
