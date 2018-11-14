@@ -21,6 +21,8 @@ macro_rules! spec_test {
 mod spec_tests {
     spec_test!(i32);
     spec_test!(i64);
+
+    spec_test!(comments);
 }
 
 #[derive(PartialEq, Clone)]
