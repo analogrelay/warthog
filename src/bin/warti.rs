@@ -2,7 +2,7 @@
 
 extern crate warthog;
 
-use std::{borrow::Cow, env, fs, path::Path, process};
+use std::{borrow::Cow, env, fs, path::Path, process, io::stderr};
 
 use warthog::{
     interp::{Thread, Trap},
@@ -68,7 +68,7 @@ pub fn run(file: &Path) {
 
     // Invoke the entry point
     if let Err(trap) = thread.invoke(&mut host, main_func) {
-        eprintln!("trap! {}", trap);
+        trap.pretty_print(&mut stderr()).unwrap();
     }
 }
 

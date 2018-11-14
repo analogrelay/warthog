@@ -1,4 +1,5 @@
 mod code_section;
+mod custom_section;
 mod data_section;
 mod export_section;
 mod function_section;
@@ -7,6 +8,7 @@ mod section_header;
 mod type_section;
 
 pub use self::code_section::CodeSection;
+pub use self::custom_section::CustomSection;
 pub use self::data_section::DataSection;
 pub use self::export_section::ExportSection;
 pub use self::function_section::FunctionSection;
@@ -70,8 +72,8 @@ impl<R: io::Read> Reader<R> {
         }))
     }
 
-    pub fn read_section<S: Section>(&mut self) -> Result<S, Error> {
-        S::read(&mut self.source)
+    pub fn read_section<S: Section>(&mut self, header: SectionHeader) -> Result<S, Error> {
+        read_section_helper(&mut self.source, header)
     }
 }
 
@@ -80,4 +82,13 @@ impl<R: io::Read + io::Seek> Reader<R> {
         self.source.seek(io::SeekFrom::Current(amount as i64))?;
         Ok(())
     }
+}
+
+// This helper forces rust to consider the &mut Read we pass in as an implementation of Read
+// itself, so we can call take.
+fn read_section_helper<R: io::Read, S: Section>(
+    reader: R,
+    header: SectionHeader,
+) -> Result<S, Error> {
+    S::read(&mut reader.take(header.size as u64))
 }

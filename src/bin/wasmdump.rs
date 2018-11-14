@@ -5,8 +5,8 @@ extern crate warthog;
 use std::{env, fs, io, process};
 
 use warthog::reader::{
-    CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader, SectionId,
-    TypeSection,
+    CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader,
+    SectionHeader, SectionId, TypeSection,
 };
 
 fn main() {
@@ -33,54 +33,60 @@ pub fn run(file: &str) {
     while let Some(header) = r.read_section_header().unwrap() {
         println!("Section: {} (size: {})", header.id, header.size);
         match header.id {
-            SectionId::Type => dump_type_section(&mut r),
-            SectionId::Import => dump_import_section(&mut r),
-            SectionId::Function => dump_function_section(&mut r),
-            SectionId::Export => dump_export_section(&mut r),
-            SectionId::Data => dump_data_section(&mut r),
-            SectionId::Code => dump_code_section(&mut r),
+            SectionId::Type => dump_type_section(&mut r, header),
+            SectionId::Import => dump_import_section(&mut r, header),
+            SectionId::Function => dump_function_section(&mut r, header),
+            SectionId::Export => dump_export_section(&mut r, header),
+            SectionId::Data => dump_data_section(&mut r, header),
+            SectionId::Code => dump_code_section(&mut r, header),
+            SectionId::Custom => dump_custom_section(&mut r, header),
             _ => r.skip(header.size as usize).unwrap(),
         }
     }
 }
 
-fn dump_type_section<R: io::Read>(r: &mut Reader<R>) {
-    let section: TypeSection = r.read_section().unwrap();
+fn dump_custom_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: CustomSection = r.read_section(header).unwrap();
+    println!("  Name: {}", section.name);
+}
+
+fn dump_type_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: TypeSection = r.read_section(header).unwrap();
     for (i, typ) in section.types.iter().enumerate() {
         println!("* {:04} {}", i, typ);
     }
 }
 
-fn dump_import_section<R: io::Read>(r: &mut Reader<R>) {
-    let section: ImportSection = r.read_section().unwrap();
+fn dump_import_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: ImportSection = r.read_section(header).unwrap();
     for (i, import) in section.imports.iter().enumerate() {
         println!("* {:04} {}", i, import);
     }
 }
 
-fn dump_function_section<R: io::Read>(r: &mut Reader<R>) {
-    let section: FunctionSection = r.read_section().unwrap();
+fn dump_function_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: FunctionSection = r.read_section(header).unwrap();
     for (i, func) in section.funcs.iter().enumerate() {
         println!("* {:04} (func {})", i, func);
     }
 }
 
-fn dump_export_section<R: io::Read>(r: &mut Reader<R>) {
-    let section: ExportSection = r.read_section().unwrap();
+fn dump_export_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: ExportSection = r.read_section(header).unwrap();
     for (i, export) in section.exports.iter().enumerate() {
         println!("* {:04} {}", i, export);
     }
 }
 
-fn dump_data_section<R: io::Read>(r: &mut Reader<R>) {
-    let section: DataSection = r.read_section().unwrap();
+fn dump_data_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: DataSection = r.read_section(header).unwrap();
     for (i, item) in section.data.iter().enumerate() {
         println!("* {:04} {}", i, item);
     }
 }
 
-fn dump_code_section<R: io::Read>(r: &mut Reader<R>) {
-    let section: CodeSection = r.read_section().unwrap();
+fn dump_code_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
+    let section: CodeSection = r.read_section(header).unwrap();
     for (i, item) in section.code.iter().enumerate() {
         print!("* {:04}", i);
         for local in item.locals().iter() {

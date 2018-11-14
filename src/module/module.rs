@@ -4,8 +4,8 @@ use crate::{
     builder::ModuleBuilder,
     module::{DataItem, Export, FuncBody, FuncType, Import},
     reader::{
-        CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader, SectionId,
-        TypeSection,
+        CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader,
+        SectionHeader, SectionId, TypeSection,
     },
     Error,
 };
@@ -54,12 +54,12 @@ impl Module {
         // Load all the sections
         while let Some(header) = r.read_section_header()? {
             match header.id {
-                SectionId::Type => types = Some(load_types(&mut r)?),
-                SectionId::Import => imports = Some(load_imports(&mut r)?),
-                SectionId::Function => funcs = Some(load_functions(&mut r)?),
-                SectionId::Export => exports = Some(load_exports(&mut r)?),
-                SectionId::Code => code = Some(load_code(&mut r)?),
-                SectionId::Data => data = Some(load_data(&mut r)?),
+                SectionId::Type => types = Some(load_types(&mut r, header)?),
+                SectionId::Import => imports = Some(load_imports(&mut r, header)?),
+                SectionId::Function => funcs = Some(load_functions(&mut r, header)?),
+                SectionId::Export => exports = Some(load_exports(&mut r, header)?),
+                SectionId::Code => code = Some(load_code(&mut r, header)?),
+                SectionId::Data => data = Some(load_data(&mut r, header)?),
                 _ => {
                     // Unknown section
                     // TODO: Logging
@@ -103,33 +103,51 @@ impl Module {
     }
 }
 
-fn load_types<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<FuncType>, Error> {
-    let section: TypeSection = r.read_section()?;
+fn load_types<R: io::Read>(
+    r: &mut Reader<R>,
+    header: SectionHeader,
+) -> Result<Vec<FuncType>, Error> {
+    let section: TypeSection = r.read_section(header)?;
     Ok(section.types)
 }
 
-fn load_imports<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<Import>, Error> {
-    let section: ImportSection = r.read_section()?;
+fn load_imports<R: io::Read>(
+    r: &mut Reader<R>,
+    header: SectionHeader,
+) -> Result<Vec<Import>, Error> {
+    let section: ImportSection = r.read_section(header)?;
     Ok(section.imports)
 }
 
-fn load_functions<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<usize>, Error> {
-    let section: FunctionSection = r.read_section()?;
+fn load_functions<R: io::Read>(
+    r: &mut Reader<R>,
+    header: SectionHeader,
+) -> Result<Vec<usize>, Error> {
+    let section: FunctionSection = r.read_section(header)?;
     Ok(section.funcs)
 }
 
-fn load_exports<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<Export>, Error> {
-    let section: ExportSection = r.read_section()?;
+fn load_exports<R: io::Read>(
+    r: &mut Reader<R>,
+    header: SectionHeader,
+) -> Result<Vec<Export>, Error> {
+    let section: ExportSection = r.read_section(header)?;
     Ok(section.exports)
 }
 
-fn load_code<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<FuncBody>, Error> {
-    let section: CodeSection = r.read_section()?;
+fn load_code<R: io::Read>(
+    r: &mut Reader<R>,
+    header: SectionHeader,
+) -> Result<Vec<FuncBody>, Error> {
+    let section: CodeSection = r.read_section(header)?;
     Ok(section.code)
 }
 
-fn load_data<R: io::Read>(r: &mut Reader<R>) -> Result<Vec<DataItem>, Error> {
-    let section: DataSection = r.read_section()?;
+fn load_data<R: io::Read>(
+    r: &mut Reader<R>,
+    header: SectionHeader,
+) -> Result<Vec<DataItem>, Error> {
+    let section: DataSection = r.read_section(header)?;
     Ok(section.data)
 }
 

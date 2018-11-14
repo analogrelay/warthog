@@ -143,8 +143,7 @@ impl Thread {
 
     /// Creates a new [`Trap`], capturing the current stack frame.
     pub fn throw<S: Into<Cow<'static, str>>>(&self, message: S) -> Trap {
-        // TODO: Capture stack frame ;)
-        Trap::new(message)
+        Trap::new(message, Some(self.stack.trace()))
     }
 
     /// Tries to pop a value off the stack for the current frame, traps if there is no current value.

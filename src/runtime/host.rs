@@ -183,7 +183,7 @@ impl Host {
 
             // Create the instance and register it in the host
             self.funcs
-                .push(Arc::new(FuncInst::local(typ, instance_addr, body)));
+                .push(Arc::new(FuncInst::local(typ, instance_addr, code_idx, body)));
         }
     }
 

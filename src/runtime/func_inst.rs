@@ -11,9 +11,9 @@ pub struct FuncInst {
 }
 
 impl FuncInst {
-    pub fn local(typ: FuncType, module: ModuleAddr, code: FuncBody) -> FuncInst {
+    pub fn local(typ: FuncType, module: ModuleAddr, func_id: usize, code: FuncBody) -> FuncInst {
         FuncInst {
-            imp: FuncImpl::Local { typ, module, code },
+            imp: FuncImpl::Local { typ, module, code, func_id },
         }
     }
 
@@ -40,6 +40,7 @@ pub enum FuncImpl {
         typ: FuncType,
         module: ModuleAddr,
         code: FuncBody,
+        func_id: usize,
     },
     Synthetic(SyntheticFunc),
 }

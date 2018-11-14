@@ -1,12 +1,51 @@
+use std::fmt;
+
 use crate::{
     runtime::{FuncAddr, ModuleAddr},
     Value,
 };
 
 #[derive(Clone, PartialEq)]
+pub struct StackTrace(Vec<StackFrame>);
+
+impl StackTrace {
+    pub fn new(frames: Vec<StackFrame>) -> StackTrace {
+        StackTrace(frames)
+    }
+
+    pub fn frames(&self) -> &[StackFrame] {
+        &self.0
+    }
+}
+
+#[derive(Clone, PartialEq)]
 pub struct StackFrame {
     module: Option<ModuleAddr>,
     func: Option<FuncAddr>,
+}
+
+impl fmt::Display for StackFrame {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(module) = self.module {
+            write!(f, "{}", module)?;
+        } else {
+            write!(f, "<unknown>")?;
+        }
+
+        write!(f, "!")?;
+
+        if let Some(func) = self.func {
+            write!(f, "{}", func)
+        } else {
+            write!(f, "<unknown>")
+        }
+    }
+}
+
+impl fmt::Debug for StackFrame {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
 }
 
 impl StackFrame {
@@ -24,7 +63,7 @@ impl StackFrame {
 }
 
 /// Represents the context under which a function executes.
-/// 
+///
 /// The execution context contains the following items:
 /// * The operand stack for the invocation.
 /// * The values of the locals currently in scope.
@@ -82,7 +121,10 @@ pub struct ExecutionStack(Vec<ExecutionContext>);
 
 impl ExecutionStack {
     pub fn new() -> ExecutionStack {
-        ExecutionStack(vec![ExecutionContext::new(StackFrame::new(None, None), Vec::new())])
+        ExecutionStack(vec![ExecutionContext::new(
+            StackFrame::new(None, None),
+            Vec::new(),
+        )])
     }
 
     /// Gets a reference to the active [`ExecutionContext`]
@@ -99,7 +141,10 @@ impl ExecutionStack {
 
     /// Pushes a new [`ExecutionContext`] on to the stack
     pub fn enter(&mut self, module: ModuleAddr, func: Option<FuncAddr>, locals: Vec<Value>) {
-        self.0.push(ExecutionContext::new(StackFrame::new(Some(module), func), locals))
+        self.0.push(ExecutionContext::new(
+            StackFrame::new(Some(module), func),
+            locals,
+        ))
     }
 
     /// Pops the current [`ExecutionContext`] (and all values associated with it) off the stack
@@ -109,5 +154,12 @@ impl ExecutionStack {
         } else {
             self.0.pop();
         }
+    }
+
+    /// Creates a [`StackTrace`] representing the current position in the stack.
+    pub fn trace(&self) -> StackTrace {
+        // Iterate up the stack from bottom to top, cloning the stack frames
+        let frames = self.0.iter().rev().map(|c| c.frame().clone()).collect();
+        StackTrace(frames)
     }
 }
