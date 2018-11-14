@@ -5,8 +5,8 @@ use crate::module::ValType;
 #[derive(PartialEq, Clone, Copy)]
 pub enum Value {
     Nil,
-    Integer32(i32),
-    Integer64(i64),
+    Integer32(u32),
+    Integer64(u64),
     Float32(f32),
     Float64(f64),
 }
@@ -22,7 +22,7 @@ impl Value {
         }
     }
 
-    pub fn unwrap_i32(&self) -> i32 {
+    pub fn unwrap_u32(&self) -> u32 {
         if let Value::Integer32(v) = self {
             *v
         } else {
@@ -45,25 +45,25 @@ impl fmt::Display for Value {
 
 impl From<u32> for Value {
     fn from(v: u32) -> Value {
-        Value::Integer32(v as i32)
+        Value::Integer32(v)
     }
 }
 
 impl From<u64> for Value {
     fn from(v: u64) -> Value {
-        Value::Integer64(v as i64)
+        Value::Integer64(v)
     }
 }
 
 impl From<i32> for Value {
     fn from(v: i32) -> Value {
-        Value::Integer32(v)
+        Value::Integer32(v as u32)
     }
 }
 
 impl From<i64> for Value {
     fn from(v: i64) -> Value {
-        Value::Integer64(v)
+        Value::Integer64(v as u64)
     }
 }
 

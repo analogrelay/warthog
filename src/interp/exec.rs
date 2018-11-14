@@ -122,102 +122,178 @@ macro_rules! unop {
 }
 
 binop!(add,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_add(y))));
+    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_add(y))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_add(y)))
+);
 binop!(sub,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_sub(y))));
+    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_sub(y))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_sub(y)))
+);
 binop!(mul,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_mul(y))));
+    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_mul(y))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_mul(y)))
+);
 binop!(div_s,
-    (Integer32, x, y) => i32_div_helper(x, y));
+    (Integer32, x, y) => int32::signed_div_helper(x, y),
+    (Integer64, x, y) => int64::signed_div_helper(x, y)
+);
 binop!(div_u,
-    (Integer32, x, y) => u32_div_helper(x, y));
+    (Integer32, x, y) => int32::unsigned_div_helper(x, y),
+    (Integer64, x, y) => int64::unsigned_div_helper(x, y)
+);
 binop!(rem_s,
-    (Integer32, x, y) => i32_rem_helper(x, y));
+    (Integer32, x, y) => int32::signed_rem_helper(x, y),
+    (Integer64, x, y) => int64::signed_rem_helper(x, y)
+);
 binop!(rem_u,
-    (Integer32, x, y) => u32_rem_helper(x, y));
+    (Integer32, x, y) => int32::unsigned_rem_helper(x, y),
+    (Integer64, x, y) => int64::unsigned_rem_helper(x, y)
+);
 binop!(and,
-    (Integer32, x, y) => Ok(Value::Integer32(x & y)));
+    (Integer32, x, y) => Ok(Value::Integer32(x & y)),
+    (Integer64, x, y) => Ok(Value::Integer64(x & y))
+);
 binop!(or,
-    (Integer32, x, y) => Ok(Value::Integer32(x | y)));
+    (Integer32, x, y) => Ok(Value::Integer32(x | y)),
+    (Integer64, x, y) => Ok(Value::Integer64(x | y))
+);
 binop!(xor,
-    (Integer32, x, y) => Ok(Value::Integer32(x ^ y)));
+    (Integer32, x, y) => Ok(Value::Integer32(x ^ y)),
+    (Integer64, x, y) => Ok(Value::Integer64(x ^ y))
+);
 binop!(shl,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_shl(y as u32))));
+    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_shl(y as u32))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_shl(y as u32)))
+);
 binop!(shr_u,
-    (Integer32, x, y) => Ok(Value::Integer32((x as u32).wrapping_shr(y as u32) as i32)));
+    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_shr(y))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_shr(y as u32)))
+);
 binop!(shr_s,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_shr(y as u32))));
+    (Integer32, x, y) => Ok(Value::Integer32((x as i32).wrapping_shr(y) as u32)),
+    (Integer64, x, y) => Ok(Value::Integer64((x as i64).wrapping_shr(y as u32) as u64))
+);
 binop!(rotl,
-    (Integer32, x, y) => Ok(Value::Integer32(x.rotate_left(y as u32))));
+    (Integer32, x, y) => Ok(Value::Integer32(x.rotate_left(y as u32))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.rotate_left(y as u32)))
+);
 binop!(rotr,
-    (Integer32, x, y) => Ok(Value::Integer32(x.rotate_right(y as u32))));
+    (Integer32, x, y) => Ok(Value::Integer32(x.rotate_right(y as u32))),
+    (Integer64, x, y) => Ok(Value::Integer64(x.rotate_right(y as u32)))
+);
+
+// Comparison ops always return i32
 binop!(eq,
-    (Integer32, x, y) => Ok(Value::Integer32(if x == y { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if x == y { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if x == y { 1 } else { 0 }))
+);
 binop!(ne,
-    (Integer32, x, y) => Ok(Value::Integer32(if x != y { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if x != y { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if x != y { 1 } else { 0 }))
+);
 binop!(gt_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if x > y { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) > (y as i32) { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) > (y as i64) { 1 } else { 0 }))
+);
 binop!(gt_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as u32) > (y as u32) { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if x > y { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if x > y { 1 } else { 0 }))
+);
 binop!(ge_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if x >= y { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) >= (y as i32) { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) >= (y as i64) { 1 } else { 0 }))
+);
 binop!(ge_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as u32) >= (y as u32) { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if x >= y { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if x >= y { 1 } else { 0 }))
+);
 binop!(lt_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if x < y { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) < (y as i32) { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) < (y as i64) { 1 } else { 0 }))
+);
 binop!(lt_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as u32) < (y as u32) { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if x < y { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if x < y { 1 } else { 0 }))
+);
 binop!(le_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if x <= y { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) <= (y as i32) { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) <= (y as i64) { 1 } else { 0 }))
+);
 binop!(le_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as u32) <= (y as u32) { 1 } else { 0 })));
+    (Integer32, x, y) => Ok(Value::Integer32(if x <= y { 1 } else { 0 })),
+    (Integer64, x, y) => Ok(Value::Integer32(if x <= y { 1 } else { 0 }))
+);
 
 unop!(clz,
-    (Integer32, x) => Ok(Value::Integer32(x.leading_zeros() as i32)));
+    (Integer32, x) => Ok(Value::Integer32(x.leading_zeros())),
+    (Integer64, x) => Ok(Value::Integer64(x.leading_zeros() as u64))
+);
 unop!(ctz,
-    (Integer32, x) => Ok(Value::Integer32(x.trailing_zeros() as i32)));
+    (Integer32, x) => Ok(Value::Integer32(x.trailing_zeros())),
+    (Integer64, x) => Ok(Value::Integer64(x.trailing_zeros() as u64))
+);
 unop!(popcnt,
-    (Integer32, x) => Ok(Value::Integer32(x.count_ones() as i32)));
+    (Integer32, x) => Ok(Value::Integer32(x.count_ones())),
+    (Integer64, x) => Ok(Value::Integer64(x.count_ones() as u64))
+);
+
+// Comparison ops already return i32
 unop!(eqz,
-    (Integer32, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 })));
+    (Integer32, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 })),
+    (Integer64, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 }))
+);
 
-fn i32_div_helper(x: i32, y: i32) -> Result<Value, Cow<'static, str>> {
-    if y == 0 {
-        Err("integer divide by zero".into())
-    } else {
-        match x.checked_div(y) {
-            Some(y) => Ok(Value::Integer32(y)),
-            None => Err("integer overflow".into()),
+macro_rules! div_helpers {
+    ($name: ident, $unsigned: ty, $signed: ty, $valtyp: ident) => {
+        mod $name {
+            use std::borrow::Cow;
+            use crate::Value;
+
+            pub fn signed_div_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+                if y == 0 {
+                    Err("integer divide by zero".into())
+                } else {
+                    match (x as $signed).checked_div(y as $signed) {
+                        Some(y) => Ok(Value::$valtyp(y as $unsigned)),
+                        None => Err("integer overflow".into()),
+                    }
+                }
+            }
+
+            pub fn unsigned_div_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+                if y == 0 {
+                    Err("integer divide by zero".into())
+                } else {
+                    match x.checked_div(y) {
+                        Some(y) => Ok(Value::$valtyp(y)),
+                        None => Err("integer overflow".into()),
+                    }
+                }
+            }
+
+            pub fn signed_rem_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+                if y == 0 {
+                    Err("integer divide by zero".into())
+                } else {
+                    Ok(Value::$valtyp(
+                        (x as $signed).overflowing_rem(y as $signed).0 as $unsigned,
+                    ))
+                }
+            }
+
+            pub fn unsigned_rem_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+                if y == 0 {
+                    Err("integer divide by zero".into())
+                } else {
+                    match x.checked_rem(y) {
+                        Some(y) => Ok(Value::$valtyp(y)),
+                        None => Err("integer overflow".into()),
+                    }
+                }
+            }
         }
     }
 }
 
-fn u32_div_helper(x: i32, y: i32) -> Result<Value, Cow<'static, str>> {
-    if y == 0 {
-        Err("integer divide by zero".into())
-    } else {
-        match (x as u32).checked_div(y as u32) {
-            Some(y) => Ok(Value::Integer32(y as i32)),
-            None => Err("integer overflow".into()),
-        }
-    }
-}
-
-fn i32_rem_helper(x: i32, y: i32) -> Result<Value, Cow<'static, str>> {
-    if y == 0 {
-        Err("integer divide by zero".into())
-    } else {
-        Ok(Value::Integer32(x.overflowing_rem(y).0))
-    }
-}
-
-fn u32_rem_helper(x: i32, y: i32) -> Result<Value, Cow<'static, str>> {
-    if y == 0 {
-        Err("integer divide by zero".into())
-    } else {
-        match (x as u32).checked_rem(y as u32) {
-            Some(y) => Ok(Value::Integer32(y as i32)),
-            None => Err("integer overflow".into()),
-        }
-    }
-}
+div_helpers!(int32, u32, i32, Integer32);
+div_helpers!(int64, u64, i64, Integer64);

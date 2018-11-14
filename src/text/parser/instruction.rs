@@ -122,7 +122,7 @@ fn parse_numeric_instruction(
         (_, _, "const") => {
             let val = match valtyp {
                 ValType::Nil => unreachable!(),
-                ValType::Integer32 => Value::Integer32(utils::pop_int(rest)? as i32),
+                ValType::Integer32 => Value::Integer32(utils::pop_int(rest)? as u32),
                 ValType::Integer64 => Value::Integer64(utils::pop_int(rest)?),
                 ValType::Float32 => Value::Float32(utils::pop_float(rest)? as f32),
                 ValType::Float64 => Value::Float64(utils::pop_float(rest)?),

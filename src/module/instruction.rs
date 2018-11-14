@@ -86,7 +86,7 @@ impl Instruction {
         match opcode {
             0x0B => Ok(None),
             0x41 => Ok(Some(Instruction::Const(Value::Integer32(
-                utils::read_leb128_i32(reader)?,
+                utils::read_leb128_u32(reader)?,
             )))),
             0x10 => Ok(Some(Instruction::Call(
                 utils::read_leb128_u32(reader)? as usize

@@ -70,8 +70,8 @@ pub fn run(file: &Path) {
 
 fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
     let (count, start) = (
-        values[0].unwrap_i32() as usize,
-        values[1].unwrap_i32() as usize,
+        values[0].unwrap_u32() as usize,
+        values[1].unwrap_u32() as usize,
     );
     let module = thread.stack_mut().module();
     let end = start + count;

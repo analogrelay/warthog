@@ -36,7 +36,7 @@ impl SExpr {
         }
     }
 
-    pub fn consume_int(self) -> Result<(i64, usize, usize), ParserError> {
+    pub fn consume_int(self) -> Result<(u64, usize, usize), ParserError> {
         match self {
             SExpr(SVal::Integer(i), start, end) => Ok((i, start, end)),
             SExpr(ref x, start, end) => Err(err!(
@@ -72,7 +72,7 @@ impl SExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SVal {
-    Integer(i64),
+    Integer(u64),
     Float(f64),
     Identifier(String),
     Str(String),
@@ -450,7 +450,7 @@ impl<R: io::Read> SExprParser<R> {
             true
         } else {
             // That was the first digit of the number
-            nat = (first_digit - b'0') as i64;
+            nat = (first_digit - b'0') as u64;
             false
         };
 
@@ -465,14 +465,14 @@ impl<R: io::Read> SExprParser<R> {
                 self.pos - 1,
             )),
             _ => Ok(SExpr::new(
-                SVal::Integer(if negate { -nat } else { nat }),
+                SVal::Integer(if negate { nat.wrapping_neg() } else { nat }),
                 start,
                 self.pos - 1,
             )),
         }
     }
 
-    fn read_float(&mut self, negate: bool, nat: i64, hex: bool) -> Result<f64, ParserError> {
+    fn read_float(&mut self, negate: bool, nat: u64, hex: bool) -> Result<f64, ParserError> {
         // Convert the natural number portion to a float
         let mut val = nat as f64;
 
@@ -504,7 +504,7 @@ impl<R: io::Read> SExprParser<R> {
         Ok(if negate { -val } else { val })
     }
 
-    fn read_digits(&mut self, mut start_val: i64, hex: bool) -> Result<(i64, i32), ParserError> {
+    fn read_digits(&mut self, mut start_val: u64, hex: bool) -> Result<(u64, i32), ParserError> {
         // Iterate over remaining digits, shifting and adding
         let mut count = 0;
         loop {
@@ -516,12 +516,12 @@ impl<R: io::Read> SExprParser<R> {
                 count += 1;
                 self.consume()?;
                 start_val *= 10;
-                start_val += get_digit(chr) as i64;
+                start_val += get_digit(chr) as u64;
             } else if hex && is_hex_digit(chr) {
                 count += 1;
                 self.consume()?;
                 start_val *= 16;
-                start_val += get_digit(chr) as i64;
+                start_val += get_digit(chr) as u64;
             } else if chr == b'_' {
                 self.consume()?;
             } else {
@@ -695,20 +695,32 @@ mod tests {
 
         assert_eq!(SExpr::new(SVal::Integer(0xA), 0, 2), single_expr("0xA"));
         assert_eq!(SExpr::new(SVal::Integer(0xA), 0, 3), single_expr("+0xA"));
-        assert_eq!(SExpr::new(SVal::Integer(-0xA), 0, 3), single_expr("-0xA"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFFF6), 0, 3),
+            single_expr("-0xA")
+        );
         assert_eq!(SExpr::new(SVal::Integer(0xA), 0, 2), single_expr("0xa"));
         assert_eq!(SExpr::new(SVal::Integer(0xA), 0, 3), single_expr("+0xa"));
-        assert_eq!(SExpr::new(SVal::Integer(-0xA), 0, 3), single_expr("-0xa"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFFF6), 0, 3),
+            single_expr("-0xa")
+        );
         assert_eq!(SExpr::new(SVal::Integer(0xAB), 0, 3), single_expr("0xAB"));
         assert_eq!(SExpr::new(SVal::Integer(0xAB), 0, 4), single_expr("+0xAB"));
-        assert_eq!(SExpr::new(SVal::Integer(-0xAB), 0, 4), single_expr("-0xAB"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFF55), 0, 4),
+            single_expr("-0xAB")
+        );
         assert_eq!(SExpr::new(SVal::Integer(0xAB), 0, 3), single_expr("0xAb"));
         assert_eq!(SExpr::new(SVal::Integer(0xAB), 0, 4), single_expr("+0xAb"));
-        assert_eq!(SExpr::new(SVal::Integer(-0xAB), 0, 4), single_expr("-0xAb"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFF55), 0, 4),
+            single_expr("-0xAb")
+        );
         assert_eq!(SExpr::new(SVal::Integer(0xAB), 0, 4), single_expr("0xA_B"));
         assert_eq!(SExpr::new(SVal::Integer(0xAB), 0, 5), single_expr("+0xA_B"));
         assert_eq!(
-            SExpr::new(SVal::Integer(-0xAB), 0, 5),
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFF55), 0, 5),
             single_expr("-0xA_B")
         );
     }
@@ -717,13 +729,22 @@ mod tests {
     pub fn single_expren_int() {
         assert_eq!(SExpr::new(SVal::Integer(42), 0, 2), single_expr("4_2"));
         assert_eq!(SExpr::new(SVal::Integer(42), 0, 3), single_expr("+4_2"));
-        assert_eq!(SExpr::new(SVal::Integer(-42), 0, 3), single_expr("-4_2"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFFD6), 0, 3),
+            single_expr("-4_2")
+        );
         assert_eq!(SExpr::new(SVal::Integer(42), 0, 1), single_expr("42"));
         assert_eq!(SExpr::new(SVal::Integer(42), 0, 2), single_expr("+42"));
-        assert_eq!(SExpr::new(SVal::Integer(-42), 0, 2), single_expr("-42"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFFD6), 0, 2),
+            single_expr("-42")
+        );
         assert_eq!(SExpr::new(SVal::Integer(4), 0, 0), single_expr("4"));
         assert_eq!(SExpr::new(SVal::Integer(4), 0, 1), single_expr("+4"));
-        assert_eq!(SExpr::new(SVal::Integer(-4), 0, 1), single_expr("-4"));
+        assert_eq!(
+            SExpr::new(SVal::Integer(0xFFFFFFFFFFFFFFFC), 0, 1),
+            single_expr("-4")
+        );
     }
 
     #[test]

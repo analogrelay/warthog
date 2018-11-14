@@ -65,7 +65,7 @@ pub fn pop_float(body: &mut VecDeque<SExpr>) -> Result<f64, ParserError> {
     }
 }
 
-pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<i64, ParserError> {
+pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<u64, ParserError> {
     match body.pop_front() {
         Some(SExpr(SVal::Integer(i), _, _)) => Ok(i),
         Some(SExpr(x, start, end)) => Err(err!(
