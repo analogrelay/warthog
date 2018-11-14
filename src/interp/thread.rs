@@ -1,28 +1,28 @@
 use std::borrow::Cow;
 
 use crate::{
-    interp::{exec, Stack, Trap},
+    interp::{exec, ExecutionStack, Trap},
     module::{Expr, Instruction, ValType},
     runtime::{FuncAddr, FuncImpl, Host, ModuleAddr},
     Value,
 };
 
 pub struct Thread {
-    stack: Stack,
+    stack: ExecutionStack,
 }
 
 impl Thread {
     pub fn new() -> Thread {
         Thread {
-            stack: Stack::new(),
+            stack: ExecutionStack::new(),
         }
     }
 
-    pub fn stack(&self) -> &Stack {
+    pub fn stack(&self) -> &ExecutionStack {
         &self.stack
     }
 
-    pub fn stack_mut(&mut self) -> &mut Stack {
+    pub fn stack_mut(&mut self) -> &mut ExecutionStack {
         &mut self.stack
     }
 
@@ -47,7 +47,7 @@ impl Thread {
             }
         };
 
-        let result = if !self.stack.frame_empty() {
+        let result = if !self.stack.current().is_empty() {
             Err(self.throw("Stack is not empty at end of function invocation!"))
         } else {
             val
@@ -69,7 +69,7 @@ impl Thread {
                 // Pop parameters
                 let mut locals = Vec::with_capacity(typ.params().len() + code.locals().len());
                 for param in typ.params() {
-                    if let Some(val) = self.stack.pop() {
+                    if let Some(val) = self.stack.current_mut().pop() {
                         if val.typ() != *param {
                             return Err(self.throw(format!(
                                 "Type mismatch. Expected: {}, Actual: {}",
@@ -105,7 +105,7 @@ impl Thread {
                 // In WASM v1, there is only zero or one result.
                 let mut results = Vec::with_capacity(typ.results().len());
                 for result in typ.results() {
-                    if let Some(val) = self.stack.pop() {
+                    if let Some(val) = self.stack.current_mut().pop() {
                         if val.typ() != *result {
                             return Err(self.throw(format!(
                                 "Type mismatch. Expected: {}, Actual: {}",
@@ -120,7 +120,7 @@ impl Thread {
                 }
 
                 // Validate that the stack is empty
-                let result = if !self.stack.frame_empty() {
+                let result = if !self.stack.current().is_empty() {
                     Err(self.throw("Stack is not empty at end of function invocation!"))
                 } else {
                     Ok(results)
@@ -149,14 +149,14 @@ impl Thread {
 
     /// Tries to pop a value off the stack for the current frame, traps if there is no current value.
     pub fn pop(&mut self) -> Result<Value, Trap> {
-        match self.stack.pop() {
+        match self.stack.current_mut().pop() {
             Some(v) => Ok(v),
             None => Err(self.throw("Stack underflow!")),
         }
     }
 
     pub fn push(&mut self, v: Value) {
-        self.stack.push(v)
+        self.stack.current_mut().push(v)
     }
 
     fn execute(&mut self, host: &mut Host, inst: Instruction) -> Result<(), Trap> {

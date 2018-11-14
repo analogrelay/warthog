@@ -1,6 +1,6 @@
 macro_rules! addr_type {
     ($name: ident) => {
-        #[derive(Clone, Copy)]
+        #[derive(Clone, Copy, PartialEq)]
         pub struct $name(::std::num::NonZeroUsize);
         
         impl $name {

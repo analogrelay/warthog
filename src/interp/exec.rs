@@ -9,7 +9,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     match inst {
         Instruction::Const(val) => thread.push(val.clone()),
         Instruction::Call(func_idx) => {
-            let module_addr = match thread.stack().module() {
+            let module_addr = match thread.stack().current().frame().module() {
                 Some(m) => m,
                 None => return Err(thread.throw("No module in scope."))
             };
@@ -22,7 +22,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
             }
         },
         Instruction::GetLocal(local_idx) => {
-            let val = match thread.stack().local(local_idx) {
+            let val = match thread.stack().current().local(local_idx) {
                 Some(l) => l,
                 None => return Err(thread.throw(format!("No such local: {}", local_idx))),
             };
