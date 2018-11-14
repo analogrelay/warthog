@@ -512,7 +512,7 @@ impl<R: io::Read> SExprParser<R> {
                 Some(c) => c,
                 None => break,
             };
-            if is_digit(chr) {
+            if !hex && is_digit(chr) {
                 count += 1;
                 self.consume()?;
                 start_val *= 10;
@@ -687,6 +687,12 @@ mod tests {
 
     #[test]
     pub fn single_token_int_hex() {
+        // Regression test: Hex digits that look like Dec digits
+        assert_eq!(
+            SExpr::new(SVal::Integer(0x80000000), 0, 9),
+            single_expr("0x80000000")
+        );
+
         assert_eq!(SExpr::new(SVal::Integer(0xA), 0, 2), single_expr("0xA"));
         assert_eq!(SExpr::new(SVal::Integer(0xA), 0, 3), single_expr("+0xA"));
         assert_eq!(SExpr::new(SVal::Integer(-0xA), 0, 3), single_expr("-0xA"));

@@ -1,11 +1,12 @@
 use crate::{
-    interp::{InvokeResult, Thread},
+    interp::{Thread, Trap},
     module::FuncType,
     runtime::Host,
     Value,
 };
 
-pub type HostFunc = fn(host: &mut Host, thread: &mut Thread, values: &[Value]) -> InvokeResult;
+pub type HostFunc =
+    fn(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap>;
 
 pub struct SyntheticFunc {
     pub typ: FuncType,
@@ -17,24 +18,23 @@ impl SyntheticFunc {
         SyntheticFunc { typ, imp }
     }
 
-    pub fn invoke(&self, host: &mut Host, thread: &mut Thread) -> InvokeResult {
+    pub fn invoke(&self, host: &mut Host, thread: &mut Thread) -> Result<Vec<Value>, Trap> {
         // Pop values off the stack
-        let values: Vec<_> = {
-            let stack = thread.stack_mut();
-            self.typ
-                .params()
-                .iter()
-                .rev()
-                .map(|t| {
-                    let v = stack.pop().expect("expected a value on the stack!");
-                    debug_assert!(
-                        v.typ() == *t,
-                        "expected the value to be a {}, but it was a {}",
-                        t,
-                        v.typ()
-                    );
-                    v
-                }).collect()
+        let values = {
+            let mut vals = Vec::new();
+            for param in self.typ.params().iter() {
+                match thread.pop()? {
+                    v if v.typ() != *param => {
+                        return Err(thread.throw(format!(
+                            "Type mismatch. Function expects '{}' but '{}' is on top of the stack.",
+                            param,
+                            v.typ()
+                        )))
+                    }
+                    v => vals.push(v),
+                }
+            }
+            vals
         };
 
         (self.imp)(host, thread, &values)

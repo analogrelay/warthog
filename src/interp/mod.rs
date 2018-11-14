@@ -1,7 +1,8 @@
-mod invoke_result;
+mod exec;
 mod stack;
 mod thread;
+mod trap;
 
-pub use self::invoke_result::InvokeResult;
 pub use self::stack::{Stack, StackFrame};
 pub use self::thread::Thread;
+pub use self::trap::Trap;

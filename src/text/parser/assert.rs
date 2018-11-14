@@ -85,8 +85,6 @@ fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use crate::{
         module::{Expr, Instruction},
         text::{parser::utils, ScriptAction, ScriptCommand},
@@ -103,7 +101,7 @@ mod tests {
                     Expr::new(vec![Instruction::Const(Value::Integer32(2))]),
                 ],
             ),
-            Expr::new(vec![Instruction::Const(Value::Integer32(3))]),
+            Some(Expr::new(vec![Instruction::Const(Value::Integer32(3))])),
         );
         assert_eq!(
             expected,
@@ -117,7 +115,7 @@ mod tests {
     pub fn assert_return_get() {
         let expected = ScriptCommand::AssertReturn(
             ScriptAction::Get("pi".to_owned()),
-            Expr::new(vec![Instruction::Const(Value::Integer32(3))]),
+            Some(Expr::new(vec![Instruction::Const(Value::Integer32(3))])),
         );
         assert_eq!(
             expected,

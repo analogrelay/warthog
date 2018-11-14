@@ -1,14 +1,33 @@
 extern crate warthog;
 
-use std::{env, fs, process};
+use std::{borrow::Cow, env, fmt, fs, process};
 
 use warthog::{
-    interp::{InvokeResult, Thread},
+    interp::{Thread, Trap},
     runtime::{ExternVal, Host, ModuleAddr},
     text::{self, ScriptAction, ScriptCommand},
-    module::Expr,
-    Value
+    Value,
 };
+
+enum AssertionResult {
+    Success,
+    Failure(Cow<'static, str>),
+}
+
+impl fmt::Display for AssertionResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AssertionResult::Success => write!(f, "success"),
+            AssertionResult::Failure(s) => write!(f, "failure - {}", s),
+        }
+    }
+}
+
+impl fmt::Debug for AssertionResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
 
 fn main() {
     // Arg 0 is the executable name
@@ -48,59 +67,59 @@ pub fn run(file: &str) {
                     Some(ref e) => print!("* {} = {} ... ", action, e),
                     None => print!("* {} ...", action),
                 }
-                let result = run_action(action, last_module, &mut host);
-                let expected = match expr {
-                    Some(e) => evaluate_expr(e, &mut host),
-                    None => InvokeResult::Empty,
+
+                if let Some(module_addr) = last_module {
+                    let mut thread = Thread::new();
+                    let result = run_action(&mut thread, action, module_addr, &mut host);
+                    let expected = match expr {
+                        Some(ref e) => thread.eval(module_addr, e, &mut host),
+                        None => Ok(Value::Nil),
+                    };
+
+                    println!(" {}", evaluate_assertion(expected, result));
+                } else {
+                    println!(" {}", AssertionResult::Failure("no active module".into()));
                 };
-                println!(" {}", evaluate_assertion(expected, result));
             }
             ScriptCommand::AssertTrap(action, failure) => {
                 print!("* {} trap '{}' ...", action, failure);
-                let result = run_action(action, last_module, &mut host);
-                match result {
-                    InvokeResult::Trap(ref f) if f == &failure => {
-                        println!(" succeeded!");
-                    }
-                    InvokeResult::Trap(f) => {
-                        println!(" trapped: '{}'", f);
-                    }
-                    _ => unimplemented!(),
-                }
+                if let Some(module_addr) = last_module {
+                    let mut thread = Thread::new();
+                    let result = run_action(&mut thread, action, module_addr, &mut host);
+                    println!(" {}", evaluate_assertion(Err(Trap::new(failure)), result));
+                } else {
+                    println!(" {}", AssertionResult::Failure("no active module".into()));
+                };
             }
         }
     }
 }
 
-fn evaluate_expr(e: Expr, host: &mut Host) -> InvokeResult {
-    InvokeResult::Return(vec![host.eval_expr(&e).unwrap()])
-}
-
 fn evaluate_assertion(
-    expected: InvokeResult,
-    actual: InvokeResult
-) -> String {
+    expected: Result<Value, Trap>,
+    actual: Result<Vec<Value>, Trap>,
+) -> AssertionResult {
     match (expected, actual) {
-        (InvokeResult::Trap(ref exp), InvokeResult::Trap(ref act)) if exp == act => "succeeded!".to_owned(),
-        (InvokeResult::Trap(_), InvokeResult::Trap(ref act)) => format!("failed - unexpected trap: '{}'", act),
-        (InvokeResult::Trap(_), _) => "failed - did not trap".to_owned(),
-        (_, InvokeResult::Trap(ref act)) => format!("failed - trapped: '{}'", act),
-        (InvokeResult::Return(r), InvokeResult::Empty) => format!("failed - expected {}, returned nothing", format_vals(r)),
-        (InvokeResult::Empty, InvokeResult::Return(r)) => format!("failed - expected nothing, returned {}", format_vals(r)),
-        (InvokeResult::Empty, InvokeResult::Empty) => "succeeded!".to_owned(),
-        (InvokeResult::Return(exp), InvokeResult::Return(act)) => {
-            for x in 0..exp.len() {
-                if x > act.len() || exp[x] != act[x] {
-                    return format!("failed - expected {}, returned {}", format_vals(exp), format_vals(act))
-                }
-            }
-
-            "succeeded!".to_owned()
-        },
+        (Err(ref e), Err(ref a)) if e == a => AssertionResult::Success,
+        (Err(_), Ok(ref x)) => {
+            AssertionResult::Failure(format!("returned '{}'", format_vals(x)).into())
+        }
+        (_, Err(ref a)) => AssertionResult::Failure(format!("trapped '{}'", a).into()),
+        (Ok(Value::Nil), Ok(ref a)) if a.len() == 0 => AssertionResult::Success,
+        (Ok(Value::Nil), Ok(ref a)) if a.len() != 0 => AssertionResult::Failure(
+            format!("expected no results, actual: '{}'", format_vals(a)).into(),
+        ),
+        (Ok(v), Ok(ref a)) if a.len() > 1 => AssertionResult::Failure(
+            format!("expected: '{}', actual: '{}'", v, format_vals(a)).into(),
+        ),
+        (Ok(v), Ok(ref a)) if v == a[0] => AssertionResult::Success,
+        (Ok(v), Ok(ref a)) => AssertionResult::Failure(
+            format!("expected: '{}', actual: '{}'", v, format_vals(a)).into(),
+        ),
     }
 }
 
-fn format_vals(vals: Vec<Value>) -> String {
+fn format_vals(vals: &Vec<Value>) -> String {
     let mut s = String::new();
     for val in vals {
         s.push_str(&format!("{}, ", val));
@@ -111,29 +130,26 @@ fn format_vals(vals: Vec<Value>) -> String {
 }
 
 fn run_action(
+    thread: &mut Thread,
     action: ScriptAction,
-    last_module: Option<ModuleAddr>,
+    module: ModuleAddr,
     host: &mut Host,
-) -> InvokeResult {
+) -> Result<Vec<Value>, Trap> {
     match action {
         ScriptAction::Invoke(name, exprs) => {
             // Resolve the FuncAddr
-            let func_addr = match last_module {
-                Some(module_addr) => {
-                    let export = host.resolve_import(module_addr, &name).unwrap();
-                    match export.value() {
-                        ExternVal::Func(func_addr) => *func_addr,
-                        e => panic!(
+            let func_addr = {
+                let export = host.resolve_import(module, &name).unwrap();
+                match export.value() {
+                    ExternVal::Func(func_addr) => *func_addr,
+                    e => {
+                        return Err(Trap::new(format!(
                             "Export '{}' from module '{}' is not a function, it's a {:?}",
-                            name, module_addr, e
-                        ),
+                            name, module, e
+                        )))
                     }
                 }
-                None => panic!("Cannot evaluate action, a module has not been instantiated yet!"),
             };
-
-            // Create a thread to run in
-            let mut thread = Thread::new();
 
             // Run the expressions to fill the stack
             for expr in exprs {

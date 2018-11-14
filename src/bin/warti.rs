@@ -3,7 +3,7 @@ extern crate warthog;
 use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
-    interp::{InvokeResult, Thread},
+    interp::{Thread, Trap},
     module::{FuncType, Module, ValType},
     reader::Reader,
     runtime::{ExternVal, Host},
@@ -68,7 +68,7 @@ pub fn run(file: &Path) {
     thread.invoke(&mut host, main_func);
 }
 
-fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> InvokeResult {
+fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
     let (count, start) = (
         values[0].unwrap_i32() as usize,
         values[1].unwrap_i32() as usize,
@@ -90,5 +90,5 @@ fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> InvokeResult
         println!("{}", s);
     }
 
-    InvokeResult::empty()
+    Ok(Vec::new())
 }

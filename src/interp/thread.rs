@@ -1,7 +1,9 @@
+use std::borrow::Cow;
+
 use crate::{
-    interp::{InvokeResult, Stack},
-    module::{Instruction, ValType},
-    runtime::{FuncAddr, FuncImpl, Host},
+    interp::{exec, Stack, Trap},
+    module::{Expr, Instruction, ValType},
+    runtime::{FuncAddr, FuncImpl, Host, ModuleAddr},
     Value,
 };
 
@@ -16,12 +18,47 @@ impl Thread {
         }
     }
 
+    pub fn stack(&self) -> &Stack {
+        &self.stack
+    }
+
     pub fn stack_mut(&mut self) -> &mut Stack {
         &mut self.stack
     }
 
-    /// Runs the function specified by the [`FuncAddr`] in the context of this thread.
-    pub fn invoke(&mut self, host: &mut Host, func: FuncAddr) -> InvokeResult {
+    /// Evaluates the expression specified by [`expr`] in the context of the provided module
+    pub fn eval(
+        &mut self,
+        module: ModuleAddr,
+        expr: &Expr,
+        host: &mut Host,
+    ) -> Result<Value, Trap> {
+        // Push a stack frame
+        self.stack.enter(module, Vec::new());
+
+        // Evaluate the expression
+        // Don't use '?' here because we need to clear the stack frame first
+        // (i.e. the "finally" of the pseudo "try-catch-finally" block)
+        let val = match self.run(host, expr.instructions()) {
+            Ok(()) => self.pop(),
+            Err(e) => {
+                self.stack.exit();
+                return Err(e);
+            }
+        };
+
+        let result = if !self.stack.frame_empty() {
+            Err(self.throw("Stack is not empty at end of function invocation!"))
+        } else {
+            val
+        };
+
+        self.stack.exit();
+        result
+    }
+
+    /// Runs the function specified by [`func`] in the context of this thread.
+    pub fn invoke(&mut self, host: &mut Host, func: FuncAddr) -> Result<Vec<Value>, Trap> {
         // Resolve the function
         let func_inst = host.get_func(func);
         match func_inst.imp() {
@@ -34,15 +71,15 @@ impl Thread {
                 for param in typ.params() {
                     if let Some(val) = self.stack.pop() {
                         if val.typ() != *param {
-                            return InvokeResult::trap(format!(
+                            return Err(self.throw(format!(
                                 "Type mismatch. Expected: {}, Actual: {}",
                                 param,
                                 val.typ()
-                            ));
+                            )));
                         }
                         locals.push(val);
                     } else {
-                        return InvokeResult::trap("Stack underflow!");
+                        return Err(self.throw("Stack underflow!"));
                     }
                 }
 
@@ -61,7 +98,7 @@ impl Thread {
                 self.stack.enter(module.clone(), locals);
                 if let Err(e) = self.run(host, code.body()) {
                     self.stack.exit();
-                    return e;
+                    return Err(e);
                 }
 
                 // Pop the result
@@ -70,23 +107,23 @@ impl Thread {
                 for result in typ.results() {
                     if let Some(val) = self.stack.pop() {
                         if val.typ() != *result {
-                            return InvokeResult::trap(format!(
+                            return Err(self.throw(format!(
                                 "Type mismatch. Expected: {}, Actual: {}",
                                 result,
                                 val.typ()
-                            ));
+                            )));
                         }
                         results.push(val);
                     } else {
-                        return InvokeResult::trap("Stack underflow!");
+                        return Err(self.throw("Stack underflow!"));
                     }
                 }
 
                 // Validate that the stack is empty
                 let result = if !self.stack.frame_empty() {
-                    InvokeResult::trap("Stack is not empty at end of function invocation!")
+                    Err(self.throw("Stack is not empty at end of function invocation!"))
                 } else {
-                    InvokeResult::Return(results)
+                    Ok(results)
                 };
 
                 // Exit the stack frame
@@ -97,59 +134,32 @@ impl Thread {
         }
     }
 
-    pub fn run(&mut self, host: &mut Host, code: &[Instruction]) -> Result<(), InvokeResult> {
+    pub fn run(&mut self, host: &mut Host, code: &[Instruction]) -> Result<(), Trap> {
         for inst in code {
-            self.execute(host, inst)?;
+            self.execute(host, inst.clone())?;
         }
         Ok(())
     }
 
-    fn execute(&mut self, host: &mut Host, inst: &Instruction) -> Result<(), InvokeResult> {
-        match inst {
-            Instruction::Const(val) => self.stack.push(val.clone()),
-            Instruction::Call(func_idx) => {
-                let func = host.resolve_func(self.stack.module(), *func_idx);
-                let results = self.invoke(host, func);
-                panic!("Call instruction needs to handle return values");
-            }
-            Instruction::GetLocal(local_idx) => {
-                let val = match self.stack.local(*local_idx) {
-                    Some(l) => l,
-                    None => return Err(InvokeResult::trap(format!("No such local: {}", local_idx))),
-                };
-                self.stack.push(val);
-            }
-            Instruction::Add(ValType::Integer32) => {
-                let x = self.pop()?;
-                let y = self.pop()?;
-
-                let res = match (x, y) {
-                    (Value::Integer32(x), Value::Integer32(y)) => Value::Integer32(x + y),
-                    _ => {
-                        return Err(InvokeResult::trap(format!(
-                            "Type mismatch. Unable to add {} and {} using i32.add",
-                            x.typ(),
-                            y.typ()
-                        )))
-                    }
-                };
-                self.stack.push(res);
-            }
-            x => {
-                return Err(InvokeResult::trap(format!(
-                    "Instruction not implemented: {}",
-                    x
-                )))
-            }
-        };
-
-        Ok(())
+    /// Creates a new [`Trap`], capturing the current stack frame.
+    pub fn throw<S: Into<Cow<'static, str>>>(&self, message: S) -> Trap {
+        // TODO: Capture stack frame ;)
+        Trap::new(message)
     }
 
-    fn pop(&mut self) -> Result<Value, InvokeResult> {
+    /// Tries to pop a value off the stack for the current frame, traps if there is no current value.
+    pub fn pop(&mut self) -> Result<Value, Trap> {
         match self.stack.pop() {
             Some(v) => Ok(v),
-            None => Err(InvokeResult::trap("Stack underflow!")),
+            None => Err(self.throw("Stack underflow!")),
         }
+    }
+
+    pub fn push(&mut self, v: Value) {
+        self.stack.push(v)
+    }
+
+    fn execute(&mut self, host: &mut Host, inst: Instruction) -> Result<(), Trap> {
+        exec::execute(self, host, inst)
     }
 }
