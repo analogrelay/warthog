@@ -9,5 +9,5 @@ pool:
 steps:
 - script: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain beta
   displayName: Install rust
-- script: cargo test
+- script: $HOME/.cargo/bin/cargo test
   displayName: 'Cargo Test'
