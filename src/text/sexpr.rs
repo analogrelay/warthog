@@ -25,17 +25,6 @@ impl SExpr {
         }
     }
 
-    pub fn consume_atom(self) -> Result<(String, usize, usize), ParserError> {
-        match self {
-            SExpr(SVal::Atom(a), start, end) => Ok((a, start, end)),
-            SExpr(ref x, start, end) => Err(err!(
-                (start, end),
-                ParserErrorKind::UnexpectedToken,
-                format!("Expected an Atom, but found: '{:?}'", x)
-            )),
-        }
-    }
-
     pub fn consume_int(self) -> Result<(u64, usize, usize), ParserError> {
         match self {
             SExpr(SVal::Integer(i), start, end) => Ok((i, start, end)),

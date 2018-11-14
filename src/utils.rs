@@ -4,10 +4,6 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::Instruction, Error};
 
-pub fn read_leb128_i32<R: io::Read>(r: &mut R) -> Result<i32, Error> {
-    Ok(leb128::read::signed(r)? as i32)
-}
-
 pub fn read_leb128_u32<R: io::Read>(r: &mut R) -> Result<u32, Error> {
     Ok(leb128::read::unsigned(r)? as u32)
 }

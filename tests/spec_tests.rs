@@ -1,6 +1,8 @@
+#![deny(warnings)]
+
 extern crate warthog;
 
-use std::{borrow::Cow, env, fmt, fs, process};
+use std::{borrow::Cow, env, fmt, fs};
 
 use warthog::{
     interp::{Thread, Trap},
@@ -184,11 +186,11 @@ fn run_action(
 
             // Run the expressions to fill the stack
             for expr in exprs {
-                thread.run(host, expr.instructions());
+                thread.run(host, expr.instructions())?;
             }
 
             thread.invoke(host, func_addr)
         }
-        ScriptAction::Get(name) => unimplemented!("(get) action"),
+        ScriptAction::Get(_) => unimplemented!("(get) action"),
     }
 }
