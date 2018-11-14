@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    module::{Expr, Export, Instruction, MemberDesc, Module},
+    module::{Export, Expr, Instruction, MemberDesc, Module},
     runtime::{
         ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
     },
@@ -84,7 +84,7 @@ impl Host {
         // Offset must be a constant expression
         match expr.instructions() {
             [Instruction::Const(v)] => Ok(*v),
-            x => panic!("expr not implemented!"),
+            _ => panic!("expr not implemented!"),
         }
     }
 
@@ -213,7 +213,7 @@ impl Host {
         for data in module.data() {
             let offset = match self.eval_expr(data.expr())? {
                 Value::Integer32(i) => i as usize,
-                _ => return Err(Error::InvalidModule)
+                _ => return Err(Error::InvalidModule),
             };
 
             // Find an initialize the memory

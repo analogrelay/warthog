@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+// use std::borrow::Cow;
 
 use crate::{
     interp::{Thread, Trap},
@@ -12,7 +12,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Const(val) => thread.push(val.clone()),
         Instruction::Call(func_idx) => {
             let func = host.resolve_func(thread.stack().module(), func_idx);
-            let results = thread.invoke(host, func);
+            thread.invoke(host, func)?;
             panic!("Call instruction needs to handle return values");
         }
         Instruction::GetLocal(local_idx) => {

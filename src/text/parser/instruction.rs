@@ -12,7 +12,7 @@ use crate::{
 
 pub fn parse_expr(token: SExpr, locals: &SymbolTable) -> Result<Expr, ParserError> {
     match token {
-        SExpr(SVal::Expr(mut expr_body), start, end) => {
+        SExpr(SVal::Expr(mut expr_body), _, _) => {
             let mut instrs = Vec::new();
             parse_instructions(&mut expr_body, &mut instrs, locals)?;
             Ok(Expr::new(instrs))
@@ -91,7 +91,7 @@ fn parse_instruction(
             ("i64", x) => parse_numeric_instruction(ValType::Integer64, &x[1..], start, end, rest),
             ("f32", x) => parse_numeric_instruction(ValType::Float32, &x[1..], start, end, rest),
             ("f64", x) => parse_numeric_instruction(ValType::Float64, &x[1..], start, end, rest),
-            (x, _) => Err(err!(
+            (_, _) => Err(err!(
                 (start, end),
                 ParserErrorKind::UnknownInstruction(name.to_owned()),
                 format!("Unknown instruction: {}", name)
