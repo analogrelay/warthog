@@ -23,7 +23,12 @@ impl SyntheticModule {
         self
     }
 
-    pub fn mem<S: Into<String>>(mut self, name: S, min_size: usize, max_size: Option<usize>) -> Self {
+    pub fn mem<S: Into<String>>(
+        mut self,
+        name: S,
+        min_size: usize,
+        max_size: Option<usize>,
+    ) -> Self {
         self.exports
             .push(Export::mem(name, MemoryType::new(min_size, max_size)));
         self

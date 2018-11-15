@@ -84,7 +84,9 @@ pub enum Instruction {
 }
 
 macro_rules! rd_int {
-    ($r:expr, $t: ty) => (utils::read_leb128_u32($r)? as $t)
+    ($r:expr, $t: ty) => {
+        utils::read_leb128_u32($r)? as $t
+    };
 }
 
 impl Instruction {
@@ -99,7 +101,10 @@ impl Instruction {
             0x41 => Ok(Some(Instruction::Const(Value::Integer32(
                 utils::read_leb128_u32(reader)?,
             )))),
-            0x6E => Ok(Some(Instruction::Div(ValType::Integer32, Signedness::Unsigned))),
+            0x6E => Ok(Some(Instruction::Div(
+                ValType::Integer32,
+                Signedness::Unsigned,
+            ))),
             x => panic!("Instruction not implemented: 0x{:X}", x),
         }
     }

@@ -2,7 +2,7 @@
 
 extern crate warthog;
 
-use std::{borrow::Cow, env, fs, path::Path, process, io::stderr};
+use std::{borrow::Cow, env, fs, io::stderr, path::Path, process};
 
 use warthog::{
     interp::{Thread, Trap},
@@ -80,7 +80,7 @@ fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<V
 
     let module = match thread.stack().current().frame().module() {
         Some(m) => m,
-        None => return Err(thread.throw("No module in scope."))
+        None => return Err(thread.throw("No module in scope.")),
     };
     let end = start + count;
 

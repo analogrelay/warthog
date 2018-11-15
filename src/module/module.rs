@@ -2,10 +2,10 @@ use std::{fmt, io};
 
 use crate::{
     builder::ModuleBuilder,
-    module::{DataItem, Export, FuncBody, FuncType, Import},
+    module::{DataItem, Export, FuncBody, FuncType, Import, ModuleNames},
     reader::{
         CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader,
-        SectionHeader, SectionId, TypeSection,
+        SectionHeader, SectionId, TypeSection, CustomSection
     },
     Error,
 };
@@ -19,6 +19,7 @@ pub struct Module {
     exports: Vec<Export>,
     code: Vec<FuncBody>,
     data: Vec<DataItem>,
+    names: Option<ModuleNames>,
 }
 
 impl Module {
@@ -30,6 +31,7 @@ impl Module {
             exports: builder.exports,
             code: builder.code,
             data: builder.data,
+            names: builder.names,
         }
     }
 
@@ -50,6 +52,7 @@ impl Module {
         let mut exports = None;
         let mut code = None;
         let mut data = None;
+        let mut names = None;
 
         // Load all the sections
         while let Some(header) = r.read_section_header()? {
@@ -60,6 +63,15 @@ impl Module {
                 SectionId::Export => exports = Some(load_exports(&mut r, header)?),
                 SectionId::Code => code = Some(load_code(&mut r, header)?),
                 SectionId::Data => data = Some(load_data(&mut r, header)?),
+                SectionId::Custom => {
+                    let section: CustomSection = r.read_section(header)?;
+                    match section.name.as_str() {
+                        "name" => names = Some(ModuleNames::load(section.read_content()?)),
+                        _ => {
+                            // Unknown custom section, just ignore it
+                        }
+                    }
+                }
                 _ => {
                     // Unknown section
                     // TODO: Logging
@@ -75,6 +87,7 @@ impl Module {
             exports: exports.unwrap_or_else(|| Vec::new()),
             code: code.unwrap_or_else(|| Vec::new()),
             data: data.unwrap_or_else(|| Vec::new()),
+            names,
         })
     }
 
@@ -100,6 +113,10 @@ impl Module {
 
     pub fn data(&self) -> &Vec<DataItem> {
         &self.data
+    }
+
+    pub fn names(&self) -> Option<&ModuleNames> {
+        self.names.as_ref()
     }
 }
 

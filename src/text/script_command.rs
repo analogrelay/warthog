@@ -26,10 +26,8 @@ impl fmt::Display for ScriptCommand {
             ScriptCommand::Module(m) => write!(f, "{}", m),
             ScriptCommand::AssertReturn(action, Some(e)) => {
                 write!(f, "(assert_return {} {})", action, e)
-            },
-            ScriptCommand::AssertReturn(action, None) => {
-                write!(f, "(assert_return {})", action)
-            },
+            }
+            ScriptCommand::AssertReturn(action, None) => write!(f, "(assert_return {})", action),
             ScriptCommand::AssertTrap(action, failure) => {
                 write!(f, "(assert_trap {} \"{}\")", action, failure)
             }

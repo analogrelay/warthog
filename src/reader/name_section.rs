@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 
-use crate::{Error, reader::Section, utils};
+use crate::{reader::Section, utils, Error};
 
 pub struct NameSection {
     pub module_name: Option<String>,
@@ -73,7 +73,7 @@ fn read_subsection_id<R: io::Read>(reader: &mut R) -> Result<Option<u8>, Error> 
     match reader.read_u8() {
         Ok(id) => Ok(Some(id)),
         Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => Ok(None),
-        Err(e) => Err(e.into())
+        Err(e) => Err(e.into()),
     }
 }
 

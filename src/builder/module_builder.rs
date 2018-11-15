@@ -1,6 +1,6 @@
 use crate::{
     builder::FuncBuilder,
-    module::{DataItem, Export, FuncBody, FuncType, Import, Module},
+    module::{DataItem, Export, FuncBody, FuncType, Import, Module, ModuleNames},
 };
 
 pub struct ModuleBuilder {
@@ -10,6 +10,7 @@ pub struct ModuleBuilder {
     pub exports: Vec<Export>,
     pub code: Vec<FuncBody>,
     pub data: Vec<DataItem>,
+    pub names: Option<ModuleNames>,
 }
 
 impl ModuleBuilder {
@@ -21,6 +22,7 @@ impl ModuleBuilder {
             exports: Vec::new(),
             code: Vec::new(),
             data: Vec::new(),
+            names: None,
         }
     }
 

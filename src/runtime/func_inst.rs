@@ -13,7 +13,12 @@ pub struct FuncInst {
 impl FuncInst {
     pub fn local(typ: FuncType, module: ModuleAddr, func_id: usize, code: FuncBody) -> FuncInst {
         FuncInst {
-            imp: FuncImpl::Local { typ, module, code, func_id },
+            imp: FuncImpl::Local {
+                typ,
+                module,
+                code,
+                func_id,
+            },
         }
     }
 

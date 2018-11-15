@@ -25,7 +25,7 @@ impl Trap {
     }
 
     /// Pretty-prints the stack trace.
-    /// 
+    ///
     /// The implementation of [`std::fmt::Display`] for [`Trap`] does not include the
     /// stack trace by default because it generally needs to be formatted across multiple
     /// lines. Pretty printing prints the stack trace over multiple lines.

@@ -11,7 +11,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Call(func_idx) => {
             let module_addr = match thread.stack().current().frame().module() {
                 Some(m) => m,
-                None => return Err(thread.throw("No module in scope."))
+                None => return Err(thread.throw("No module in scope.")),
             };
             let func = host.resolve_func(module_addr, func_idx);
             let values = thread.invoke(host, func)?;
@@ -20,7 +20,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
             for value in values {
                 thread.push(value)
             }
-        },
+        }
         Instruction::GetLocal(local_idx) => {
             let val = match thread.stack().current().local(local_idx) {
                 Some(l) => l,
@@ -58,7 +58,9 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Lt(t, Signedness::Unsigned) => lt_u(thread, t)?,
         Instruction::Le(t, Signedness::Unsigned) => le_u(thread, t)?,
 
-        Instruction::Drop => { thread.pop()?; },
+        Instruction::Drop => {
+            thread.pop()?;
+        }
         x => return Err(thread.throw(format!("Instruction not implemented: {}", x))),
     };
 
@@ -254,10 +256,13 @@ unop!(eqz,
 macro_rules! div_helpers {
     ($name: ident, $unsigned: ty, $signed: ty, $valtyp: ident) => {
         mod $name {
-            use std::borrow::Cow;
             use crate::Value;
-
-            pub fn signed_div_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+            use std::borrow::Cow;
+        
+            pub fn signed_div_helper(
+                x: $unsigned,
+                y: $unsigned,
+            ) -> Result<Value, Cow<'static, str>> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -267,8 +272,11 @@ macro_rules! div_helpers {
                     }
                 }
             }
-
-            pub fn unsigned_div_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+        
+            pub fn unsigned_div_helper(
+                x: $unsigned,
+                y: $unsigned,
+            ) -> Result<Value, Cow<'static, str>> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -278,8 +286,11 @@ macro_rules! div_helpers {
                     }
                 }
             }
-
-            pub fn signed_rem_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+        
+            pub fn signed_rem_helper(
+                x: $unsigned,
+                y: $unsigned,
+            ) -> Result<Value, Cow<'static, str>> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -288,8 +299,11 @@ macro_rules! div_helpers {
                     ))
                 }
             }
-
-            pub fn unsigned_rem_helper(x: $unsigned, y: $unsigned) -> Result<Value, Cow<'static, str>> {
+        
+            pub fn unsigned_rem_helper(
+                x: $unsigned,
+                y: $unsigned,
+            ) -> Result<Value, Cow<'static, str>> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -300,7 +314,7 @@ macro_rules! div_helpers {
                 }
             }
         }
-    }
+    };
 }
 
 div_helpers!(int32, u32, i32, Integer32);

@@ -5,7 +5,7 @@ extern crate warthog;
 use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
-    module::{FuncType, Module, ValType},
+    module::{FuncType, Module, ValType, ModuleNames},
     reader::Reader,
     runtime::{FuncImpl, Host, MemInst, ModuleAddr, ModuleInst},
     synth::SyntheticModule,
@@ -66,7 +66,11 @@ fn dump_funcs(host: &Host) {
     println!("  Functions:");
     for (i, func_inst) in host.funcs().enumerate() {
         match func_inst.imp() {
-            FuncImpl::Local { module: m, func_id: f, .. } => {
+            FuncImpl::Local {
+                module: m,
+                func_id: f,
+                ..
+            } => {
                 println!("  * {:04} {} {} {:04}", i + 1, func_inst.typ(), m, f);
             }
             FuncImpl::Synthetic(_) => println!("  * {:04} {} <Synthetic>", i + 1, func_inst.typ()),
@@ -126,6 +130,32 @@ fn dump_instances(entry_point: ModuleAddr, host: &Host) {
         dump_instance_funcs(&module_inst);
         dump_instance_mems(&module_inst);
         dump_instance_exports(&module_inst);
+
+        if let Some(names) = module_inst.names() {
+            dump_instance_names(names);
+        }
+    }
+}
+
+fn dump_instance_names(names: &ModuleNames) {
+    println!("  Debug Names:");
+    if let Some(module_name) = names.module_name() {
+        println!("    Module: {}", module_name);
+    }
+
+    if names.funcs().len() > 0 {
+        println!("    Functions:");
+        for (idx, func_names) in names.funcs().iter() {
+            if let Some(func_name) = func_names.func_name() {
+                println!("    * {:04} {}", idx, func_name);
+            } else {
+                println!("    * {:04} <no name>", idx);
+            }
+
+            for (idx, local_name) in func_names.locals().iter() {
+                println!("      * {:04} {}", idx, local_name);
+            }
+        }
     }
 }
 

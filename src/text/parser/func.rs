@@ -54,7 +54,11 @@ fn parse_export(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<()
     }
 }
 
-fn parse_typeuse(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder, locals: &mut SymbolTable) -> Result<(), ParserError> {
+fn parse_typeuse(
+    rest: &mut VecDeque<SExpr>,
+    func: &mut FuncBuilder,
+    locals: &mut SymbolTable,
+) -> Result<(), ParserError> {
     if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "type") {
         // Read the ID
         match body.pop_front() {
@@ -104,18 +108,22 @@ fn parse_func_type_segment(
                         }
                     };
                     list.push(valtyp)
-                },
+                }
                 SExpr(SVal::Identifier(id), start, end) => {
                     // Assign the next identifier
                     match locals.as_mut() {
-                        Some(l) => { l.assign(id); },
-                        None => return Err(err!(
-                            (start, end),
-                            ParserErrorKind::UnexpectedToken,
-                            format!("Identifiers are not permitted in this definition.")
-                        ))
+                        Some(l) => {
+                            l.assign(id);
+                        }
+                        None => {
+                            return Err(err!(
+                                (start, end),
+                                ParserErrorKind::UnexpectedToken,
+                                format!("Identifiers are not permitted in this definition.")
+                            ))
+                        }
                     }
-                },
+                }
                 x => {
                     return Err(err!(
                         (x.start(), x.end()),

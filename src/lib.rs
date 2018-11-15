@@ -12,9 +12,9 @@ extern crate lazy_static;
 
 mod error;
 mod memory;
+mod sparse_vec;
 mod utils;
 mod value;
-mod sparse_vec;
 
 pub mod builder;
 pub mod interp;

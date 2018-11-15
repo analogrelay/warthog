@@ -176,10 +176,13 @@ fn run_action(
                 match export.value() {
                     ExternVal::Func(func_addr) => *func_addr,
                     e => {
-                        return Err(Trap::new(format!(
-                            "Export '{}' from module '{}' is not a function, it's a {:?}",
-                            name, module, e
-                        ), None))
+                        return Err(Trap::new(
+                            format!(
+                                "Export '{}' from module '{}' is not a function, it's a {:?}",
+                                name, module, e
+                            ),
+                            None,
+                        ))
                     }
                 }
             };

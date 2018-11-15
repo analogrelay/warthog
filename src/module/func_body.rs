@@ -13,10 +13,7 @@ pub struct FuncBody {
 
 impl FuncBody {
     pub fn new(locals: Vec<ValType>, body: Vec<Instruction>) -> FuncBody {
-        FuncBody {
-            locals,
-            body,
-        }
+        FuncBody { locals, body }
     }
 
     pub fn read<R: io::Read>(reader: &mut R) -> Result<FuncBody, Error> {

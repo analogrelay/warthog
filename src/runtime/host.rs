@@ -94,12 +94,14 @@ impl Host {
         name: S,
         module: SyntheticModule,
     ) -> Result<ModuleAddr, Error> {
-        let module_addr = ModuleAddr::new(self.modules.len() + 1).expect("New module address should be non-zero!");
+        let module_addr = ModuleAddr::new(self.modules.len() + 1)
+            .expect("New module address should be non-zero!");
 
         let mut funcs = Vec::new();
         for func in module.funcs {
             // Allocate a func in the host
-            let func_addr = FuncAddr::new(self.funcs.len() + 1).expect("New function address should be non-zero!");
+            let func_addr = FuncAddr::new(self.funcs.len() + 1)
+                .expect("New function address should be non-zero!");
             let func_inst = FuncInst::synthetic(func);
             self.funcs.push(Arc::new(func_inst));
             funcs.push(func_addr);
@@ -114,6 +116,7 @@ impl Host {
             funcs,
             Vec::new(),
             exports,
+            None,
         )));
         Ok(module_addr)
     }
@@ -124,7 +127,8 @@ impl Host {
         name: S,
         module: Module,
     ) -> Result<ModuleAddr, Error> {
-        let module_addr = ModuleAddr::new(self.modules.len() + 1).expect("New module address should be non-zero!");
+        let module_addr = ModuleAddr::new(self.modules.len() + 1)
+            .expect("New module address should be non-zero!");
 
         let mut funcs = Vec::new();
         let mut mems = Vec::new();
@@ -136,7 +140,7 @@ impl Host {
         let exports = self.export_module(&funcs, module.exports())?;
 
         self.modules
-            .push(Arc::new(ModuleInst::new(name.into(), funcs, mems, exports)));
+            .push(Arc::new(ModuleInst::new(name.into(), funcs, mems, exports, module.names().cloned())));
         Ok(module_addr)
     }
 
@@ -154,7 +158,8 @@ impl Host {
                     exports.push(inst);
                 }
                 MemberDesc::Memory(ref mem_type) => {
-                    let mem_addr = MemAddr::new(self.mems.len() + 1).expect("New memory address should be non-zero!");
+                    let mem_addr = MemAddr::new(self.mems.len() + 1)
+                        .expect("New memory address should be non-zero!");
                     self.mems.push(Arc::new(MemInst::from_type(mem_type)?));
                     let inst = ExportInst::mem(export.name(), mem_addr);
                     exports.push(inst);
@@ -174,7 +179,8 @@ impl Host {
         // Instantiate functions
         for (code_idx, type_id) in module.funcs().iter().enumerate() {
             // Assign an address
-            let func_addr = FuncAddr::new(self.funcs.len() + 1).expect("New function address should be non-zero!");
+            let func_addr = FuncAddr::new(self.funcs.len() + 1)
+                .expect("New function address should be non-zero!");
             funcs.push(func_addr);
 
             // Get the function body and type
@@ -182,8 +188,12 @@ impl Host {
             let body = module.code()[code_idx].clone();
 
             // Create the instance and register it in the host
-            self.funcs
-                .push(Arc::new(FuncInst::local(typ, instance_addr, code_idx, body)));
+            self.funcs.push(Arc::new(FuncInst::local(
+                typ,
+                instance_addr,
+                code_idx,
+                body,
+            )));
         }
     }
 
