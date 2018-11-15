@@ -6,6 +6,7 @@ mod function_section;
 mod import_section;
 mod section_header;
 mod type_section;
+mod name_section;
 
 pub use self::code_section::CodeSection;
 pub use self::custom_section::CustomSection;
@@ -15,6 +16,7 @@ pub use self::function_section::FunctionSection;
 pub use self::import_section::ImportSection;
 pub use self::section_header::{SectionHeader, SectionId};
 pub use self::type_section::TypeSection;
+pub use self::name_section::NameSection;
 
 use std::io;
 

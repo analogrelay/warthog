@@ -5,8 +5,8 @@ extern crate warthog;
 use std::{env, fs, io, process};
 
 use warthog::reader::{
-    CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader,
-    SectionHeader, SectionId, TypeSection,
+    CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection,
+    NameSection, Reader, SectionHeader, SectionId, TypeSection,
 };
 
 fn main() {
@@ -47,7 +47,29 @@ pub fn run(file: &str) {
 
 fn dump_custom_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
     let section: CustomSection = r.read_section(header).unwrap();
-    println!("  Name: {}", section.name);
+    println!("  Custom Section Name: {}", section.name);
+    match section.name.as_str() {
+        "name" => dump_name_section(section),
+        _ => {}
+    }
+}
+
+fn dump_name_section(custom_section: CustomSection) {
+    let section: NameSection = custom_section.read_content().unwrap();
+    if let Some(module_name) = section.module_name {
+        println!("  Module Name: {}", module_name);
+    }
+    println!("  Functions:");
+    for func in section.func_names {
+        println!("  * {:04} {}", func.index(), func.name());
+    }
+    println!("  Locals:");
+    for func in section.local_names {
+        println!("  * Function {:04}", func.index());
+        for local in func.names() {
+            println!("    * {:04} {}", local.index(), local.name());
+        }
+    }
 }
 
 fn dump_type_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
