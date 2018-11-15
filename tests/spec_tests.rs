@@ -117,7 +117,7 @@ fn run(commands: Vec<ScriptCommand>) {
                 let result = if let Some(module_addr) = last_module {
                     let mut thread = Thread::new();
                     let result = run_action(&mut thread, &action, module_addr, &mut host);
-                    evaluate_assertion(Err(Trap::new(failure.clone())), result)
+                    evaluate_assertion(Err(Trap::new(failure.clone(), None)), result)
                 } else {
                     AssertionResult::Failure("no active module".into())
                 };
@@ -133,7 +133,7 @@ fn evaluate_assertion(
     actual: Result<Vec<Value>, Trap>,
 ) -> AssertionResult {
     match (expected, actual) {
-        (Err(ref e), Err(ref a)) if e == a => AssertionResult::Success,
+        (Err(ref e), Err(ref a)) if e.message() == a.message() => AssertionResult::Success,
         (Err(_), Ok(ref x)) => {
             AssertionResult::Failure(format!("returned '{}'", format_vals(x)).into())
         }
@@ -179,7 +179,7 @@ fn run_action(
                         return Err(Trap::new(format!(
                             "Export '{}' from module '{}' is not a function, it's a {:?}",
                             name, module, e
-                        )))
+                        ), None))
                     }
                 }
             };

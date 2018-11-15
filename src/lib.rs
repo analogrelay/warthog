@@ -14,6 +14,7 @@ mod error;
 mod memory;
 mod utils;
 mod value;
+mod sparse_vec;
 
 pub mod builder;
 pub mod interp;
@@ -26,5 +27,7 @@ pub mod text;
 pub use crate::error::Error;
 pub use crate::memory::Memory;
 pub use crate::value::Value;
+
+pub(crate) use crate::sparse_vec::SparseVec;
 
 pub const PAGE_SIZE: usize = 65536;

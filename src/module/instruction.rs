@@ -29,6 +29,7 @@ impl fmt::Debug for Signedness {
 pub enum Instruction {
     Call(usize),
     GetLocal(usize),
+    SetLocal(usize),
 
     Const(Value),
     Clz(ValType),
@@ -82,15 +83,19 @@ pub enum Instruction {
     Drop,
 }
 
+macro_rules! rd_int {
+    ($r:expr, $t: ty) => (utils::read_leb128_u32($r)? as $t)
+}
+
 impl Instruction {
     pub fn read<R: io::Read>(reader: &mut R) -> Result<Option<Instruction>, Error> {
         let opcode = reader.read_u8()?;
         match opcode {
             0x0B => Ok(None),
-            0x10 => Ok(Some(Instruction::Call(
-                utils::read_leb128_u32(reader)? as usize
-            ))),
+            0x10 => Ok(Some(Instruction::Call(rd_int!(reader, usize)))),
             0x1A => Ok(Some(Instruction::Drop)),
+            0x20 => Ok(Some(Instruction::GetLocal(rd_int!(reader, usize)))),
+            0x21 => Ok(Some(Instruction::SetLocal(rd_int!(reader, usize)))),
             0x41 => Ok(Some(Instruction::Const(Value::Integer32(
                 utils::read_leb128_u32(reader)?,
             )))),
@@ -105,6 +110,8 @@ impl fmt::Display for Instruction {
         match self {
             Instruction::Call(x) => write!(f, "call {}", x),
             Instruction::GetLocal(x) => write!(f, "get_local {}", x),
+            Instruction::SetLocal(x) => write!(f, "set_local {}", x),
+
             Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
             Instruction::Clz(x) => write!(f, "{}.clz", x),
             Instruction::Ctz(x) => write!(f, "{}.ctz", x),
