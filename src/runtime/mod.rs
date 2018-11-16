@@ -21,6 +21,18 @@ macro_rules! addr_type {
                 write!(f, concat!("[", stringify!($name), "]0x{:04X}"), self.0)
             }
         }
+
+        impl ::std::fmt::LowerHex for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                write!(f, "{:08x}", self.0)
+            }
+        }
+
+        impl ::std::fmt::UpperHex for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                write!(f, "{:08X}", self.0)
+            }
+        }
     };
 }
 

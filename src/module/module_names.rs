@@ -21,6 +21,10 @@ impl FuncNames {
     pub fn locals(&self) -> &SparseVec<String> {
         &self.locals
     }
+
+    pub fn local_name(&self, local_idx: usize) -> Option<&str> {
+        self.locals.get(local_idx).map(|x| &**x)
+    }
 }
 
 #[derive(Clone, PartialEq)]

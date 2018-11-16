@@ -20,24 +20,30 @@ impl StackTrace {
 
 #[derive(Clone, PartialEq)]
 pub struct StackFrame {
-    module: Option<ModuleAddr>,
+    module: ModuleAddr,
     func: Option<FuncAddr>,
+}
+
+impl StackFrame {
+    pub fn new(module: ModuleAddr, func: Option<FuncAddr>) -> StackFrame {
+        StackFrame { module, func }
+    }
+
+    pub fn module(&self) -> ModuleAddr {
+        self.module
+    }
+
+    pub fn func(&self) -> Option<FuncAddr> {
+        self.func
+    }
 }
 
 impl fmt::Display for StackFrame {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(module) = self.module {
-            write!(f, "{}", module)?;
-        } else {
-            write!(f, "<unknown>")?;
-        }
-
-        write!(f, "!")?;
-
         if let Some(func) = self.func {
-            write!(f, "{}", func)
+            write!(f, "0x{:08X}", func)
         } else {
-            write!(f, "<unknown>")
+            write!(f, "<module: 0x{:08X}>", self.module)
         }
     }
 }
@@ -45,20 +51,6 @@ impl fmt::Display for StackFrame {
 impl fmt::Debug for StackFrame {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
-    }
-}
-
-impl StackFrame {
-    pub fn new(module: Option<ModuleAddr>, func: Option<FuncAddr>) -> StackFrame {
-        StackFrame { module, func }
-    }
-
-    pub fn module(&self) -> Option<ModuleAddr> {
-        self.module
-    }
-
-    pub fn func(&self) -> Option<FuncAddr> {
-        self.func
     }
 }
 
@@ -75,7 +67,7 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-    /// Creates a new execution context with the specified [`StackFrame`] and a list of local values.
+    /// Creates a new execution context with the specified [`ExecutionContext`] and a list of local values.
     pub fn new(frame: StackFrame, locals: Vec<Value>) -> ExecutionContext {
         ExecutionContext {
             values: Vec::new(),
@@ -121,33 +113,35 @@ pub struct ExecutionStack(Vec<ExecutionContext>);
 
 impl ExecutionStack {
     pub fn new() -> ExecutionStack {
-        ExecutionStack(vec![ExecutionContext::new(
-            StackFrame::new(None, None),
-            Vec::new(),
-        )])
+        ExecutionStack(Vec::new())
     }
 
     /// Gets a reference to the active [`ExecutionContext`]
+    ///
+    /// # Panics
+    /// Panics if there is no current [`ExecutionContext`] on the stack
     pub fn current(&self) -> &ExecutionContext {
-        // We can unwrap because we ensure there is always at least one item
         self.0.last().unwrap()
     }
 
     /// Gets a mutable reference to the active [`ExecutionContext`].
+    ///
+    /// # Panics
+    /// Panics if there is no current [`ExecutionContext`] on the stack
     pub fn current_mut(&mut self) -> &mut ExecutionContext {
-        // We can unwrap because we ensure there is always at least one item
         self.0.last_mut().unwrap()
     }
 
     /// Pushes a new [`ExecutionContext`] on to the stack
     pub fn enter(&mut self, module: ModuleAddr, func: Option<FuncAddr>, locals: Vec<Value>) {
-        self.0.push(ExecutionContext::new(
-            StackFrame::new(Some(module), func),
-            locals,
-        ))
+        self.0
+            .push(ExecutionContext::new(StackFrame::new(module, func), locals))
     }
 
     /// Pops the current [`ExecutionContext`] (and all values associated with it) off the stack
+    ///
+    /// # Panics
+    /// Panics if there is no current [`ExecutionContext`] on the stack
     pub fn exit(&mut self) {
         if self.0.len() == 1 {
             panic!("There is no current frame to exit!");

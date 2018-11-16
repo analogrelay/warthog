@@ -1,6 +1,5 @@
 // Elevate certain warnings to errors in debug and ALL warnings to errors in release
-#![deny(unconditional_recursion)]
-#![cfg_attr(not(debug_assertions), deny(warnings))]
+#![deny(warnings)]
 // Quiet down some warnings when running tests.
 #![cfg_attr(test, allow(dead_code))]
 
@@ -11,6 +10,7 @@ extern crate leb128;
 extern crate lazy_static;
 
 mod error;
+mod location;
 mod memory;
 mod sparse_vec;
 mod utils;
@@ -25,6 +25,7 @@ pub mod synth;
 pub mod text;
 
 pub use crate::error::Error;
+pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::value::Value;
 

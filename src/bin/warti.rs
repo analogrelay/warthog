@@ -2,7 +2,7 @@
 
 extern crate warthog;
 
-use std::{borrow::Cow, env, fs, io::stderr, path::Path, process};
+use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
     interp::{Thread, Trap},
@@ -68,7 +68,16 @@ pub fn run(file: &Path) {
 
     // Invoke the entry point
     if let Err(trap) = thread.invoke(&mut host, main_func) {
-        trap.pretty_print(&mut stderr()).unwrap();
+        eprintln!("trap! {}", trap.message());
+        if let Some(trace) = trap.trace() {
+            for frame in trace.frames() {
+                if let Some(loc) = frame.func().and_then(|f| host.get_location(f, 0)) {
+                    eprintln!(" at {}", loc);
+                } else {
+                    eprintln!(" at {}", frame);
+                }
+            }
+        }
     }
 }
 
@@ -78,10 +87,7 @@ fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<V
         values[1].unwrap_u32() as usize,
     );
 
-    let module = match thread.stack().current().frame().module() {
-        Some(m) => m,
-        None => return Err(thread.throw("No module in scope.")),
-    };
+    let module = thread.stack().current().frame().module();
     let end = start + count;
 
     // Get memory 0 for the current frame

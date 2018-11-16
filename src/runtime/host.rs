@@ -3,10 +3,11 @@ use std::sync::Arc;
 use crate::{
     module::{Export, Expr, Instruction, MemberDesc, Module},
     runtime::{
-        ExportInst, ExternVal, FuncAddr, FuncInst, MemAddr, MemInst, ModuleAddr, ModuleInst,
+        ExportInst, ExternVal, FuncAddr, FuncImpl, FuncInst, MemAddr, MemInst, ModuleAddr,
+        ModuleInst,
     },
     synth::SyntheticModule,
-    Error, Value,
+    Error, Location, Value,
 };
 
 #[derive(Clone)]
@@ -88,6 +89,33 @@ impl Host {
         }
     }
 
+    /// Resolves a [`Location`] based on a provided [`FuncAddr`] and offset
+    pub fn get_location(&self, addr: FuncAddr, offset: usize) -> Option<Location> {
+        if addr.val() < self.funcs.len() {
+            let func = &self.funcs[addr.val()];
+            let module = &self.modules[func.module().val()];
+
+            let func_name = match func.imp() {
+                FuncImpl::Synthetic(f) => Some(f.name.to_owned()),
+                FuncImpl::Local(_, id) => module
+                    .names()
+                    .and_then(|n| n.funcs().get(*id))
+                    .and_then(|n| n.func_name())
+                    .map(|x| x.to_owned()),
+            };
+
+            Some(Location::new(
+                func.module(),
+                addr,
+                Some(module.name().to_owned()),
+                func_name,
+                offset,
+            ))
+        } else {
+            None
+        }
+    }
+
     /// Synthesizes a module from the provided [`ModuleBuilder`], consuming it in the process.
     pub fn synthesize<S: Into<String>>(
         &mut self,
@@ -102,7 +130,7 @@ impl Host {
             // Allocate a func in the host
             let func_addr = FuncAddr::new(self.funcs.len() + 1)
                 .expect("New function address should be non-zero!");
-            let func_inst = FuncInst::synthetic(func);
+            let func_inst = FuncInst::synthetic(func.typ.clone(), module_addr, func);
             self.funcs.push(Arc::new(func_inst));
             funcs.push(func_addr);
         }
@@ -139,8 +167,13 @@ impl Host {
 
         let exports = self.export_module(&funcs, module.exports())?;
 
-        self.modules
-            .push(Arc::new(ModuleInst::new(name.into(), funcs, mems, exports, module.names().cloned())));
+        self.modules.push(Arc::new(ModuleInst::new(
+            name.into(),
+            funcs,
+            mems,
+            exports,
+            module.names().cloned(),
+        )));
         Ok(module_addr)
     }
 

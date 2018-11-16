@@ -9,13 +9,18 @@ pub type HostFunc =
     fn(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap>;
 
 pub struct SyntheticFunc {
+    pub name: String,
     pub typ: FuncType,
     pub imp: HostFunc,
 }
 
 impl SyntheticFunc {
-    pub fn new(typ: FuncType, imp: HostFunc) -> SyntheticFunc {
-        SyntheticFunc { typ, imp }
+    pub fn new<S: Into<String>>(name: S, typ: FuncType, imp: HostFunc) -> SyntheticFunc {
+        SyntheticFunc {
+            name: name.into(),
+            typ,
+            imp,
+        }
     }
 
     pub fn invoke(&self, host: &mut Host, thread: &mut Thread) -> Result<Vec<Value>, Trap> {

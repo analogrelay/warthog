@@ -9,10 +9,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     match inst {
         Instruction::Const(val) => thread.push(val.clone()),
         Instruction::Call(func_idx) => {
-            let module_addr = match thread.stack().current().frame().module() {
-                Some(m) => m,
-                None => return Err(thread.throw("No module in scope.")),
-            };
+            let module_addr = thread.stack().current().frame().module();
             let func = host.resolve_func(module_addr, func_idx);
             let values = thread.invoke(host, func)?;
 

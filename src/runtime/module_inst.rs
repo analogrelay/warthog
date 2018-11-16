@@ -1,4 +1,7 @@
-use crate::{module::ModuleNames, runtime::{ExportInst, FuncAddr, MemAddr}};
+use crate::{
+    module::ModuleNames,
+    runtime::{ExportInst, FuncAddr, MemAddr},
+};
 
 addr_type!(ModuleAddr);
 

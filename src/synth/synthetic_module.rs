@@ -18,7 +18,8 @@ impl SyntheticModule {
 
     pub fn func<S: Into<String>>(mut self, name: S, typ: FuncType, imp: HostFunc) -> Self {
         let idx = self.funcs.len();
-        self.funcs.push(SyntheticFunc::new(typ, imp));
+        let name = name.into();
+        self.funcs.push(SyntheticFunc::new(name.clone(), typ, imp));
         self.exports.push(Export::func(name, idx));
         self
     }

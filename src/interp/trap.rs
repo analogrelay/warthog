@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt, io};
+use std::{borrow::Cow, fmt};
 
 use crate::interp::StackTrace;
 
@@ -20,24 +20,8 @@ impl Trap {
         &self.message
     }
 
-    pub fn stack_trace(&self) -> Option<&StackTrace> {
+    pub fn trace(&self) -> Option<&StackTrace> {
         self.stack_trace.as_ref()
-    }
-
-    /// Pretty-prints the stack trace.
-    ///
-    /// The implementation of [`std::fmt::Display`] for [`Trap`] does not include the
-    /// stack trace by default because it generally needs to be formatted across multiple
-    /// lines. Pretty printing prints the stack trace over multiple lines.
-    pub fn pretty_print<W: io::Write>(&self, f: &mut W) -> io::Result<()> {
-        writeln!(f, "trap occurred: {}", self.message)?;
-        if let Some(ref trace) = self.stack_trace {
-            for frame in trace.frames() {
-                writeln!(f, "  at {}", frame)?;
-            }
-        }
-
-        Ok(())
     }
 }
 

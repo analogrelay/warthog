@@ -7,32 +7,34 @@ use crate::{
 addr_type!(FuncAddr);
 
 pub struct FuncInst {
+    typ: FuncType,
+    module: ModuleAddr,
     imp: FuncImpl,
 }
 
 impl FuncInst {
     pub fn local(typ: FuncType, module: ModuleAddr, func_id: usize, code: FuncBody) -> FuncInst {
         FuncInst {
-            imp: FuncImpl::Local {
-                typ,
-                module,
-                code,
-                func_id,
-            },
+            typ,
+            module,
+            imp: FuncImpl::Local(code, func_id),
         }
     }
 
-    pub fn synthetic(func: SyntheticFunc) -> FuncInst {
+    pub fn synthetic(typ: FuncType, module: ModuleAddr, func: SyntheticFunc) -> FuncInst {
         FuncInst {
+            typ,
+            module,
             imp: FuncImpl::Synthetic(func),
         }
     }
 
     pub fn typ(&self) -> &FuncType {
-        match self.imp {
-            FuncImpl::Local { typ: ref t, .. } => t,
-            FuncImpl::Synthetic(ref f) => &f.typ,
-        }
+        &self.typ
+    }
+
+    pub fn module(&self) -> ModuleAddr {
+        self.module
     }
 
     pub fn imp(&self) -> &FuncImpl {
@@ -41,11 +43,6 @@ impl FuncInst {
 }
 
 pub enum FuncImpl {
-    Local {
-        typ: FuncType,
-        module: ModuleAddr,
-        code: FuncBody,
-        func_id: usize,
-    },
+    Local(FuncBody, usize),
     Synthetic(SyntheticFunc),
 }

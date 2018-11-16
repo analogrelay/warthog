@@ -26,14 +26,14 @@ impl<T> SparseVec<T> {
     pub fn get(&self, index: usize) -> Option<&T> {
         match self.0.binary_search_by(|x| x.0.cmp(&index)) {
             Ok(idx) => Some(&self.0[idx].1),
-            Err(idx) => None,
+            Err(_) => None,
         }
     }
 
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
         match self.0.binary_search_by(|x| x.0.cmp(&index)) {
             Ok(idx) => Some(&mut self.0[idx].1),
-            Err(idx) => None,
+            Err(_) => None,
         }
     }
 
@@ -48,7 +48,7 @@ impl<T> SparseVec<T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=&(usize, T)> {
+    pub fn iter(&self) -> impl Iterator<Item = &(usize, T)> {
         self.0.iter()
     }
 }

@@ -63,12 +63,11 @@ impl Thread {
         let func_inst = host.get_func(func);
         match func_inst.imp() {
             FuncImpl::Synthetic(synth_fn) => synth_fn.invoke(host, self),
-            FuncImpl::Local {
-                typ, module, code, ..
-            } => {
+            FuncImpl::Local(code, _) => {
                 // Pop parameters
-                let mut locals = Vec::with_capacity(typ.params().len() + code.locals().len());
-                for param in typ.params() {
+                let mut locals =
+                    Vec::with_capacity(func_inst.typ().params().len() + code.locals().len());
+                for param in func_inst.typ().params() {
                     if let Some(val) = self.stack.current_mut().pop() {
                         if val.typ() != *param {
                             return Err(self.throw(format!(
@@ -95,16 +94,14 @@ impl Thread {
                     locals.push(v);
                 }
 
-                self.stack.enter(module.clone(), Some(func), locals);
-                if let Err(e) = self.run(host, code.body()) {
-                    self.stack.exit();
-                    return Err(e);
-                }
+                self.stack
+                    .enter(func_inst.module().clone(), Some(func), locals);
+                self.run(host, code.body())?;
 
                 // Pop the result
                 // In WASM v1, there is only zero or one result.
-                let mut results = Vec::with_capacity(typ.results().len());
-                for result in typ.results() {
+                let mut results = Vec::with_capacity(func_inst.typ().results().len());
+                for result in func_inst.typ().results() {
                     if let Some(val) = self.stack.current_mut().pop() {
                         if val.typ() != *result {
                             return Err(self.throw(format!(
