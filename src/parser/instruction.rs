@@ -2,10 +2,10 @@ use std::collections::VecDeque;
 
 use crate::{
     module::{Expr, Instruction, Signedness, ValType},
-    text::{
-        parser::{symbol_table::SymbolTable, utils},
+    parser::{
         sexpr::{SExpr, SVal},
-        ParserError, ParserErrorKind,
+        symbol_table::SymbolTable,
+        utils, ParserError, ParserErrorKind,
     },
     Value,
 };

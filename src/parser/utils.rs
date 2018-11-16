@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
-use crate::text::{
-    parser::symbol_table::SymbolTable,
+use crate::parser::{
     sexpr::{SExpr, SVal},
+    symbol_table::SymbolTable,
     ParserError, ParserErrorKind,
 };
 

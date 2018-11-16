@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::module::{Expr, Module};
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ScriptCommand {
     Nil,
     Module(Module),
@@ -41,7 +41,7 @@ impl fmt::Debug for ScriptCommand {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ScriptAction {
     Get(String),
     Invoke(String, Vec<Expr>),

@@ -3,10 +3,11 @@ use std::collections::VecDeque;
 use crate::{
     builder::FuncBuilder,
     module::ValType,
-    text::{
-        parser::{instruction, symbol_table::SymbolTable, utils},
+    parser::{
+        instruction,
         sexpr::{SExpr, SVal},
-        ParserError, ParserErrorKind,
+        symbol_table::SymbolTable,
+        utils, ParserError, ParserErrorKind,
     },
 };
 

@@ -1,9 +1,10 @@
 use std::collections::VecDeque;
 
-use crate::text::{
-    parser::{instruction, symbol_table::SymbolTable, utils},
-    sexpr::SExpr,
-    ParserError, ParserErrorKind, ScriptAction, ScriptCommand,
+use crate::{
+    parser::{
+        instruction, sexpr::SExpr, symbol_table::SymbolTable, utils, ParserError, ParserErrorKind,
+    },
+    script::{ScriptAction, ScriptCommand},
 };
 
 pub fn parse_assert_trap(

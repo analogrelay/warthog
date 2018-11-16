@@ -37,10 +37,8 @@ impl Thread {
         self.stack.enter(module, None, Vec::new());
 
         // Evaluate the expression
-        // Don't use '?' here because we need to clear the stack frame first
-        // (i.e. the "finally" of the pseudo "try-catch-finally" block)
         let val = match self.run(host, expr.instructions()) {
-            Ok(()) => self.pop(),
+            Ok(()) => self.pop()?,
             Err(e) => {
                 self.stack.exit();
                 return Err(e);
@@ -50,7 +48,7 @@ impl Thread {
         let result = if !self.stack.current().is_empty() {
             Err(self.throw("Stack is not empty at end of function invocation!"))
         } else {
-            val
+            Ok(val)
         };
 
         self.stack.exit();
@@ -96,7 +94,10 @@ impl Thread {
 
                 self.stack
                     .enter(func_inst.module().clone(), Some(func), locals);
-                self.run(host, code.body())?;
+                if let Err(e) = self.run(host, code.body()) {
+                    self.stack.exit();
+                    return Err(e);
+                }
 
                 // Pop the result
                 // In WASM v1, there is only zero or one result.

@@ -1,7 +1,6 @@
-use crate::text::{
-    parser::{assert, module, utils},
-    sexpr::SExpr,
-    ParserError, ParserErrorKind, ScriptCommand,
+use crate::{
+    parser::{assert, module, sexpr::SExpr, utils, ParserError, ParserErrorKind},
+    script::ScriptCommand,
 };
 
 pub fn parse_command(sexpr: SExpr) -> Result<ScriptCommand, ParserError> {

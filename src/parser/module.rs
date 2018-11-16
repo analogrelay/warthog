@@ -2,11 +2,8 @@ use std::collections::VecDeque;
 
 use crate::{
     builder::ModuleBuilder,
-    text::{
-        parser::{func, utils},
-        sexpr::SExpr,
-        ParserError, ParserErrorKind, ScriptCommand,
-    },
+    parser::{func, sexpr::SExpr, utils, ParserError, ParserErrorKind},
+    script::ScriptCommand,
 };
 
 pub fn parse_module(mut body: VecDeque<SExpr>) -> Result<ScriptCommand, ParserError> {

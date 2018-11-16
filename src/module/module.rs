@@ -4,14 +4,14 @@ use crate::{
     builder::ModuleBuilder,
     module::{DataItem, Export, FuncBody, FuncType, Import, ModuleNames},
     reader::{
-        CodeSection, DataSection, ExportSection, FunctionSection, ImportSection, Reader,
-        SectionHeader, SectionId, TypeSection, CustomSection
+        CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection,
+        Reader, SectionHeader, SectionId, TypeSection,
     },
     Error,
 };
 
 /// Represents the static information associated with a WebAssembly Module
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Module {
     types: Vec<FuncType>,
     imports: Vec<Import>,

@@ -143,7 +143,7 @@ impl ExecutionStack {
     /// # Panics
     /// Panics if there is no current [`ExecutionContext`] on the stack
     pub fn exit(&mut self) {
-        if self.0.len() == 1 {
+        if self.0.len() == 0 {
             panic!("There is no current frame to exit!");
         } else {
             self.0.pop();

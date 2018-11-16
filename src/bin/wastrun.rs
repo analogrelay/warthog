@@ -2,7 +2,9 @@
 
 extern crate warthog;
 
-use std::{env, process};
+use std::{env, fs, process};
+
+use warthog::parser;
 
 fn main() {
     // Arg 0 is the executable name
@@ -10,7 +12,20 @@ fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
 
     if args.len() > 0 {
-        panic!("share code with spec_tests!");
+        let script = {
+            let mut file = fs::File::open(&args[0]).expect("failed to open file");
+            parser::parse(&mut file).unwrap()
+        };
+
+        let mut exit_code = 0;
+        for result in script.run() {
+            println!("{}", result);
+            if !result.is_success() {
+                exit_code = 1;
+            }
+        }
+
+        process::exit(exit_code);
     } else {
         eprintln!("Usage: {} <wasm file>", arg0);
         process::exit(1);
