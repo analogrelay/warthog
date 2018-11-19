@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::module::ValType;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Value {
     Nil,
     Integer32(u32),

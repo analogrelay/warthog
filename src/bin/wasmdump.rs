@@ -89,7 +89,7 @@ fn dump_import_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
 fn dump_function_section<R: io::Read>(r: &mut Reader<R>, header: SectionHeader) {
     let section: FunctionSection = r.read_section(header).unwrap();
     for (i, func) in section.funcs.iter().enumerate() {
-        println!("* {:04} (func {})", i, func);
+        println!("* {:04} (type {})", i, func);
     }
 }
 

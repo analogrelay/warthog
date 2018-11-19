@@ -8,6 +8,10 @@ pub fn read_leb128_u32<R: io::Read>(r: &mut R) -> Result<u32, Error> {
     Ok(leb128::read::unsigned(r)? as u32)
 }
 
+pub fn read_leb128_u64<R: io::Read>(r: &mut R) -> Result<u64, Error> {
+    Ok(leb128::read::unsigned(r)?)
+}
+
 pub fn read_vec<R, F, I>(r: &mut R, mut body: F) -> Result<Vec<I>, Error>
 where
     R: io::Read,

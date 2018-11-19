@@ -44,12 +44,12 @@
             "externalConsole": true
         },
         {
-            "name": "(Windows; Debug) wastrun i32.wast",
+            "name": "(Windows; Debug) wastrun int_exprs.wast",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/wastrun.exe",
             "args": [
-                "${workspaceFolder}/samples/i32.wast"
+                "${workspaceFolder}/vendor/webassembly/test/core/int_exprs.wast"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

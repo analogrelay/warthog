@@ -4,7 +4,7 @@ extern crate warthog;
 
 use std::{env, fs, process};
 
-use warthog::text;
+use warthog::parser;
 
 fn main() {
     // Arg 0 is the executable name
@@ -22,8 +22,8 @@ fn main() {
 
 pub fn run(file: &str) {
     let mut file = fs::File::open(file).unwrap();
-    let commands = text::parse(&mut file).unwrap();
-    for command in commands {
+    let script = parser::parse(&mut file).unwrap();
+    for command in script.commands() {
         println!("{:?}", command);
     }
 }

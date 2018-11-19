@@ -5,6 +5,73 @@ use crate::{
     Value,
 };
 
+macro_rules! binop {
+    ($name: ident, $(($typ: ident, $x: ident, $y: ident) => $bl: expr),+) => {
+        fn $name(thread: &mut Thread, typ: ValType) -> Result<(), Trap> {
+            let c2 = thread.pop()?;
+            let c1 = thread.pop()?;
+
+            let res = match (typ, c2, c1) {
+                $(
+                    (ValType::$typ, Value::$typ($x), Value::$typ($y)) => {
+                        $bl as Result<Value, ::std::borrow::Cow<'static, str>>
+                    }
+                ),+
+                (t, x, y) => return Err(thread.throw(format!(
+                    "Type mismatch. Expected arguments of type '{}' but found arguments of type '{}' and '{}'.",
+                    t,
+                    x.typ(),
+                    y.typ()
+                ))),
+            };
+
+            println!(concat!(stringify!($name), " {:?}, {:?} = {:?}"), c1, c2, res);
+
+            match res {
+                Ok(r) => {
+                    thread.push(r);
+                    Ok(())
+                },
+                Err(e) => {
+                    Err(thread.throw(e))
+                }
+            }
+        }
+    };
+}
+
+macro_rules! unop {
+    ($name: ident, $(($typ: ident, $x: ident) => $bl: expr),+) => {
+        fn $name(thread: &mut Thread, typ: ValType) -> Result<(), Trap> {
+            let x = thread.pop()?;
+
+            let res = match (typ, x) {
+                $(
+                    (ValType::$typ, Value::$typ($x)) => {
+                        $bl as Result<Value, ::std::borrow::Cow<'static, str>>
+                    }
+                ),+
+                (t, x) => return Err(thread.throw(format!(
+                    "Type mismatch. Expected argument of type '{}' but found argument of type '{}'.",
+                    t,
+                    x.typ()
+                ))),
+            };
+
+            match res {
+                Ok(r) => {
+                    thread.push(r);
+                    Ok(())
+                },
+                Err(e) => {
+                    Err(thread.throw(e))
+                }
+            }
+        }
+    };
+}
+
+
 pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Result<(), Trap> {
     match inst {
         Instruction::Const(val) => thread.push(val.clone()),
@@ -55,6 +122,10 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Lt(t, Signedness::Unsigned) => lt_u(thread, t)?,
         Instruction::Le(t, Signedness::Unsigned) => le_u(thread, t)?,
 
+        Instruction::Wrap => wrap(thread, ValType::Integer64)?,
+        Instruction::Extend(Signedness::Signed) => extend_s(thread, ValType::Integer32)?,
+        Instruction::Extend(Signedness::Unsigned) => extend_u(thread, ValType::Integer32)?,
+
         Instruction::Drop => {
             thread.pop()?;
         }
@@ -63,71 +134,6 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
 
     Ok(())
 }
-
-macro_rules! binop {
-    ($name: ident, $(($typ: ident, $x: ident, $y: ident) => $bl: expr),+) => {
-        fn $name(thread: &mut Thread, typ: ValType) -> Result<(), Trap> {
-            let x = thread.pop()?;
-            let y = thread.pop()?;
-
-            let res = match (typ, x, y) {
-                $(
-                    (ValType::$typ, Value::$typ($x), Value::$typ($y)) => {
-                        $bl as Result<Value, ::std::borrow::Cow<'static, str>>
-                    }
-                ),+
-                (t, x, y) => return Err(thread.throw(format!(
-                    concat!("Type mismatch. Unable to ", stringify!($name), " {} and {} using {}.", stringify!($name)),
-                    x.typ(),
-                    y.typ(),
-                    t
-                ))),
-            };
-
-            match res {
-                Ok(r) => {
-                    thread.push(r);
-                    Ok(())
-                },
-                Err(e) => {
-                    Err(thread.throw(e))
-                }
-            }
-        }
-    };
-}
-
-macro_rules! unop {
-    ($name: ident, $(($typ: ident, $x: ident) => $bl: expr),+) => {
-        fn $name(thread: &mut Thread, typ: ValType) -> Result<(), Trap> {
-            let x = thread.pop()?;
-
-            let res = match (typ, x) {
-                $(
-                    (ValType::$typ, Value::$typ($x)) => {
-                        $bl as Result<Value, ::std::borrow::Cow<'static, str>>
-                    }
-                ),+
-                (t, x) => return Err(thread.throw(format!(
-                    concat!("Type mismatch. Unable to ", stringify!($name), " {} using {}.", stringify!($name)),
-                    x.typ(),
-                    t
-                ))),
-            };
-
-            match res {
-                Ok(r) => {
-                    thread.push(r);
-                    Ok(())
-                },
-                Err(e) => {
-                    Err(thread.throw(e))
-                }
-            }
-        }
-    };
-}
-
 binop!(add,
     (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_add(y))),
     (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_add(y)))
@@ -249,6 +255,10 @@ unop!(eqz,
     (Integer32, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 })),
     (Integer64, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 }))
 );
+
+unop!(wrap, (Integer64, x) => Ok(Value::Integer32(x as u32)));
+unop!(extend_u, (Integer32, x) => Ok(Value::Integer64(x as u64)));
+unop!(extend_s, (Integer32, x) => Ok(Value::Integer64((x as i32) as i64 as u64)));
 
 macro_rules! div_helpers {
     ($name: ident, $unsigned: ty, $signed: ty, $valtyp: ident) => {

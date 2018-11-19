@@ -101,8 +101,29 @@ impl Instruction {
             0x41 => Ok(Some(Instruction::Const(Value::Integer32(
                 utils::read_leb128_u32(reader)?,
             )))),
+            0x42 => Ok(Some(Instruction::Const(Value::Integer64(
+                utils::read_leb128_u64(reader)?,
+            )))),
             0x6E => Ok(Some(Instruction::Div(
                 ValType::Integer32,
+                Signedness::Unsigned,
+            ))),
+            0x74 => Ok(Some(Instruction::Shl(ValType::Integer32))),
+            0x75 => Ok(Some(Instruction::Shr(
+                ValType::Integer32,
+                Signedness::Signed,
+            ))),
+            0x76 => Ok(Some(Instruction::Shr(
+                ValType::Integer32,
+                Signedness::Unsigned,
+            ))),
+            0x86 => Ok(Some(Instruction::Shl(ValType::Integer64))),
+            0x87 => Ok(Some(Instruction::Shr(
+                ValType::Integer64,
+                Signedness::Signed,
+            ))),
+            0x88 => Ok(Some(Instruction::Shr(
+                ValType::Integer64,
                 Signedness::Unsigned,
             ))),
             x => panic!("Instruction not implemented: 0x{:X}", x),

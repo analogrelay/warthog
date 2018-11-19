@@ -39,7 +39,6 @@ fn run_commands(commands: Vec<ScriptCommand>) -> Vec<AssertionResult> {
             ScriptCommand::Module(module) => {
                 let module_addr = host.instantiate("current", module).unwrap();
                 last_module = Some(module_addr);
-                println!("Instatiated Module: {}", module_addr);
             }
             ScriptCommand::AssertReturn(action, expr) => {
                 let assertion = match expr.as_ref() {
@@ -115,13 +114,21 @@ fn evaluate_assertion(
         (Ok(v), Ok(ref a)) if a.len() > 1 => AssertionResult::failure(
             index,
             assertion,
-            format!("expected: '{}', actual: '{}'", v, format_vals(a)),
+            format!(
+                "expected: '{}', actual: '{}'",
+                format_val(&v),
+                format_vals(a)
+            ),
         ),
         (Ok(v), Ok(ref a)) if v == a[0] => AssertionResult::success(index, assertion),
         (Ok(v), Ok(ref a)) => AssertionResult::failure(
             index,
             assertion,
-            format!("expected: '{}', actual: '{}'", v, format_vals(a)),
+            format!(
+                "expected: '{}', actual: '{}'",
+                format_val(&v),
+                format_vals(a)
+            ),
         ),
     }
 }
@@ -129,11 +136,21 @@ fn evaluate_assertion(
 fn format_vals(vals: &Vec<Value>) -> String {
     let mut s = String::new();
     for val in vals {
-        s.push_str(&format!("{}, ", val));
+        s.push_str(&format!("{}, ", format_val(val)));
     }
     let target = s.len() - 2;
     s.truncate(target);
     s
+}
+
+fn format_val(val: &Value) -> String {
+    match val {
+        Value::Nil => "<nil>".to_owned(),
+        Value::Integer32(x) => format!("0x{:X}i32", x),
+        Value::Integer64(x) => format!("0x{:X}i64", x),
+        Value::Float32(x) => format!("{}f32", x),
+        Value::Float64(x) => format!("{}f64", x),
+    }
 }
 
 fn run_action(
@@ -164,7 +181,7 @@ fn run_action(
             thread.stack_mut().enter(module, None, Vec::new());
 
             // Run the expressions to fill the stack
-            for expr in exprs {
+            for expr in exprs.iter() {
                 thread.run(host, expr.instructions())?;
             }
 
