@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{
-    runtime::{FuncAddr, ModuleAddr},
+    hosting::{FuncAddr, ModuleAddr},
     Value,
 };
 

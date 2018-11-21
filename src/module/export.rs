@@ -13,16 +13,17 @@ pub struct Export {
 
 impl Export {
     pub fn func<S: Into<String>>(name: S, idx: usize) -> Export {
-        Export {
-            name: name.into(),
-            description: MemberDesc::Function(idx),
-        }
+        Export::new(name, MemberDesc::Function(idx))
     }
 
     pub fn mem<S: Into<String>>(name: S, typ: MemoryType) -> Export {
+        Export::new(name, MemberDesc::Memory(typ))
+    }
+
+    pub fn new<S: Into<String>>(name: S, description: MemberDesc) -> Export {
         Export {
             name: name.into(),
-            description: MemberDesc::Memory(typ),
+            description,
         }
     }
 

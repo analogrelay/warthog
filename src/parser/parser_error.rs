@@ -37,9 +37,9 @@ impl ParserError {
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(ref detail) = self.2 {
-            write!(f, "{}: {}", self.1, detail)
+            write!(f, "{}: {}", self.1.start(), detail)
         } else {
-            write!(f, "{}: {:?}", self.1, self.0)
+            write!(f, "{}: {:?}", self.1.start(), self.0)
         }
     }
 }

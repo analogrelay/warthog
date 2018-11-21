@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::runtime::{FuncAddr, ModuleAddr};
+use crate::hosting::{FuncAddr, ModuleAddr};
 
 pub struct Location {
     module: ModuleAddr,

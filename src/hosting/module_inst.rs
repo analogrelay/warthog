@@ -1,11 +1,12 @@
 use crate::{
+    hosting::{ExportInst, FuncAddr, MemAddr},
     module::ModuleNames,
-    runtime::{ExportInst, FuncAddr, MemAddr},
 };
 
 addr_type!(ModuleAddr);
 
 pub struct ModuleInst {
+    // TODO: Consider making names Cow<'static, str>
     name: String,
     funcs: Vec<FuncAddr>,
     mems: Vec<MemAddr>,

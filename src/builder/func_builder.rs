@@ -1,11 +1,12 @@
-use crate::module::{Instruction, ValType};
+use crate::{
+    builder::TypeUse,
+    module::{Instruction, ValType},
+};
 
 pub struct FuncBuilder {
     pub export: Option<String>,
     pub import: Option<(String, String)>,
-    pub type_id: Option<usize>,
-    pub params: Vec<ValType>,
-    pub results: Vec<ValType>,
+    pub type_use: TypeUse,
     pub locals: Vec<ValType>,
     pub body: Vec<Instruction>,
 }
@@ -15,9 +16,7 @@ impl FuncBuilder {
         FuncBuilder {
             export: None,
             import: None,
-            type_id: None,
-            params: Vec::new(),
-            results: Vec::new(),
+            type_use: TypeUse::new(),
             locals: Vec::new(),
             body: Vec::new(),
         }
@@ -34,17 +33,17 @@ impl FuncBuilder {
     }
 
     pub fn type_id(mut self, type_id: usize) -> Self {
-        self.type_id = Some(type_id);
+        self.type_use.id = Some(type_id);
         self
     }
 
     pub fn param(mut self, param: ValType) -> Self {
-        self.params.push(param);
+        self.type_use.params.push(param);
         self
     }
 
     pub fn result(mut self, result: ValType) -> Self {
-        self.results.push(result);
+        self.type_use.results.push(result);
         self
     }
 

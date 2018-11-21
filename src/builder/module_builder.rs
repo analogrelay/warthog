@@ -1,5 +1,5 @@
 use crate::{
-    builder::FuncBuilder,
+    builder::{FuncBuilder, TypeUse},
     module::{DataItem, Export, FuncBody, FuncType, Import, MemberDesc, Module, ModuleNames},
 };
 
@@ -26,13 +26,13 @@ impl ModuleBuilder {
         }
     }
 
-    pub fn add_func(&mut self, func: FuncBuilder) {
+    pub fn add_type(&mut self, type_use: TypeUse) -> usize {
         // Check if we need to add a type and get the type id
-        let type_id = match func.type_id {
+        match type_use.id {
             Some(id) => id,
             None => {
                 // Create a functype
-                let typ = FuncType::new(func.params, func.results);
+                let typ = FuncType::new(type_use.params, type_use.results);
 
                 // Check if a matching one already exists
                 match self.types.iter().position(|f| f == &typ) {
@@ -45,18 +45,29 @@ impl ModuleBuilder {
                     }
                 }
             }
-        };
+        }
+    }
+
+    pub fn add_func(&mut self, func: FuncBuilder) -> usize {
+        let type_id = self.add_type(func.type_use);
 
         // Add the func to the list
         if let Some((module, name)) = func.import {
+            assert_eq!(
+                0,
+                self.funcs.len(),
+                "Cannot add imports after local functions are defined!"
+            );
+            let func_id = self.imports.len();
             self.imports
                 .push(Import::new(module, name, MemberDesc::Function(type_id)));
+            func_id
         } else {
-            let func_id = self.funcs.len();
+            let func_id = self.imports.len() + self.funcs.len();
             self.funcs.push(type_id);
 
             // Add the body
-            debug_assert_eq!(func_id, self.code.len());
+            debug_assert_eq!(func_id - self.imports.len(), self.code.len());
             let body = FuncBody::new(func.locals, func.body);
             self.code.push(body);
 
@@ -64,6 +75,8 @@ impl ModuleBuilder {
             if let Some(export) = func.export {
                 self.exports.push(Export::func(export, func_id));
             }
+
+            func_id
         }
     }
 

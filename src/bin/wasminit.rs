@@ -5,10 +5,10 @@ extern crate warthog;
 use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
-    module::{FuncType, Module, ValType, ModuleNames},
+    hosting::{FuncImpl, Host, MemInst, ModuleAddr, ModuleInst},
+    module::{Module, ModuleNames},
     reader::Reader,
-    runtime::{FuncImpl, Host, MemInst, ModuleAddr, ModuleInst},
-    synth::SyntheticModule,
+    runtime,
 };
 
 fn main() {
@@ -44,13 +44,7 @@ pub fn run(file: &Path) {
     };
 
     // Synthesize the 'env' module
-    let env = SyntheticModule::new()
-        .func(
-            "print",
-            FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            |_, _, _| panic!("'print' function not implemented"),
-        ).mem("memory", 256, Some(256));
-    host.synthesize("env", env).unwrap();
+    host.external(runtime::Env::new()).unwrap();
 
     // Instantiate the module
     let entry_point = host.instantiate(name, module).unwrap();
@@ -67,9 +61,15 @@ fn dump_funcs(host: &Host) {
     for (i, func_inst) in host.funcs().enumerate() {
         match func_inst.imp() {
             FuncImpl::Local(_, func_id) => {
-                println!("  * {:04} {} {} {:04}", i + 1, func_inst.typ(), func_inst.module(), func_id);
+                println!(
+                    "  * {:04} {} {} {:04}",
+                    i + 1,
+                    func_inst.typ(),
+                    func_inst.module(),
+                    func_id
+                );
             }
-            FuncImpl::Synthetic(_) => println!("  * {:04} {} <Synthetic>", i + 1, func_inst.typ()),
+            FuncImpl::External(_) => println!("  * {:04} {} <extern>", i + 1, func_inst.typ()),
         }
     }
 }

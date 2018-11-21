@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
 use crate::{
+    hosting::{FuncAddr, FuncImpl, Host, ModuleAddr},
     interp::{exec, ExecutionStack, Trap},
     module::{Expr, Instruction, ValType},
-    runtime::{FuncAddr, FuncImpl, Host, ModuleAddr},
     Value,
 };
 
@@ -86,7 +86,7 @@ impl Thread {
         // Resolve the function
         let func_inst = host.get_func(func);
         match func_inst.imp() {
-            FuncImpl::Synthetic(synth_fn) => synth_fn.invoke(host, self),
+            FuncImpl::External(synth_fn) => synth_fn.invoke(host, self),
             FuncImpl::Local(code, _) => {
                 // Pop parameters
                 let mut locals =

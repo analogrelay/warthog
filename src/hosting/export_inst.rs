@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::runtime::{FuncAddr, MemAddr};
+use crate::hosting::{FuncAddr, MemAddr};
 
 pub struct ExportInst {
     name: String,

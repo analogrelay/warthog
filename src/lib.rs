@@ -17,13 +17,13 @@ mod utils;
 mod value;
 
 pub mod builder;
+pub mod hosting;
 pub mod interp;
 pub mod module;
 pub mod parser;
 pub mod reader;
 pub mod runtime;
 pub mod script;
-pub mod synth;
 
 pub use crate::error::Error;
 pub use crate::location::Location;

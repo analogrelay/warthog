@@ -1,6 +1,7 @@
 use crate::{
+    hosting::{ExternVal, Host, ModuleAddr},
     interp::{Thread, Trap},
-    runtime::{ExternVal, Host, ModuleAddr},
+    runtime,
     script::{AssertionResult, ScriptAction, ScriptCommand},
     Value,
 };
@@ -25,6 +26,10 @@ impl Script {
 fn run_commands(commands: Vec<ScriptCommand>) -> Vec<AssertionResult> {
     // Create a host
     let mut host = Host::new();
+
+    // Synthesize the helper modules
+    host.external(runtime::Env::new()).unwrap();
+    host.external(runtime::SpecTest::new()).unwrap();;
 
     // Set up state
     let mut last_module = None;

@@ -5,12 +5,11 @@ extern crate warthog;
 use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
-    interp::{Thread, Trap},
-    module::{FuncType, Module, ValType},
+    hosting::{ExternVal, Host},
+    interp::Thread,
+    module::Module,
     reader::Reader,
-    runtime::{ExternVal, Host},
-    synth::SyntheticModule,
-    Value,
+    runtime,
 };
 
 fn main() {
@@ -46,13 +45,7 @@ pub fn run(file: &Path) {
     };
 
     // Synthesize the 'env' module
-    let env = SyntheticModule::new()
-        .func(
-            "print",
-            FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
-            |host, thread, values| print(host, thread, values),
-        ).mem("memory", 256, Some(256));
-    host.synthesize("env", env).unwrap();
+    host.external(runtime::Env::new()).unwrap();
 
     // Instantiate the module
     let entry_point = host.instantiate(name, module).unwrap();
@@ -79,30 +72,4 @@ pub fn run(file: &Path) {
             }
         }
     }
-}
-
-fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
-    let (count, start) = (
-        values[0].unwrap_u32() as usize,
-        values[1].unwrap_u32() as usize,
-    );
-
-    let module = thread.stack().current().frame().module();
-    let end = start + count;
-
-    // Get memory 0 for the current frame
-    let mem_addr = host.resolve_mem(module, 0);
-    let mem_inst = host.get_mem(mem_addr);
-    let mem = mem_inst.memory();
-
-    // Safe as long as other threads (which don't even exist in WASM yet)
-    // aren't accessing memory. When threading exists, WASM will provide
-    // it's own synchronization primitives.
-    unsafe {
-        // Read the memory sequence in as a UTF-8 string
-        let s = std::str::from_utf8(&mem.data()[start..end]).unwrap();
-        println!("{}", s);
-    }
-
-    Ok(Vec::new())
 }

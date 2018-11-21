@@ -10,7 +10,7 @@ use crate::{
 
 pub fn parse_assert_trap(
     mut body: VecDeque<SExpr>,
-    range: &TextRange,
+    range: TextRange,
 ) -> Result<ScriptCommand, ParserError> {
     // Parse the action
     let action = match body.pop_front() {
@@ -27,13 +27,13 @@ pub fn parse_assert_trap(
     // Parse the failure
     Ok(ScriptCommand::AssertTrap(
         action,
-        utils::expect_str(&mut body, "a trap message")?,
+        utils::expect_str(&mut body, "a trap message")?.0,
     ))
 }
 
 pub fn parse_assert_return(
     mut body: VecDeque<SExpr>,
-    range: &TextRange,
+    range: TextRange,
 ) -> Result<ScriptCommand, ParserError> {
     // Parse the action
     let action = match body.pop_front() {
@@ -57,11 +57,12 @@ pub fn parse_assert_return(
 }
 
 fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
-    let (kwd, mut body) = utils::expect_keyword_expr(expr)?;
+    let (mut body, _) = utils::extract_body(expr)?;
+    let (kwd, range) = utils::expect_atom(&mut body, "a keyword")?;
 
-    match kwd.keyword().unwrap() {
+    match kwd.as_str() {
         "invoke" => {
-            let name = utils::expect_str(&mut body, "a function name")?;
+            let (name, _) = utils::expect_str(&mut body, "a function name")?;
             let mut exprs = Vec::new();
             while let Some(expr) = body.pop_front() {
                 exprs.push(instruction::parse_expr(expr, SymbolTable::empty())?);
@@ -70,12 +71,12 @@ fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
             Ok(ScriptAction::Invoke(name, exprs))
         }
         "get" => {
-            let name = utils::expect_str(&mut body, "a global name")?;
+            let (name, _) = utils::expect_str(&mut body, "a global name")?;
             Ok(ScriptAction::Get(name))
         }
         x => {
             return Err(err!(
-                kwd.range(),
+                range,
                 ParserErrorKind::UnexpectedAtom(x.to_string()),
                 format!("Unexpected keyword: '{}'.", x)
             ))

@@ -1,7 +1,8 @@
+use std::sync::Arc;
+
 use crate::{
+    hosting::{ExternalFunc, ModuleAddr},
     module::{FuncBody, FuncType},
-    runtime::ModuleAddr,
-    synth::SyntheticFunc,
 };
 
 addr_type!(FuncAddr);
@@ -21,11 +22,11 @@ impl FuncInst {
         }
     }
 
-    pub fn synthetic(typ: FuncType, module: ModuleAddr, func: SyntheticFunc) -> FuncInst {
+    pub fn external(typ: FuncType, module: ModuleAddr, func: Arc<ExternalFunc>) -> FuncInst {
         FuncInst {
             typ,
             module,
-            imp: FuncImpl::Synthetic(func),
+            imp: FuncImpl::External(func),
         }
     }
 
@@ -44,5 +45,5 @@ impl FuncInst {
 
 pub enum FuncImpl {
     Local(FuncBody, usize),
-    Synthetic(SyntheticFunc),
+    External(Arc<ExternalFunc>),
 }

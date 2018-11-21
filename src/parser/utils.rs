@@ -8,10 +8,10 @@ use crate::parser::{
 
 macro_rules! expect_msg {
     ($expect: expr) => {
-        format!("Expected {} but found <end-of-file>", $expect)
+        format!("Expected {} but found <end-of-file>.", $expect)
     };
     ($expect: expr, $actual: expr) => {
-        format!("Expected {} but found '{}'", $expect, $actual)
+        format!("Expected {} but found '{}'.", $expect, $actual)
     };
 }
 
@@ -19,11 +19,11 @@ pub fn expect_id(
     body: &mut VecDeque<SExpr>,
     symbol_table: &SymbolTable,
     expectation: &'static str,
-) -> Result<usize, ParserError> {
+) -> Result<(usize, TextRange), ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Integer(i), _)) => Ok(i as usize),
+        Some(SExpr(SVal::Integer(i), r)) => Ok((i as usize, r)),
         Some(SExpr(SVal::Identifier(id), range)) => match symbol_table.get(id.as_str()) {
-            Some(x) => Ok(x),
+            Some(x) => Ok((x, range)),
             None => Err(err!(
                 range,
                 ParserErrorKind::UndeclaredIdentifier(id.clone()),
@@ -43,12 +43,31 @@ pub fn expect_id(
     }
 }
 
+pub fn expect_atom(
+    body: &mut VecDeque<SExpr>,
+    expectation: &'static str,
+) -> Result<(String, TextRange), ParserError> {
+    match body.pop_front() {
+        Some(SExpr(SVal::Atom(s), r)) => Ok((s, r)),
+        Some(SExpr(x, range)) => Err(err!(
+            range,
+            ParserErrorKind::UnexpectedToken,
+            expect_msg!(expectation, x),
+        )),
+        None => Err(err!(
+            TextRange::empty(), // TODO: Figure out the start point?
+            ParserErrorKind::UnexpectedEof,
+            expect_msg!(expectation),
+        )),
+    }
+}
+
 pub fn expect_str(
     body: &mut VecDeque<SExpr>,
     expectation: &'static str,
-) -> Result<String, ParserError> {
+) -> Result<(String, TextRange), ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Str(s), _)) => Ok(s),
+        Some(SExpr(SVal::Str(s), r)) => Ok((s, r)),
         Some(SExpr(x, range)) => Err(err!(
             range,
             ParserErrorKind::UnexpectedToken,
@@ -65,9 +84,28 @@ pub fn expect_str(
 pub fn expect_float(
     body: &mut VecDeque<SExpr>,
     expectation: &'static str,
-) -> Result<f64, ParserError> {
+) -> Result<(f64, TextRange), ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Float(i), _)) => Ok(i),
+        Some(SExpr(SVal::Float(i), r)) => Ok((i, r)),
+        Some(SExpr(x, range)) => Err(err!(
+            range,
+            ParserErrorKind::UnexpectedToken,
+            expect_msg!(expectation, x),
+        )),
+        None => Err(err!(
+            TextRange::empty(), // TODO: Figure out the start point?
+            ParserErrorKind::UnexpectedEof,
+            expect_msg!(expectation),
+        )),
+    }
+}
+
+pub fn expect_expr(
+    body: &mut VecDeque<SExpr>,
+    expectation: &'static str,
+) -> Result<(VecDeque<SExpr>, TextRange), ParserError> {
+    match body.pop_front() {
+        Some(SExpr(SVal::Expr(v), r)) => Ok((v, r)),
         Some(SExpr(x, range)) => Err(err!(
             range,
             ParserErrorKind::UnexpectedToken,
@@ -84,18 +122,29 @@ pub fn expect_float(
 pub fn expect_int(
     body: &mut VecDeque<SExpr>,
     expectation: &'static str,
-) -> Result<u64, ParserError> {
+) -> Result<(u64, TextRange), ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Integer(i), _)) => Ok(i),
+        Some(SExpr(SVal::Integer(i), r)) => Ok((i, r)),
         Some(SExpr(x, range)) => Err(err!(
             range,
             ParserErrorKind::UnexpectedToken,
-            format!("Expected an Integer but found: {:?}", x)
+            expect_msg!(expectation, x),
         )),
         None => Err(err!(
             TextRange::empty(), // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
             expect_msg!(expectation),
+        )),
+    }
+}
+
+pub fn extract_body(expr: SExpr) -> Result<(VecDeque<SExpr>, TextRange), ParserError> {
+    match expr {
+        SExpr(SVal::Expr(b), r) => Ok((b, r)),
+        SExpr(v, range) => Err(err!(
+            range,
+            ParserErrorKind::UnexpectedToken,
+            expect_msg!("an expression", v)
         )),
     }
 }
@@ -123,35 +172,6 @@ pub fn try_pop_keyword_expr(
     } else {
         None
     }
-}
-
-/// Unwraps a "keyword expression" which is an s-expression with an atom at the start,
-/// like `(foo 42)`
-pub fn unwrap_keyword_expr(sexpr: SExpr) -> Result<Option<(SExpr, VecDeque<SExpr>)>, ParserError> {
-    match sexpr {
-        SExpr(SVal::Expr(mut items), range) => {
-            let first = items.pop_front().ok_or_else(|| {
-                err!(
-                    range,
-                    ParserErrorKind::UnexpectedToken,
-                    "Expected s-expression to have at least one value."
-                )
-            })?;
-            Ok(Some((first, items)))
-        }
-        SExpr(_, _) => Ok(None),
-    }
-}
-
-pub fn expect_keyword_expr(sexpr: SExpr) -> Result<(SExpr, VecDeque<SExpr>), ParserError> {
-    let range = sexpr.range().clone();
-    unwrap_keyword_expr(sexpr)?.ok_or_else(|| {
-        err!(
-            range,
-            ParserErrorKind::UnexpectedToken,
-            "Expected an s-expression."
-        )
-    })
 }
 
 // Test helpers

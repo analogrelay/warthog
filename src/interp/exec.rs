@@ -1,7 +1,7 @@
 use crate::{
     interp::{Thread, Trap},
     module::{Instruction, Signedness, ValType},
-    runtime::Host,
+    hosting::Host,
     Value,
 };
 

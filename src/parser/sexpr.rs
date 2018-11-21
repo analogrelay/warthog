@@ -21,17 +21,6 @@ impl SExpr {
         }
     }
 
-    pub fn consume_int(self) -> Result<(u64, TextRange), ParserError> {
-        match self {
-            SExpr(SVal::Integer(i), range) => Ok((i, range)),
-            SExpr(x, range) => Err(err!(
-                range,
-                ParserErrorKind::UnexpectedToken,
-                format!("Expected an Integer, but found: '{:?}'", x)
-            )),
-        }
-    }
-
     pub fn consume_expr(self) -> Result<(VecDeque<SExpr>, TextRange), ParserError> {
         match self {
             SExpr(SVal::Expr(items), range) => Ok((items, range)),

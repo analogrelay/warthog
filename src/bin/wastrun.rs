@@ -14,7 +14,13 @@ fn main() {
     if args.len() > 0 {
         let script = {
             let mut file = fs::File::open(&args[0]).expect("failed to open file");
-            parser::parse(&mut file).unwrap()
+            match parser::parse(&mut file) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("syntax error: {}{}", args[0], e);
+                    process::exit(1);
+                }
+            }
         };
 
         let mut exit_code = 0;

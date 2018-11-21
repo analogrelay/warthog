@@ -1,21 +1,22 @@
 macro_rules! err {
     ($p: expr, $e: expr) => {
-        ParserError::new($e, $p)
+        $crate::parser::ParserError::new($e, $p)
     };
     ($p: expr, $e: expr,) => {
-        ParserError::new($e, $p)
+        $crate::parser::ParserError::new($e, $p)
     };
     ($p: expr, $e: expr, $det: expr) => {
-        ParserError::detailed($e, $p, $det)
+        $crate::parser::ParserError::detailed($e, $p, $det)
     };
     ($p: expr, $e: expr, $det: expr,) => {
-        ParserError::detailed($e, $p, $det)
+        $crate::parser::ParserError::detailed($e, $p, $det)
     };
 }
 
 mod assert;
 mod command;
 mod func;
+mod func_type;
 mod instruction;
 mod module;
 mod symbol_table;

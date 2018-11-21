@@ -97,10 +97,10 @@ fn parse_instruction(
     } else {
         match name.as_str() {
             "call" => Ok(Instruction::Call(
-                utils::expect_int(rest, "a function index")? as usize,
+                utils::expect_int(rest, "a function index")?.0 as usize,
             )),
             "get_local" => Ok(Instruction::GetLocal(
-                utils::expect_id(rest, locals, "a local name")? as usize,
+                utils::expect_id(rest, locals, "a local name")?.0 as usize,
             )),
             x => panic!("Instruction not yet implemented: {}.", x),
         }
@@ -122,11 +122,11 @@ fn parse_numeric_instruction(
             let val = match valtyp {
                 ValType::Nil => unreachable!(),
                 ValType::Integer32 => {
-                    Value::Integer32(utils::expect_int(rest, "an integer")? as u32)
+                    Value::Integer32(utils::expect_int(rest, "an integer")?.0 as u32)
                 }
-                ValType::Integer64 => Value::Integer64(utils::expect_int(rest, "an integer")?),
-                ValType::Float32 => Value::Float32(utils::expect_float(rest, "a float")? as f32),
-                ValType::Float64 => Value::Float64(utils::expect_float(rest, "a float")?),
+                ValType::Integer64 => Value::Integer64(utils::expect_int(rest, "an integer")?.0),
+                ValType::Float32 => Value::Float32(utils::expect_float(rest, "a float")?.0 as f32),
+                ValType::Float64 => Value::Float64(utils::expect_float(rest, "a float")?.0),
             };
             Ok(Instruction::Const(val))
         }
