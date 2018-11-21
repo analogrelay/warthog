@@ -27,7 +27,7 @@ pub fn parse_assert_trap(
     // Parse the failure
     Ok(ScriptCommand::AssertTrap(
         action,
-        utils::pop_str(&mut body)?,
+        utils::expect_str(&mut body, "a trap message")?,
     ))
 }
 
@@ -62,7 +62,7 @@ fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
 
     match kwd.keyword().unwrap() {
         "invoke" => {
-            let name = utils::pop_str(&mut body)?;
+            let name = utils::expect_str(&mut body, "a function name")?;
             let mut exprs = Vec::new();
             while let Some(expr) = body.pop_front() {
                 exprs.push(instruction::parse_expr(expr, SymbolTable::empty())?);
@@ -71,7 +71,7 @@ fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
             Ok(ScriptAction::Invoke(name, exprs))
         }
         "get" => {
-            let name = utils::pop_str(&mut body)?;
+            let name = utils::expect_str(&mut body, "a global name")?;
             Ok(ScriptAction::Get(name))
         }
         x => {

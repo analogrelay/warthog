@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, io};
+use std::{collections::VecDeque, fmt, io};
 
 use crate::parser::{ParserError, ParserErrorKind};
 
@@ -74,6 +74,27 @@ impl SVal {
     pub fn new_expr<I: IntoIterator<Item = SExpr>>(content: I) -> SVal {
         SVal::Expr(content.into_iter().collect())
     }
+}
+
+impl fmt::Display for SVal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SVal::Integer(x) => write!(f, "{}", x),
+            SVal::Float(x) => write!(f, "{}", x),
+            SVal::Identifier(x) => write!(f, "{}", x),
+            SVal::Str(x) => write!(f, "\"{}\"", escape(x)),
+            SVal::Atom(x) => write!(f, "{}", x),
+            SVal::Expr(_) => write!(f, "<sub-expression>"),
+        }
+    }
+}
+
+fn escape(x: &str) -> String {
+    let mut s = String::new();
+    for c in s.chars().flat_map(|x| x.escape_default()) {
+        s.push(c);
+    }
+    s
 }
 
 pub struct SExprParser<R: io::Read> {

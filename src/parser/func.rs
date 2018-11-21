@@ -16,30 +16,30 @@ pub fn parse_func(mut body: VecDeque<SExpr>) -> Result<FuncBuilder, ParserError>
     let mut locals = SymbolTable::new();
 
     // TODO: Support identifiers
-    parse_export(&mut body, &mut func)?;
-    parse_typeuse(&mut body, &mut func, &mut locals)?;
-
-    instruction::parse_instructions(&mut body, &mut func.body, &locals)?;
+    if try_parse_import(&mut body, &mut func)? {
+        parse_typeuse(&mut body, &mut func, &mut locals)?;
+    } else {
+        parse_export(&mut body, &mut func)?;
+        parse_typeuse(&mut body, &mut func, &mut locals)?;
+        instruction::parse_instructions(&mut body, &mut func.body, &locals)?;
+    }
 
     Ok(func)
+}
+
+fn try_parse_import(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(), ParserError> {
+    if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "import") {
+        // Read the names
+        let module = body.expect_str(rest, "a module name")?;
+        let func = body.expect_str(rest, "a function name")?;
+        func.import = (module, func);
+    }
 }
 
 fn parse_export(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(), ParserError> {
     if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "export") {
         // Read the name
-        match body.pop_front() {
-            Some(ex) => {
-                let (name, _, _) = ex.consume_str()?;
-                func.export = Some(name);
-            }
-            None => {
-                return Err(err!(
-                    (start, end),
-                    ParserErrorKind::UnexpectedToken,
-                    "'export' block is empty, expected a name!"
-                ))
-            }
-        }
+        func.export = utils::expect_str(rest, "an export name")?;
 
         match body.pop_front() {
             None => Ok(()),

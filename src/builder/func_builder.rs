@@ -2,6 +2,7 @@ use crate::module::{Instruction, ValType};
 
 pub struct FuncBuilder {
     pub export: Option<String>,
+    pub import: Option<(String, String)>,
     pub type_id: Option<usize>,
     pub params: Vec<ValType>,
     pub results: Vec<ValType>,
@@ -13,12 +14,18 @@ impl FuncBuilder {
     pub fn new() -> FuncBuilder {
         FuncBuilder {
             export: None,
+            import: None,
             type_id: None,
             params: Vec::new(),
             results: Vec::new(),
             locals: Vec::new(),
             body: Vec::new(),
         }
+    }
+
+    pub fn import_from<S: Into<String>, T: Into<String>>(mut self, module: S, func: T) -> Self {
+        self.import = Some(module.into(), func.into())
+        self
     }
 
     pub fn export_as<S: Into<String>>(mut self, name: S) -> Self {

@@ -6,9 +6,19 @@ use crate::parser::{
     ParserError, ParserErrorKind,
 };
 
-pub fn pop_id(
+macro_rules! expect_msg {
+    ($expect: expr) => {
+        format!("Expected {} but found <end-of-file>", $expect)
+    };
+    ($expect: expr, $actual: expr) => {
+        format!("Expected {} but found '{}'", $expect, $actual)
+    };
+}
+
+pub fn expect_id(
     body: &mut VecDeque<SExpr>,
     symbol_table: &SymbolTable,
+    expectation: &'static str,
 ) -> Result<usize, ParserError> {
     match body.pop_front() {
         Some(SExpr(SVal::Integer(i), _, _)) => Ok(i as usize),
@@ -23,49 +33,58 @@ pub fn pop_id(
         Some(SExpr(x, start, end)) => Err(err!(
             (start, end),
             ParserErrorKind::UnexpectedToken,
-            format!("Expected an Integer or Identifier but found: {:?}", x)
+            expect_msg!(expectation, x),
         )),
         None => Err(err!(
             0, // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
-            format!("Unexpected end-of-file when attempting to read an integer")
+            expect_msg!(expectation),
         )),
     }
 }
 
-pub fn pop_str(body: &mut VecDeque<SExpr>) -> Result<String, ParserError> {
+pub fn expect_str(
+    body: &mut VecDeque<SExpr>,
+    expectation: &'static str,
+) -> Result<String, ParserError> {
     match body.pop_front() {
         Some(SExpr(SVal::Str(s), _, _)) => Ok(s),
         Some(SExpr(x, start, end)) => Err(err!(
             (start, end),
             ParserErrorKind::UnexpectedToken,
-            format!("Expected a Str but found: {:?}", x)
+            expect_msg!(expectation, x),
         )),
         None => Err(err!(
             0, // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
-            format!("Unexpected end-of-file when attempting to read a string")
+            expect_msg!(expectation),
         )),
     }
 }
 
-pub fn pop_float(body: &mut VecDeque<SExpr>) -> Result<f64, ParserError> {
+pub fn expect_float(
+    body: &mut VecDeque<SExpr>,
+    expectation: &'static str,
+) -> Result<f64, ParserError> {
     match body.pop_front() {
         Some(SExpr(SVal::Float(i), _, _)) => Ok(i),
         Some(SExpr(x, start, end)) => Err(err!(
             (start, end),
             ParserErrorKind::UnexpectedToken,
-            format!("Expected a Float but found: {:?}", x)
+            expect_msg!(expectation, x),
         )),
         None => Err(err!(
             0, // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
-            format!("Unexpected end-of-file when attempting to read a float")
+            expect_msg!(expectation),
         )),
     }
 }
 
-pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<u64, ParserError> {
+pub fn expect_int(
+    body: &mut VecDeque<SExpr>,
+    expectation: &'static str,
+) -> Result<u64, ParserError> {
     match body.pop_front() {
         Some(SExpr(SVal::Integer(i), _, _)) => Ok(i),
         Some(SExpr(x, start, end)) => Err(err!(
@@ -76,7 +95,7 @@ pub fn pop_int(body: &mut VecDeque<SExpr>) -> Result<u64, ParserError> {
         None => Err(err!(
             0, // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
-            format!("Unexpected end-of-file when attempting to read an integer")
+            expect_msg!(expectation),
         )),
     }
 }
