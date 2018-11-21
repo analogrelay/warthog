@@ -2,6 +2,10 @@
 
 extern crate warthog;
 
+use std::{env, fs};
+
+use warthog::parser;
+
 macro_rules! spec_test {
     ($name: ident) => {
         #[test]
@@ -14,6 +18,7 @@ macro_rules! spec_test {
 mod spec_tests {
     spec_test!(i32);
     spec_test!(i64);
+    spec_test!(int_exprs);
 
     spec_test!(comments);
 }
@@ -43,10 +48,16 @@ fn run_spec_test(name: &'static str) {
         );
     }
 
-    let commands = {
+    let script = {
         let mut file = fs::File::open(test_path).expect("failed to open file");
-        text::parse(&mut file).unwrap()
+        parser::parse(&mut file).unwrap()
     };
 
-    run(commands);
+    let results = script.run();
+
+    for result in results {
+        if !result.is_success() {
+            panic!("Assertion Failed: {}", result);
+        }
+    }
 }

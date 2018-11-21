@@ -144,7 +144,8 @@ mod tests {
     use crate::{
         builder::{FuncBuilder, ModuleBuilder},
         module::{Instruction, ValType},
-        text::{parser::utils, ScriptCommand},
+        parser::utils,
+        script::ScriptCommand,
         Value,
     };
 
@@ -162,7 +163,8 @@ mod tests {
                         Instruction::Const(Value::Integer32(13)),
                         Instruction::Call(0),
                     ]),
-            ).build();
+            )
+            .build();
 
         assert_eq!(
             ScriptCommand::Module(expected_module),
@@ -183,7 +185,8 @@ mod tests {
                         Instruction::GetLocal(1),
                         Instruction::Call(0),
                     ]),
-            ).build();
+            )
+            .build();
 
         assert_eq!(
             ScriptCommand::Module(expected_module),

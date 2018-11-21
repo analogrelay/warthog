@@ -138,13 +138,13 @@ pub fn expect_keyword_expr(sexpr: SExpr) -> Result<(SExpr, VecDeque<SExpr>), Par
 
 // Test helpers
 #[cfg(test)]
-use crate::text::ScriptCommand;
+use crate::script::ScriptCommand;
 
 #[cfg(test)]
 pub fn single_command(inp: &str) -> Result<ScriptCommand, ParserError> {
-    let mut parser = crate::text::parse(&mut inp.as_bytes())?;
-    let mut drainer = parser.drain(..);
-    let first = drainer.next().unwrap();
+    let script = crate::parser::parse(&mut inp.as_bytes())?;
+    let mut drainer = script.commands().iter();
+    let first = drainer.next().cloned().unwrap();
     assert_eq!(None, drainer.next());
 
     Ok(first)

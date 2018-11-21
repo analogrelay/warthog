@@ -59,14 +59,14 @@ impl Thread {
     ///
     /// This method enters a new stack frame, evaluates the provided expressions, then invokes
     /// the requested function. Because this enters a new stack frame before evaluating the expressions,
-    /// the stack will have **two** new frames by the time the function code actually runs:
-    ///
-    /// ```
-    /// <base>
-    ///     <frame entered to evaluate parameter exprs>
-    ///         <frame entered to invoke 'func'>
-    /// ```
-    pub fn call(&mut self, host: &mut Host, module: ModuleAddr, func: FuncAddr, exprs: &Vec<Expr>) -> Result<Vec<Value>, Trap> {
+    /// the stack will have **two** new frames by the time the function code actually runs
+    pub fn call(
+        &mut self,
+        host: &mut Host,
+        module: ModuleAddr,
+        func: FuncAddr,
+        exprs: &Vec<Expr>,
+    ) -> Result<Vec<Value>, Trap> {
         self.stack_mut().enter(module, None, Vec::new());
 
         // Run the expressions to fill the stack

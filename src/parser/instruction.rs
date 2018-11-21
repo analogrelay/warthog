@@ -232,7 +232,7 @@ mod tests {
 
     use crate::{
         module::{Instruction, Signedness, ValType},
-        text::sexpr::SExprParser,
+        parser::sexpr::SExprParser,
     };
 
     macro_rules! test_inst {

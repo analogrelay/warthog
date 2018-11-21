@@ -20,7 +20,7 @@ pub fn parse_command(sexpr: SExpr) -> Result<ScriptCommand, ParserError> {
 
 #[cfg(test)]
 mod test {
-    use crate::text::{parser::utils, ParserError, ParserErrorKind};
+    use crate::parser::{utils, ParserError, ParserErrorKind};
 
     #[test]
     pub fn error_empty_sexpr() {

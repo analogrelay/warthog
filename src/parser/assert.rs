@@ -88,7 +88,8 @@ fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
 mod tests {
     use crate::{
         module::{Expr, Instruction},
-        text::{parser::utils, ScriptAction, ScriptCommand},
+        parser::utils,
+        script::{ScriptAction, ScriptCommand},
         Value,
     };
 
@@ -108,7 +109,8 @@ mod tests {
             expected,
             utils::single_command(
                 "(assert_return (invoke \"add\" (i32.const 1) (i32.const 2)) (i32.const 3))"
-            ).unwrap()
+            )
+            .unwrap()
         );
     }
 

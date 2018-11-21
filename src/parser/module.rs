@@ -31,7 +31,8 @@ pub fn parse_module(mut body: VecDeque<SExpr>) -> Result<ScriptCommand, ParserEr
 mod tests {
     use crate::{
         builder::ModuleBuilder,
-        text::{parser::utils, ScriptCommand},
+        parser::utils, 
+        script::ScriptCommand,
     };
 
     #[test]
