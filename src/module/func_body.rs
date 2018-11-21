@@ -52,7 +52,7 @@ impl fmt::Display for FuncBody {
             if start {
                 start = false;
             } else {
-                write!(f, " ");
+                write!(f, " ")?;
             }
             write!(f, "{}", param)?;
         }
@@ -60,7 +60,7 @@ impl fmt::Display for FuncBody {
             if start {
                 start = false;
             } else {
-                write!(f, " ");
+                write!(f, " ")?;
             }
             write!(f, "{}", inst)?;
         }

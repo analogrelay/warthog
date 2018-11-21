@@ -55,6 +55,32 @@ impl Thread {
         result
     }
 
+    /// Calls the specified function, providing the value represented by [`exprs`] as parameters
+    ///
+    /// This method enters a new stack frame, evaluates the provided expressions, then invokes
+    /// the requested function. Because this enters a new stack frame before evaluating the expressions,
+    /// the stack will have **two** new frames by the time the function code actually runs:
+    ///
+    /// ```
+    /// <base>
+    ///     <frame entered to evaluate parameter exprs>
+    ///         <frame entered to invoke 'func'>
+    /// ```
+    pub fn call(&mut self, host: &mut Host, module: ModuleAddr, func: FuncAddr, exprs: &Vec<Expr>) -> Result<Vec<Value>, Trap> {
+        self.stack_mut().enter(module, None, Vec::new());
+
+        // Run the expressions to fill the stack
+        for expr in exprs.iter().rev() {
+            self.run(host, expr.instructions())?;
+        }
+
+        let res = self.invoke(host, func);
+
+        self.stack_mut().exit();
+
+        res
+    }
+
     /// Runs the function specified by [`func`] in the context of this thread.
     pub fn invoke(&mut self, host: &mut Host, func: FuncAddr) -> Result<Vec<Value>, Trap> {
         // Resolve the function

@@ -178,18 +178,7 @@ fn run_action(
                 }
             };
 
-            thread.stack_mut().enter(module, None, Vec::new());
-
-            // Run the expressions to fill the stack
-            for expr in exprs.iter() {
-                thread.run(host, expr.instructions())?;
-            }
-
-            let res = thread.invoke(host, func_addr);
-
-            thread.stack_mut().exit();
-
-            res
+            thread.call(host, module, func_addr, exprs)
         }
         ScriptAction::Get(_) => unimplemented!("(get) action"),
     }

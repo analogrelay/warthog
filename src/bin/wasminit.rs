@@ -66,12 +66,8 @@ fn dump_funcs(host: &Host) {
     println!("  Functions:");
     for (i, func_inst) in host.funcs().enumerate() {
         match func_inst.imp() {
-            FuncImpl::Local {
-                module: m,
-                func_id: f,
-                ..
-            } => {
-                println!("  * {:04} {} {} {:04}", i + 1, func_inst.typ(), m, f);
+            FuncImpl::Local(_, func_id) => {
+                println!("  * {:04} {} {} {:04}", i + 1, func_inst.typ(), func_inst.module(), func_id);
             }
             FuncImpl::Synthetic(_) => println!("  * {:04} {} <Synthetic>", i + 1, func_inst.typ()),
         }

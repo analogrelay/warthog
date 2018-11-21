@@ -25,12 +25,12 @@ impl Expr {
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(");
+        write!(f, "(")?;
         for (i, instr) in self.iter().enumerate() {
             if i > 0 {
-                write!(f, " {}", instr);
+                write!(f, " {}", instr)?;
             } else {
-                write!(f, "{}", instr);
+                write!(f, "{}", instr)?;
             }
         }
         write!(f, ")")

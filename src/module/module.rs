@@ -173,26 +173,26 @@ impl fmt::Display for Module {
         write!(f, "(module")?;
         for typ in self.types().iter() {
             if typ.params().len() > 0 || typ.results().len() > 0 {
-                write!(f, " (type {})", typ);
+                write!(f, " (type {})", typ)?;
             } else {
-                write!(f, " (type)");
+                write!(f, " (type)")?;
             }
         }
         for (func_idx, code) in self.funcs().iter().zip(self.code().iter()) {
             if code.locals().len() > 0 || code.body().len() > 0 {
-                write!(f, " (func (type {}) {})", func_idx, code);
+                write!(f, " (func (type {}) {})", func_idx, code)?;
             } else {
-                write!(f, " (func (type {}))", func_idx);
+                write!(f, " (func (type {}))", func_idx)?;
             }
         }
         for import in self.imports().iter() {
-            write!(f, " {}", import);
+            write!(f, " {}", import)?;
         }
         for export in self.exports().iter() {
-            write!(f, " {}", export);
+            write!(f, " {}", export)?;
         }
         for data in self.data().iter() {
-            write!(f, " {}", data);
+            write!(f, " {}", data)?;
         }
         write!(f, ")")
     }

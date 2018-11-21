@@ -11,7 +11,7 @@ macro_rules! binop {
             let c2 = thread.pop()?;
             let c1 = thread.pop()?;
 
-            let res = match (typ, c2, c1) {
+            let res = match (typ, c1, c2) {
                 $(
                     (ValType::$typ, Value::$typ($x), Value::$typ($y)) => {
                         $bl as Result<Value, ::std::borrow::Cow<'static, str>>
@@ -24,8 +24,6 @@ macro_rules! binop {
                     y.typ()
                 ))),
             };
-
-            println!(concat!(stringify!($name), " {:?}, {:?} = {:?}"), c1, c2, res);
 
             match res {
                 Ok(r) => {
@@ -135,130 +133,130 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     Ok(())
 }
 binop!(add,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_add(y))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_add(y)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_add(c2))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_add(c2)))
 );
 binop!(sub,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_sub(y))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_sub(y)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_sub(c2))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_sub(c2)))
 );
 binop!(mul,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_mul(y))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_mul(y)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_mul(c2))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_mul(c2)))
 );
 binop!(div_s,
-    (Integer32, x, y) => int32::signed_div_helper(x, y),
-    (Integer64, x, y) => int64::signed_div_helper(x, y)
+    (Integer32, c1, c2) => int32::signed_div_helper(c1, c2),
+    (Integer64, c1, c2) => int64::signed_div_helper(c1, c2)
 );
 binop!(div_u,
-    (Integer32, x, y) => int32::unsigned_div_helper(x, y),
-    (Integer64, x, y) => int64::unsigned_div_helper(x, y)
+    (Integer32, c1, c2) => int32::unsigned_div_helper(c1, c2),
+    (Integer64, c1, c2) => int64::unsigned_div_helper(c1, c2)
 );
 binop!(rem_s,
-    (Integer32, x, y) => int32::signed_rem_helper(x, y),
-    (Integer64, x, y) => int64::signed_rem_helper(x, y)
+    (Integer32, c1, c2) => int32::signed_rem_helper(c1, c2),
+    (Integer64, c1, c2) => int64::signed_rem_helper(c1, c2)
 );
 binop!(rem_u,
-    (Integer32, x, y) => int32::unsigned_rem_helper(x, y),
-    (Integer64, x, y) => int64::unsigned_rem_helper(x, y)
+    (Integer32, c1, c2) => int32::unsigned_rem_helper(c1, c2),
+    (Integer64, c1, c2) => int64::unsigned_rem_helper(c1, c2)
 );
 binop!(and,
-    (Integer32, x, y) => Ok(Value::Integer32(x & y)),
-    (Integer64, x, y) => Ok(Value::Integer64(x & y))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1 & c2)),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1 & c2))
 );
 binop!(or,
-    (Integer32, x, y) => Ok(Value::Integer32(x | y)),
-    (Integer64, x, y) => Ok(Value::Integer64(x | y))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1 | c2)),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1 | c2))
 );
 binop!(xor,
-    (Integer32, x, y) => Ok(Value::Integer32(x ^ y)),
-    (Integer64, x, y) => Ok(Value::Integer64(x ^ y))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1 ^ c2)),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1 ^ c2))
 );
 binop!(shl,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_shl(y as u32))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_shl(y as u32)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_shl(c2 as u32))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_shl(c2 as u32)))
 );
 binop!(shr_u,
-    (Integer32, x, y) => Ok(Value::Integer32(x.wrapping_shr(y))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.wrapping_shr(y as u32)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_shr(c2))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_shr(c2 as u32)))
 );
 binop!(shr_s,
-    (Integer32, x, y) => Ok(Value::Integer32((x as i32).wrapping_shr(y) as u32)),
-    (Integer64, x, y) => Ok(Value::Integer64((x as i64).wrapping_shr(y as u32) as u64))
+    (Integer32, c1, c2) => Ok(Value::Integer32((c1 as i32).wrapping_shr(c2) as u32)),
+    (Integer64, c1, c2) => Ok(Value::Integer64((c1 as i64).wrapping_shr(c2 as u32) as u64))
 );
 binop!(rotl,
-    (Integer32, x, y) => Ok(Value::Integer32(x.rotate_left(y as u32))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.rotate_left(y as u32)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.rotate_left(c2 as u32))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.rotate_left(c2 as u32)))
 );
 binop!(rotr,
-    (Integer32, x, y) => Ok(Value::Integer32(x.rotate_right(y as u32))),
-    (Integer64, x, y) => Ok(Value::Integer64(x.rotate_right(y as u32)))
+    (Integer32, c1, c2) => Ok(Value::Integer32(c1.rotate_right(c2 as u32))),
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.rotate_right(c2 as u32)))
 );
 
-// Comparison ops always return i32
+// Comparison ops alwac2s return i32
 binop!(eq,
-    (Integer32, x, y) => Ok(Value::Integer32(if x == y { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if x == y { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if c1 == c2 { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if c1 == c2 { 1 } else { 0 }))
 );
 binop!(ne,
-    (Integer32, x, y) => Ok(Value::Integer32(if x != y { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if x != y { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if c1 != c2 { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if c1 != c2 { 1 } else { 0 }))
 );
 binop!(gt_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) > (y as i32) { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) > (y as i64) { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if (c1 as i32) > (c2 as i32) { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if (c1 as i64) > (c2 as i64) { 1 } else { 0 }))
 );
 binop!(gt_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if x > y { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if x > y { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if c1 > c2 { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if c1 > c2 { 1 } else { 0 }))
 );
 binop!(ge_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) >= (y as i32) { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) >= (y as i64) { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if (c1 as i32) >= (c2 as i32) { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if (c1 as i64) >= (c2 as i64) { 1 } else { 0 }))
 );
 binop!(ge_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if x >= y { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if x >= y { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if c1 >= c2 { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if c1 >= c2 { 1 } else { 0 }))
 );
 binop!(lt_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) < (y as i32) { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) < (y as i64) { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if (c1 as i32) < (c2 as i32) { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if (c1 as i64) < (c2 as i64) { 1 } else { 0 }))
 );
 binop!(lt_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if x < y { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if x < y { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if c1 < c2 { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if c1 < c2 { 1 } else { 0 }))
 );
 binop!(le_s,
-    (Integer32, x, y) => Ok(Value::Integer32(if (x as i32) <= (y as i32) { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if (x as i64) <= (y as i64) { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if (c1 as i32) <= (c2 as i32) { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if (c1 as i64) <= (c2 as i64) { 1 } else { 0 }))
 );
 binop!(le_u,
-    (Integer32, x, y) => Ok(Value::Integer32(if x <= y { 1 } else { 0 })),
-    (Integer64, x, y) => Ok(Value::Integer32(if x <= y { 1 } else { 0 }))
+    (Integer32, c1, c2) => Ok(Value::Integer32(if c1 <= c2 { 1 } else { 0 })),
+    (Integer64, c1, c2) => Ok(Value::Integer32(if c1 <= c2 { 1 } else { 0 }))
 );
 
 unop!(clz,
-    (Integer32, x) => Ok(Value::Integer32(x.leading_zeros())),
-    (Integer64, x) => Ok(Value::Integer64(x.leading_zeros() as u64))
+    (Integer32, c1) => Ok(Value::Integer32(c1.leading_zeros())),
+    (Integer64, c1) => Ok(Value::Integer64(c1.leading_zeros() as u64))
 );
 unop!(ctz,
-    (Integer32, x) => Ok(Value::Integer32(x.trailing_zeros())),
-    (Integer64, x) => Ok(Value::Integer64(x.trailing_zeros() as u64))
+    (Integer32, c1) => Ok(Value::Integer32(c1.trailing_zeros())),
+    (Integer64, c1) => Ok(Value::Integer64(c1.trailing_zeros() as u64))
 );
 unop!(popcnt,
-    (Integer32, x) => Ok(Value::Integer32(x.count_ones())),
-    (Integer64, x) => Ok(Value::Integer64(x.count_ones() as u64))
+    (Integer32, c1) => Ok(Value::Integer32(c1.count_ones())),
+    (Integer64, c1) => Ok(Value::Integer64(c1.count_ones() as u64))
 );
 
-// Comparison ops already return i32
+// Comparison ops alreadc2 return i32
 unop!(eqz,
-    (Integer32, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 })),
-    (Integer64, x) => Ok(Value::Integer32(if x == 0 { 1 } else { 0 }))
+    (Integer32, c1) => Ok(Value::Integer32(if c1 == 0 { 1 } else { 0 })),
+    (Integer64, c1) => Ok(Value::Integer32(if c1 == 0 { 1 } else { 0 }))
 );
 
-unop!(wrap, (Integer64, x) => Ok(Value::Integer32(x as u32)));
-unop!(extend_u, (Integer32, x) => Ok(Value::Integer64(x as u64)));
-unop!(extend_s, (Integer32, x) => Ok(Value::Integer64((x as i32) as i64 as u64)));
+unop!(wrap, (Integer64, c1) => Ok(Value::Integer32(c1 as u32)));
+unop!(extend_u, (Integer32, c1) => Ok(Value::Integer64(c1 as u64)));
+unop!(extend_s, (Integer32, c1) => Ok(Value::Integer64((c1 as i32) as i64 as u64)));
 
 macro_rules! div_helpers {
     ($name: ident, $unsigned: ty, $signed: ty, $valtyp: ident) => {

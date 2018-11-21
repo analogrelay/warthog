@@ -52,9 +52,9 @@ impl fmt::Display for ScriptAction {
         match self {
             ScriptAction::Get(s) => write!(f, "(get \"{}\")", s),
             ScriptAction::Invoke(s, exprs) => {
-                write!(f, "(invoke \"{}\"", s);
+                write!(f, "(invoke \"{}\"", s)?;
                 for expr in exprs {
-                    write!(f, " {}", expr);
+                    write!(f, " {}", expr)?;
                 }
                 write!(f, ")")
             }
