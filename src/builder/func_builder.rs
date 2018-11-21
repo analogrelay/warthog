@@ -24,7 +24,7 @@ impl FuncBuilder {
     }
 
     pub fn import_from<S: Into<String>, T: Into<String>>(mut self, module: S, func: T) -> Self {
-        self.import = Some(module.into(), func.into())
+        self.import = Some((module.into(), func.into()));
         self
     }
 

@@ -16,7 +16,7 @@ pub fn parse_module(mut body: VecDeque<SExpr>) -> Result<ScriptCommand, ParserEr
             "func" => module.add_func(func::parse_func(body)?),
             x => {
                 return Err(err!(
-                    (kwd.start(), kwd.end()),
+                    kwd.range(),
                     ParserErrorKind::UnexpectedAtom(x.to_string()),
                     format!("Unexpected keyword: '{}'.", x)
                 ))
@@ -29,11 +29,7 @@ pub fn parse_module(mut body: VecDeque<SExpr>) -> Result<ScriptCommand, ParserEr
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        builder::ModuleBuilder,
-        parser::utils, 
-        script::ScriptCommand,
-    };
+    use crate::{builder::ModuleBuilder, parser::utils, script::ScriptCommand};
 
     #[test]
     pub fn empty_module() {

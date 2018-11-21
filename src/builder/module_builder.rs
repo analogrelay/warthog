@@ -1,6 +1,6 @@
 use crate::{
     builder::FuncBuilder,
-    module::{DataItem, Export, FuncBody, FuncType, Import, Module, ModuleNames},
+    module::{DataItem, Export, FuncBody, FuncType, Import, MemberDesc, Module, ModuleNames},
 };
 
 pub struct ModuleBuilder {
@@ -48,17 +48,22 @@ impl ModuleBuilder {
         };
 
         // Add the func to the list
-        let func_id = self.funcs.len();
-        self.funcs.push(type_id);
+        if let Some((module, name)) = func.import {
+            self.imports
+                .push(Import::new(module, name, MemberDesc::Function(type_id)));
+        } else {
+            let func_id = self.funcs.len();
+            self.funcs.push(type_id);
 
-        // Add the body
-        debug_assert_eq!(func_id, self.code.len());
-        let body = FuncBody::new(func.locals, func.body);
-        self.code.push(body);
+            // Add the body
+            debug_assert_eq!(func_id, self.code.len());
+            let body = FuncBody::new(func.locals, func.body);
+            self.code.push(body);
 
-        // Export, if the builder is marked as exported
-        if let Some(export) = func.export {
-            self.exports.push(Export::func(export, func_id));
+            // Export, if the builder is marked as exported
+            if let Some(export) = func.export {
+                self.exports.push(Export::func(export, func_id));
+            }
         }
     }
 

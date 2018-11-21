@@ -3,21 +3,21 @@ use std::collections::VecDeque;
 use crate::{
     parser::{
         instruction, sexpr::SExpr, symbol_table::SymbolTable, utils, ParserError, ParserErrorKind,
+        TextRange,
     },
     script::{ScriptAction, ScriptCommand},
 };
 
 pub fn parse_assert_trap(
     mut body: VecDeque<SExpr>,
-    start: usize,
-    end: usize,
+    range: &TextRange,
 ) -> Result<ScriptCommand, ParserError> {
     // Parse the action
     let action = match body.pop_front() {
         Some(expr) => parse_action(expr)?,
         None => {
             return Err(err!(
-                (start, end),
+                range,
                 ParserErrorKind::IncompleteDeclaration,
                 "Expected 'assert_return' declaration to have an action."
             ))
@@ -33,15 +33,14 @@ pub fn parse_assert_trap(
 
 pub fn parse_assert_return(
     mut body: VecDeque<SExpr>,
-    start: usize,
-    end: usize,
+    range: &TextRange,
 ) -> Result<ScriptCommand, ParserError> {
     // Parse the action
     let action = match body.pop_front() {
         Some(expr) => parse_action(expr)?,
         None => {
             return Err(err!(
-                (start, end),
+                range,
                 ParserErrorKind::IncompleteDeclaration,
                 "Expected 'assert_return' declaration to have an action."
             ))
@@ -76,7 +75,7 @@ fn parse_action(expr: SExpr) -> Result<ScriptAction, ParserError> {
         }
         x => {
             return Err(err!(
-                (kwd.start(), kwd.end()),
+                kwd.range(),
                 ParserErrorKind::UnexpectedAtom(x.to_string()),
                 format!("Unexpected keyword: '{}'.", x)
             ))
@@ -109,8 +108,7 @@ mod tests {
             expected,
             utils::single_command(
                 "(assert_return (invoke \"add\" (i32.const 1) (i32.const 2)) (i32.const 3))"
-            )
-            .unwrap()
+            ).unwrap()
         );
     }
 

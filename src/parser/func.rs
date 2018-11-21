@@ -27,24 +27,30 @@ pub fn parse_func(mut body: VecDeque<SExpr>) -> Result<FuncBuilder, ParserError>
     Ok(func)
 }
 
-fn try_parse_import(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(), ParserError> {
-    if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "import") {
+fn try_parse_import(
+    rest: &mut VecDeque<SExpr>,
+    func: &mut FuncBuilder,
+) -> Result<bool, ParserError> {
+    if let Some((mut body, _)) = utils::try_pop_keyword_expr(rest, "import") {
         // Read the names
-        let module = body.expect_str(rest, "a module name")?;
-        let func = body.expect_str(rest, "a function name")?;
-        func.import = (module, func);
+        let module = utils::expect_str(&mut body, "a module name")?;
+        let func_name = utils::expect_str(&mut body, "a function name")?;
+        func.import = Some((module, func_name));
+        Ok(true)
+    } else {
+        Ok(false)
     }
 }
 
 fn parse_export(rest: &mut VecDeque<SExpr>, func: &mut FuncBuilder) -> Result<(), ParserError> {
-    if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "export") {
+    if let Some((mut body, _)) = utils::try_pop_keyword_expr(rest, "export") {
         // Read the name
-        func.export = utils::expect_str(rest, "an export name")?;
+        func.export = Some(utils::expect_str(&mut body, "an export name")?);
 
         match body.pop_front() {
             None => Ok(()),
             Some(tok) => Err(err!(
-                (tok.start(), tok.end()),
+                tok.range(),
                 ParserErrorKind::UnexpectedToken,
                 format!("'export' block does not expect a {:?}", tok)
             )),
@@ -60,16 +66,16 @@ fn parse_typeuse(
     func: &mut FuncBuilder,
     locals: &mut SymbolTable,
 ) -> Result<(), ParserError> {
-    if let Some((mut body, start, end)) = utils::try_pop_keyword_expr(rest, "type") {
+    if let Some((mut body, range)) = utils::try_pop_keyword_expr(rest, "type") {
         // Read the ID
         match body.pop_front() {
             Some(ex) => {
-                let (id, _, _) = ex.consume_int()?;
+                let (id, _) = ex.consume_int()?;
                 func.type_id = Some(id as usize);
             }
             None => {
                 return Err(err!(
-                    (start, end),
+                    range,
                     ParserErrorKind::UnexpectedToken,
                     "'type' block is empty, expected a type index or identifier!"
                 ))
@@ -90,10 +96,10 @@ fn parse_func_type_segment(
     mut locals: Option<&mut SymbolTable>,
 ) -> Result<(), ParserError> {
     // Read while we have the specified keyword
-    while let Some((mut body, _, _)) = utils::try_pop_keyword_expr(rest, keyword) {
+    while let Some((mut body, _)) = utils::try_pop_keyword_expr(rest, keyword) {
         for expr in body.drain(..) {
             match expr {
-                SExpr(SVal::Atom(atom), start, end) => {
+                SExpr(SVal::Atom(atom), range) => {
                     let valtyp = match atom.as_str() {
                         "i64" => ValType::Integer64,
                         "i32" => ValType::Integer32,
@@ -102,7 +108,7 @@ fn parse_func_type_segment(
                         x => {
                             let msg = format!("'{}' is not a valid value type.", x);
                             return Err(err!(
-                                (start, end),
+                                range,
                                 ParserErrorKind::UnexpectedAtom(x.to_string()),
                                 msg
                             ));
@@ -110,7 +116,7 @@ fn parse_func_type_segment(
                     };
                     list.push(valtyp)
                 }
-                SExpr(SVal::Identifier(id), start, end) => {
+                SExpr(SVal::Identifier(id), range) => {
                     // Assign the next identifier
                     match locals.as_mut() {
                         Some(l) => {
@@ -118,7 +124,7 @@ fn parse_func_type_segment(
                         }
                         None => {
                             return Err(err!(
-                                (start, end),
+                                range,
                                 ParserErrorKind::UnexpectedToken,
                                 format!("Identifiers are not permitted in this definition.")
                             ))
@@ -127,7 +133,7 @@ fn parse_func_type_segment(
                 }
                 x => {
                     return Err(err!(
-                        (x.start(), x.end()),
+                        x.range(),
                         ParserErrorKind::UnexpectedToken,
                         format!("Expected an Atom or Identifier, but found: '{:?}'", x)
                     ));
@@ -163,8 +169,7 @@ mod tests {
                         Instruction::Const(Value::Integer32(13)),
                         Instruction::Call(0),
                     ]),
-            )
-            .build();
+            ).build();
 
         assert_eq!(
             ScriptCommand::Module(expected_module),
@@ -185,8 +190,7 @@ mod tests {
                         Instruction::GetLocal(1),
                         Instruction::Call(0),
                     ]),
-            )
-            .build();
+            ).build();
 
         assert_eq!(
             ScriptCommand::Module(expected_module),

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::parser::{
     sexpr::{SExpr, SVal},
     symbol_table::SymbolTable,
-    ParserError, ParserErrorKind,
+    ParserError, ParserErrorKind, TextRange,
 };
 
 macro_rules! expect_msg {
@@ -21,22 +21,22 @@ pub fn expect_id(
     expectation: &'static str,
 ) -> Result<usize, ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Integer(i), _, _)) => Ok(i as usize),
-        Some(SExpr(SVal::Identifier(id), start, end)) => match symbol_table.get(id.as_str()) {
+        Some(SExpr(SVal::Integer(i), _)) => Ok(i as usize),
+        Some(SExpr(SVal::Identifier(id), range)) => match symbol_table.get(id.as_str()) {
             Some(x) => Ok(x),
             None => Err(err!(
-                (start, end),
+                range,
                 ParserErrorKind::UndeclaredIdentifier(id.clone()),
                 format!("Use of undeclared identifier: {}", id)
             )),
         },
-        Some(SExpr(x, start, end)) => Err(err!(
-            (start, end),
+        Some(SExpr(x, range)) => Err(err!(
+            range,
             ParserErrorKind::UnexpectedToken,
             expect_msg!(expectation, x),
         )),
         None => Err(err!(
-            0, // TODO: Figure out the start point?
+            TextRange::empty(), // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
             expect_msg!(expectation),
         )),
@@ -48,14 +48,14 @@ pub fn expect_str(
     expectation: &'static str,
 ) -> Result<String, ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Str(s), _, _)) => Ok(s),
-        Some(SExpr(x, start, end)) => Err(err!(
-            (start, end),
+        Some(SExpr(SVal::Str(s), _)) => Ok(s),
+        Some(SExpr(x, range)) => Err(err!(
+            range,
             ParserErrorKind::UnexpectedToken,
             expect_msg!(expectation, x),
         )),
         None => Err(err!(
-            0, // TODO: Figure out the start point?
+            TextRange::empty(), // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
             expect_msg!(expectation),
         )),
@@ -67,14 +67,14 @@ pub fn expect_float(
     expectation: &'static str,
 ) -> Result<f64, ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Float(i), _, _)) => Ok(i),
-        Some(SExpr(x, start, end)) => Err(err!(
-            (start, end),
+        Some(SExpr(SVal::Float(i), _)) => Ok(i),
+        Some(SExpr(x, range)) => Err(err!(
+            range,
             ParserErrorKind::UnexpectedToken,
             expect_msg!(expectation, x),
         )),
         None => Err(err!(
-            0, // TODO: Figure out the start point?
+            TextRange::empty(), // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
             expect_msg!(expectation),
         )),
@@ -86,14 +86,14 @@ pub fn expect_int(
     expectation: &'static str,
 ) -> Result<u64, ParserError> {
     match body.pop_front() {
-        Some(SExpr(SVal::Integer(i), _, _)) => Ok(i),
-        Some(SExpr(x, start, end)) => Err(err!(
-            (start, end),
+        Some(SExpr(SVal::Integer(i), _)) => Ok(i),
+        Some(SExpr(x, range)) => Err(err!(
+            range,
             ParserErrorKind::UnexpectedToken,
             format!("Expected an Integer but found: {:?}", x)
         )),
         None => Err(err!(
-            0, // TODO: Figure out the start point?
+            TextRange::empty(), // TODO: Figure out the start point?
             ParserErrorKind::UnexpectedEof,
             expect_msg!(expectation),
         )),
@@ -103,12 +103,12 @@ pub fn expect_int(
 pub fn try_pop_keyword_expr(
     body: &mut VecDeque<SExpr>,
     keyword: &str,
-) -> Option<(VecDeque<SExpr>, usize, usize)> {
+) -> Option<(VecDeque<SExpr>, TextRange)> {
     // Need to end the immutable borrows before actually popping the values
     // So we capture the match result in a boolean.
-    let is_match = if let Some(SExpr(SVal::Expr(items), _, _)) = body.front() {
+    let is_match = if let Some(SExpr(SVal::Expr(items), _)) = body.front() {
         match items.front() {
-            Some(SExpr(SVal::Atom(s), _, _)) if s == keyword => true,
+            Some(SExpr(SVal::Atom(s), _)) if s == keyword => true,
             _ => false,
         }
     } else {
@@ -116,10 +116,10 @@ pub fn try_pop_keyword_expr(
     };
 
     if is_match {
-        let (mut items, start, end) = body.pop_front().unwrap().consume_expr().unwrap();
+        let (mut items, range) = body.pop_front().unwrap().consume_expr().unwrap();
         debug_assert_eq!(keyword, items.pop_front().unwrap().keyword().unwrap());
 
-        Some((items, start, end))
+        Some((items, range))
     } else {
         None
     }
@@ -129,26 +129,25 @@ pub fn try_pop_keyword_expr(
 /// like `(foo 42)`
 pub fn unwrap_keyword_expr(sexpr: SExpr) -> Result<Option<(SExpr, VecDeque<SExpr>)>, ParserError> {
     match sexpr {
-        SExpr(SVal::Expr(mut items), start, end) => {
+        SExpr(SVal::Expr(mut items), range) => {
             let first = items.pop_front().ok_or_else(|| {
                 err!(
-                    (start, end),
+                    range,
                     ParserErrorKind::UnexpectedToken,
                     "Expected s-expression to have at least one value."
                 )
             })?;
             Ok(Some((first, items)))
         }
-        SExpr(_, _, _) => Ok(None),
+        SExpr(_, _) => Ok(None),
     }
 }
 
 pub fn expect_keyword_expr(sexpr: SExpr) -> Result<(SExpr, VecDeque<SExpr>), ParserError> {
-    let (start, end) = (sexpr.start(), sexpr.end());
-
+    let range = sexpr.range().clone();
     unwrap_keyword_expr(sexpr)?.ok_or_else(|| {
         err!(
-            (start, end),
+            range,
             ParserErrorKind::UnexpectedToken,
             "Expected an s-expression."
         )

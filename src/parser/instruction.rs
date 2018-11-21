@@ -5,20 +5,20 @@ use crate::{
     parser::{
         sexpr::{SExpr, SVal},
         symbol_table::SymbolTable,
-        utils, ParserError, ParserErrorKind,
+        utils, ParserError, ParserErrorKind, TextRange,
     },
     Value,
 };
 
 pub fn parse_expr(token: SExpr, locals: &SymbolTable) -> Result<Expr, ParserError> {
     match token {
-        SExpr(SVal::Expr(mut expr_body), _, _) => {
+        SExpr(SVal::Expr(mut expr_body), _) => {
             let mut instrs = Vec::new();
             parse_instructions(&mut expr_body, &mut instrs, locals)?;
             Ok(Expr::new(instrs))
         }
-        SExpr(x, start, end) => Err(err!(
-            (start, end),
+        SExpr(x, range) => Err(err!(
+            range,
             ParserErrorKind::UnexpectedToken,
             format!("Expected an Expr but found: {:?}", x)
         )),
@@ -32,13 +32,13 @@ pub fn parse_instructions(
 ) -> Result<(), ParserError> {
     loop {
         match rest.pop_front() {
-            Some(SExpr(SVal::Expr(body), _, _)) => unfold_instructions(body, list, locals)?,
-            Some(SExpr(SVal::Atom(inst), start, end)) => {
-                list.push(parse_instruction(inst, start, end, rest, locals)?)
+            Some(SExpr(SVal::Expr(body), _)) => unfold_instructions(body, list, locals)?,
+            Some(SExpr(SVal::Atom(inst), range)) => {
+                list.push(parse_instruction(inst, range, rest, locals)?)
             }
-            Some(SExpr(val, start, end)) => {
+            Some(SExpr(val, range)) => {
                 return Err(err!(
-                    (start, end),
+                    range,
                     ParserErrorKind::UnexpectedToken,
                     format!("Expected an instruction, but found: '{:?}'.", val),
                 ))
@@ -55,12 +55,10 @@ fn unfold_instructions(
 ) -> Result<(), ParserError> {
     // Parse the current instruction and stash it away.
     let first = match body.pop_front() {
-        Some(SExpr(SVal::Atom(inst), start, end)) => {
-            parse_instruction(inst, start, end, &mut body, locals)?
-        }
-        Some(SExpr(val, start, end)) => {
+        Some(SExpr(SVal::Atom(inst), range)) => parse_instruction(inst, range, &mut body, locals)?,
+        Some(SExpr(val, range)) => {
             return Err(err!(
-                (start, end),
+                range,
                 ParserErrorKind::UnexpectedToken,
                 format!("Expected an instruction, but found: '{:?}'.", val),
             ))
@@ -79,20 +77,19 @@ fn unfold_instructions(
 
 fn parse_instruction(
     name: String,
-    start: usize,
-    end: usize,
+    range: TextRange,
     rest: &mut VecDeque<SExpr>,
     locals: &SymbolTable,
 ) -> Result<Instruction, ParserError> {
     // Check if this is a numeric instruction
     if let Some(idx) = name.find('.') {
         match name.split_at(idx) {
-            ("i32", x) => parse_numeric_instruction(ValType::Integer32, &x[1..], start, end, rest),
-            ("i64", x) => parse_numeric_instruction(ValType::Integer64, &x[1..], start, end, rest),
-            ("f32", x) => parse_numeric_instruction(ValType::Float32, &x[1..], start, end, rest),
-            ("f64", x) => parse_numeric_instruction(ValType::Float64, &x[1..], start, end, rest),
+            ("i32", x) => parse_numeric_instruction(ValType::Integer32, &x[1..], rest),
+            ("i64", x) => parse_numeric_instruction(ValType::Integer64, &x[1..], rest),
+            ("f32", x) => parse_numeric_instruction(ValType::Float32, &x[1..], rest),
+            ("f64", x) => parse_numeric_instruction(ValType::Float64, &x[1..], rest),
             (_, _) => Err(err!(
-                (start, end),
+                range,
                 ParserErrorKind::UnknownInstruction(name.to_owned()),
                 format!("Unknown instruction: {}", name)
             )),
@@ -113,8 +110,6 @@ fn parse_instruction(
 fn parse_numeric_instruction(
     valtyp: ValType,
     suffix: &str,
-    _start: usize,
-    _end: usize,
     rest: &mut VecDeque<SExpr>,
 ) -> Result<Instruction, ParserError> {
     let is_int = match valtyp {

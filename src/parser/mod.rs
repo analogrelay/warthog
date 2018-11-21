@@ -1,15 +1,15 @@
 macro_rules! err {
     ($p: expr, $e: expr) => {
-        ParserError::new($e, crate::parser::ToRange::into_range($p))
+        ParserError::new($e, $p)
     };
     ($p: expr, $e: expr,) => {
-        ParserError::new($e, crate::parser::ToRange::into_range($p))
+        ParserError::new($e, $p)
     };
     ($p: expr, $e: expr, $det: expr) => {
-        ParserError::detailed($e, crate::parser::ToRange::into_range($p), $det)
+        ParserError::detailed($e, $p, $det)
     };
     ($p: expr, $e: expr, $det: expr,) => {
-        ParserError::detailed($e, crate::parser::ToRange::into_range($p), $det)
+        ParserError::detailed($e, $p, $det)
     };
 }
 
@@ -19,12 +19,14 @@ mod func;
 mod instruction;
 mod module;
 mod symbol_table;
+mod text_location;
 mod utils;
 
 mod parser_error;
 mod sexpr;
 
 pub use self::parser_error::{ParserError, ParserErrorKind};
+pub use self::text_location::{TextLocation, TextRange};
 
 use std::io;
 
@@ -37,20 +39,4 @@ pub fn parse<R: io::Read>(reader: &mut R) -> Result<Script, ParserError> {
         commands.push(command::parse_command(sexpr)?);
     }
     Ok(Script::new(commands))
-}
-
-trait ToRange {
-    fn into_range(self) -> (usize, usize);
-}
-
-impl ToRange for usize {
-    fn into_range(self) -> (usize, usize) {
-        (self, self)
-    }
-}
-
-impl ToRange for (usize, usize) {
-    fn into_range(self) -> (usize, usize) {
-        self
-    }
 }

@@ -21,6 +21,18 @@ impl Import {
         })
     }
 
+    pub fn new<S: Into<String>, T: Into<String>>(
+        module: S,
+        name: T,
+        description: MemberDesc,
+    ) -> Import {
+        Import {
+            module: module.into(),
+            name: name.into(),
+            description,
+        }
+    }
+
     pub fn module(&self) -> &str {
         &self.module
     }
