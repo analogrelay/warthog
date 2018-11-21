@@ -17,7 +17,7 @@ impl SpecTest {
             funcs: vec![Arc::new(ExternalFunc::new(
                 "print_i32",
                 FuncType::new(vec![ValType::Integer32], vec![]),
-                |_, _, values| print_i32(values),
+                print_i32,
             ))],
         }
     }
@@ -37,10 +37,8 @@ impl ExternalModule for SpecTest {
     }
 }
 
-fn print_i32(values: &[Value]) -> Result<Vec<Value>, Trap> {
-    let value = values[0].unwrap_u32() as usize;
-
-    println!("{} : {}", value, values[0].typ());
+fn print_i32(value: u32) -> Result<Vec<Value>, Trap> {
+    println!("{} : {}", value, ValType::Integer32);
 
     Ok(Vec::new())
 }

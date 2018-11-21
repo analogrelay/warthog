@@ -42,10 +42,12 @@ mod host;
 mod mem_inst;
 mod module_inst;
 mod external;
+mod host_func;
 
 pub use self::export_inst::{ExportInst, ExternVal};
 pub use self::func_inst::{FuncAddr, FuncImpl, FuncInst};
 pub use self::host::Host;
 pub use self::mem_inst::{MemAddr, MemInst};
 pub use self::module_inst::{ModuleAddr, ModuleInst};
-pub use self::external::{HostFunc, ExternalModule, ExternalFunc, ExternalMemory};
+pub use self::external::{ExternalModule, ExternalFunc, ExternalMemory};
+pub use self::host_func::HostFunc;

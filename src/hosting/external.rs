@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    hosting::Host,
+    hosting::{Host, HostFunc},
     interp::{Thread, Trap},
     module::{FuncType, MemoryType},
     Value,
@@ -13,22 +13,23 @@ pub trait ExternalModule {
     fn mems(&self) -> &[ExternalMemory];
 }
 
-pub type HostFunc =
-    fn(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap>;
-
 #[derive(Clone)]
 pub struct ExternalFunc {
     name: String,
     typ: FuncType,
-    imp: HostFunc,
+    imp: Arc<Box<HostFunc>>,
 }
 
 impl ExternalFunc {
-    pub fn new<S: Into<String>>(name: S, typ: FuncType, imp: HostFunc) -> ExternalFunc {
+    pub fn new<S: Into<String>, F: 'static + HostFunc>(
+        name: S,
+        typ: FuncType,
+        imp: F,
+    ) -> ExternalFunc {
         ExternalFunc {
             name: name.into(),
             typ,
-            imp,
+            imp: Arc::new(Box::new(imp)),
         }
     }
 

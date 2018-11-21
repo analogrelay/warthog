@@ -19,6 +19,7 @@ mod spec_tests {
     spec_test!(i32);
     spec_test!(i64);
     spec_test!(int_exprs);
+    spec_test!(names);
 
     spec_test!(comments);
 }
