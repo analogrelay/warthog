@@ -18,12 +18,12 @@
             "externalConsole": true
         },
         {
-            "name": "(Windows; Debug) wasminit hello_world.wasm",
+            "name": "(Windows; Debug) warti trap.wasm",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/wasminit.exe",
+            "program": "${workspaceFolder}/target/debug/warti.exe",
             "args": [
-                "${workspaceFolder}/samples/hello_world.wasm"
+                "${workspaceFolder}/samples/trap.wasm"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

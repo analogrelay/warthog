@@ -1,10 +1,6 @@
 (module
   (memory (import "env" "memory") 256 256)
   (func $print (import "env" "print") (param i32 i32))
-  (func $get_offset (result i32) i32.const 1400)
-  (func $get_count (result i32) i32.const 13)
   (func $main (export "_main") (local $offset i32) (local $count i32)
-    (set_local $offset (call $get_offset))
-    (set_local $count (call $get_count))
-    (call $print (get_local $offset) (get_local $count)))
+    (call $print (i32.const 1400) (i32.const 13)))
   (data (i32.const 1400) "Hello, world!"))
