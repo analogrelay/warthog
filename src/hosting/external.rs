@@ -17,19 +17,15 @@ pub trait ExternalModule {
 pub struct ExternalFunc {
     name: String,
     typ: FuncType,
-    imp: Arc<Box<HostFunc>>,
+    imp: Arc<HostFunc>,
 }
 
 impl ExternalFunc {
-    pub fn new<S: Into<String>, F: 'static + HostFunc>(
-        name: S,
-        typ: FuncType,
-        imp: F,
-    ) -> ExternalFunc {
+    pub fn new<S: Into<String>>(name: S, typ: FuncType, imp: HostFunc) -> ExternalFunc {
         ExternalFunc {
             name: name.into(),
             typ,
-            imp: Arc::new(Box::new(imp)),
+            imp: Arc::new(imp),
         }
     }
 
