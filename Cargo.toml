@@ -6,4 +6,3 @@ authors = ["Andrew Stanton-Nurse <andrew@stanton-nurse.com>"]
 [dependencies]
 byteorder = "1.2.6"
 leb128 = "0.2.3"
-lazy_static = "1.2.0"

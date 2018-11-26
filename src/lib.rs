@@ -6,9 +6,6 @@
 extern crate byteorder;
 extern crate leb128;
 
-#[macro_use]
-extern crate lazy_static;
-
 mod error;
 mod location;
 mod memory;
@@ -20,10 +17,8 @@ pub mod builder;
 pub mod hosting;
 pub mod interp;
 pub mod module;
-pub mod parser;
 pub mod reader;
 pub mod runtime;
-pub mod script;
 
 pub use crate::error::Error;
 pub use crate::location::Location;
