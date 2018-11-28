@@ -186,13 +186,26 @@ fn write_val<W: Write>(target: &mut W, val: &Map<String, Value>) {
 }
 
 fn to_literal<S: AsRef<str>>(val: S) -> String {
+    let val = jstring_to_rstring(val.as_ref());
     let mut s = String::new();
     s.push('\"');
-    for c in val.as_ref().chars() {
+    for c in val.chars() {
         for d in c.escape_default() {
             s.push(d);
         }
     }
     s.push('\"');
     s
+}
+
+// Borrowed from https://github.com/pepyakin/wabt-rs/blob/16603d07aedbf071659b0f2d60bc4bd9e9066aed/src/script/mod.rs#L255
+// Under Apache 2 license: https://github.com/pepyakin/wabt-rs/blob/16603d07aedbf071659b0f2d60bc4bd9e9066aed/LICENSE
+
+// Convert json string to correct rust UTF8 string.
+// The reason is that, for example, rust character "\u{FEEF}" (3-byte UTF8 BOM) is represented as "\u00ef\u00bb\u00bf" in spec json.
+// It is incorrect. Correct BOM representation in json is "\uFEFF" => we need to do a double utf8-parse here.
+// This conversion is incorrect in general case (casting char to u8)!!!
+fn jstring_to_rstring(jstring: &str) -> String {
+    let jstring_chars: Vec<u8> = jstring.chars().map(|c| c as u8).collect();
+    String::from_utf8(jstring_chars).unwrap()
 }

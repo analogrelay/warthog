@@ -37,9 +37,6 @@ try {
             $Dest = Join-Path $DestDir "$name.json"
             wast2json $_.FullName -o $Dest
 
-            # Copy the original file too
-            Copy-Item $_.FullName $DestDir
-
             # Now process the spec into a Rust test using the specgen command
             & "$SpecGenRoot\target\debug\specgen.exe" $Dest
             $SpecModuleContent += "mod $name;" + [Environment]::NewLine;

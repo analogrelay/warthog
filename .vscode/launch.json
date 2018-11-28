@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/wasmdump.exe",
             "args": [
-                "${workspaceFolder}/samples/hello_world.wasm"
+                "${workspaceFolder}/samples/temp.wasm"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -36,7 +36,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/spec_tests-4abdf2514c0aa809.exe",
             "args": [
-                "spec::int_exprs::int_exprs"
+                "spec::temp::temp"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
