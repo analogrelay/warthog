@@ -7,7 +7,7 @@ use warthog::{
     interp::{Thread, Trap},
     module::Module,
     reader::Reader,
-    Value,
+    runtime, Value,
 };
 
 macro_rules! vals {
@@ -28,10 +28,16 @@ pub struct TestContext {
 
 impl TestContext {
     pub fn new() -> TestContext {
+        let mut host = Host::new();
+
+        // Install the Env and SpecTest modules
+        host.external(runtime::Env::new()).unwrap();
+        host.external(runtime::SpecTest::new()).unwrap();
+
         TestContext {
             current_line: 0,
             active_module: None,
-            host: Host::new(),
+            host,
         }
     }
 
@@ -43,9 +49,21 @@ impl TestContext {
         let module = {
             let mut cur = Cursor::new(module_data);
             let mut reader = Reader::new(cur);
-            Module::load(reader).unwrap()
+            match Module::load(reader) {
+                Ok(m) => m,
+                Err(e) => self.panic(format!(
+                    "Failed to load module: {}. Error: {:?}",
+                    module_name, e
+                )),
+            }
         };
-        let addr = self.host.instantiate(module_name, module).unwrap();
+        let addr = match self.host.instantiate(module_name, module) {
+            Ok(a) => a,
+            Err(e) => self.panic(format!(
+                "Failed to instantiate module: {}. Error: {:?}",
+                module_name, e
+            )),
+        };
         self.active_module = Some(addr);
     }
 

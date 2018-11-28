@@ -60,15 +60,6 @@ impl ModuleInst {
     }
 
     pub fn find_export(&self, name: &str) -> Option<&ExportInst> {
-        self.exports.iter().find(|e| {
-            println!(
-                "Checking if [{:?}] == [{:?}]",
-                e.name().as_bytes(),
-                name.as_bytes()
-            );
-            let result = e.name() == name;
-            println!(" Result = {}", result);
-            result
-        })
+        self.exports.iter().find(|e| e.name() == name)
     }
 }
