@@ -55,9 +55,9 @@ impl Thread {
         result
     }
 
-    /// Calls the specified function, providing the value represented by [`exprs`] as parameters
+    /// Calls the specified function, providing the values represented by [`values`] as parameters
     ///
-    /// This method enters a new stack frame, evaluates the provided expressions, then invokes
+    /// This method enters a new stack frame, pushes [`values`] to the stack, then invokes
     /// the requested function. Because this enters a new stack frame before evaluating the expressions,
     /// the stack will have **two** new frames by the time the function code actually runs
     pub fn call(
@@ -65,13 +65,13 @@ impl Thread {
         host: &mut Host,
         module: ModuleAddr,
         func: FuncAddr,
-        exprs: &Vec<Expr>,
+        mut values: Vec<Value>,
     ) -> Result<Vec<Value>, Trap> {
         self.stack_mut().enter(module, None, Vec::new());
 
-        // Run the expressions to fill the stack
-        for expr in exprs.iter().rev() {
-            self.run(host, expr.instructions())?;
+        // Push the values on to the stack
+        for value in values.drain(..).rev() {
+            self.push(value);
         }
 
         let res = self.invoke(host, func);

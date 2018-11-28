@@ -34,9 +34,9 @@
             "name": "(Windows; Debug) ad-hoc test",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/warthog-039e2130285f00fd.exe",
+            "program": "${workspaceFolder}/target/debug/spec_tests-4abdf2514c0aa809.exe",
             "args": [
-                "text::sexpr::tests::single_token_int_hex"
+                "spec::int_exprs::int_exprs"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

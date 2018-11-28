@@ -83,51 +83,134 @@ pub enum Instruction {
     Drop,
 }
 
-macro_rules! rd_int {
-    ($r:expr, $t: ty) => {
-        utils::read_leb128_u32($r)? as $t
+macro_rules! ri {
+    ($r:expr) => {
+        utils::read_leb128_s($r)?
+    };
+}
+
+macro_rules! vt {
+    (i32) => {
+        $crate::module::ValType::Integer32
+    };
+    (i64) => {
+        $crate::module::ValType::Integer64
+    };
+    (f32) => {
+        $crate::module::ValType::Float32
+    };
+    (f64) => {
+        $crate::module::ValType::Float64
     };
 }
 
 impl Instruction {
     pub fn read<R: io::Read>(reader: &mut R) -> Result<Option<Instruction>, Error> {
+        use self::{Instruction::*, Signedness::*};
+        use Value::*;
+
         let opcode = reader.read_u8()?;
-        match opcode {
-            0x0B => Ok(None),
-            0x10 => Ok(Some(Instruction::Call(rd_int!(reader, usize)))),
-            0x1A => Ok(Some(Instruction::Drop)),
-            0x20 => Ok(Some(Instruction::GetLocal(rd_int!(reader, usize)))),
-            0x21 => Ok(Some(Instruction::SetLocal(rd_int!(reader, usize)))),
-            0x41 => Ok(Some(Instruction::Const(Value::Integer32(
-                utils::read_leb128_u32(reader)?,
-            )))),
-            0x42 => Ok(Some(Instruction::Const(Value::Integer64(
-                utils::read_leb128_u64(reader)?,
-            )))),
-            0x6E => Ok(Some(Instruction::Div(
-                ValType::Integer32,
-                Signedness::Unsigned,
-            ))),
-            0x74 => Ok(Some(Instruction::Shl(ValType::Integer32))),
-            0x75 => Ok(Some(Instruction::Shr(
-                ValType::Integer32,
-                Signedness::Signed,
-            ))),
-            0x76 => Ok(Some(Instruction::Shr(
-                ValType::Integer32,
-                Signedness::Unsigned,
-            ))),
-            0x86 => Ok(Some(Instruction::Shl(ValType::Integer64))),
-            0x87 => Ok(Some(Instruction::Shr(
-                ValType::Integer64,
-                Signedness::Signed,
-            ))),
-            0x88 => Ok(Some(Instruction::Shr(
-                ValType::Integer64,
-                Signedness::Unsigned,
-            ))),
-            x => panic!("Instruction not implemented: 0x{:X}", x),
+        if opcode == 0x0B {
+            return Ok(None);
         }
+
+        Ok(Some(match opcode {
+            0x10 => Call(ri!(reader)),
+            0x1A => Drop,
+            0x20 => GetLocal(ri!(reader)),
+            0x21 => SetLocal(ri!(reader)),
+
+            0x41 => Const(Integer32(ri!(reader))),
+            0x42 => Const(Integer64(ri!(reader))),
+            0x43 => unimplemented!("f32.const"),
+            0x44 => unimplemented!("f64.const"),
+
+            0x45 => Eqz(vt!(i32)),
+            0x46 => Eq(vt!(i32)),
+            0x47 => Ne(vt!(i32)),
+            0x48 => Lt(vt!(i32), Signed),
+            0x49 => Lt(vt!(i32), Unsigned),
+            0x4A => Gt(vt!(i32), Signed),
+            0x4B => Gt(vt!(i32), Unsigned),
+            0x4C => Le(vt!(i32), Signed),
+            0x4D => Le(vt!(i32), Unsigned),
+            0x4E => Ge(vt!(i32), Signed),
+            0x4F => Ge(vt!(i32), Unsigned),
+
+            0x50 => Eqz(vt!(i64)),
+            0x51 => Eq(vt!(i64)),
+            0x52 => Ne(vt!(i64)),
+            0x53 => Lt(vt!(i64), Signed),
+            0x54 => Lt(vt!(i64), Unsigned),
+            0x55 => Gt(vt!(i64), Signed),
+            0x56 => Gt(vt!(i64), Unsigned),
+            0x57 => Le(vt!(i64), Signed),
+            0x58 => Le(vt!(i64), Unsigned),
+            0x59 => Ge(vt!(i64), Signed),
+            0x5A => Ge(vt!(i64), Unsigned),
+
+            0x67 => Clz(vt!(i32)),
+            0x68 => Ctz(vt!(i32)),
+            0x69 => Popcnt(vt!(i32)),
+            0x6A => Add(vt!(i32)),
+            0x6B => Sub(vt!(i32)),
+            0x6C => Mul(vt!(i32)),
+            0x6D => Div(vt!(i32), Signed),
+            0x6E => Div(vt!(i32), Unsigned),
+            0x6F => Rem(vt!(i32), Signed),
+            0x70 => Rem(vt!(i32), Unsigned),
+            0x71 => And(vt!(i32)),
+            0x72 => Or(vt!(i32)),
+            0x73 => Xor(vt!(i32)),
+            0x74 => Shl(vt!(i32)),
+            0x75 => Shr(vt!(i32), Signed),
+            0x76 => Shr(vt!(i32), Unsigned),
+            0x77 => Rotl(vt!(i32)),
+            0x78 => Rotr(vt!(i32)),
+
+            0x79 => Clz(vt!(i64)),
+            0x7A => Ctz(vt!(i64)),
+            0x7B => Popcnt(vt!(i64)),
+            0x7C => Add(vt!(i64)),
+            0x7D => Sub(vt!(i64)),
+            0x7E => Mul(vt!(i64)),
+            0x7F => Div(vt!(i64), Signed),
+            0x80 => Div(vt!(i64), Unsigned),
+            0x81 => Rem(vt!(i64), Signed),
+            0x82 => Rem(vt!(i64), Unsigned),
+            0x83 => And(vt!(i64)),
+            0x84 => Or(vt!(i64)),
+            0x85 => Xor(vt!(i64)),
+            0x86 => Shl(vt!(i64)),
+            0x87 => Shr(vt!(i64), Signed),
+            0x88 => Shr(vt!(i64), Unsigned),
+            0x89 => Rotl(vt!(i64)),
+            0x8A => Rotr(vt!(i64)),
+
+            0xA7 => Wrap,
+            0xA8 => Trunc(vt!(i32), Signed, vt!(f32)),
+            0xA9 => Trunc(vt!(i32), Unsigned, vt!(f32)),
+            0xAA => Trunc(vt!(i32), Signed, vt!(f64)),
+            0xAB => Trunc(vt!(i32), Unsigned, vt!(f64)),
+            0xAC => Extend(Signed),
+            0xAD => Extend(Unsigned),
+            0xAE => Trunc(vt!(i64), Signed, vt!(f32)),
+            0xAF => Trunc(vt!(i64), Unsigned, vt!(f32)),
+            0xB0 => Trunc(vt!(i64), Signed, vt!(f64)),
+            0xB1 => Trunc(vt!(i64), Unsigned, vt!(f64)),
+            0xB2 => Convert(vt!(f32), Signed, vt!(i32)),
+            0xB3 => Convert(vt!(f32), Unsigned, vt!(i32)),
+            0xB4 => Convert(vt!(f32), Signed, vt!(i64)),
+            0xB5 => Convert(vt!(f32), Unsigned, vt!(i64)),
+            0xB6 => Demote,
+            0xB7 => Convert(vt!(f64), Signed, vt!(i32)),
+            0xB8 => Convert(vt!(f64), Unsigned, vt!(i32)),
+            0xB9 => Convert(vt!(f64), Signed, vt!(i64)),
+            0xBA => Convert(vt!(f64), Unsigned, vt!(i64)),
+            0xBB => Promote,
+
+            x => panic!("Instruction not implemented: 0x{:X}", x),
+        }))
     }
 }
 

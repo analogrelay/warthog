@@ -11,7 +11,10 @@ $SpecGenRoot = [IO.Path]::Combine($RepoRoot, "specgen")
 # Right now, manually specify the tests to generate Rust tests for
 # This is because we don't implement everything yet.
 $TestsToGenerate = @(
-    "i32"
+    "i32",
+    "i64",
+    "int_exprs",
+    "names"
 )
 
 Push-Location $SpecGenRoot
@@ -20,6 +23,8 @@ try {
     Write-Host -ForegroundColor Green "Building specgen..."
     cargo build
 
+    $SpecModulePath = Join-Path $DestRoot "mod.rs"
+    $SpecModuleContent = "";
     Get-ChildItem $SpecTestRoot -Filter *.wast | ForEach-Object {
         $name = [IO.Path]::GetFileNameWithoutExtension($_.FullName)
         if ($TestsToGenerate -icontains $name) {
@@ -32,10 +37,17 @@ try {
             $Dest = Join-Path $DestDir "$name.json"
             wast2json $_.FullName -o $Dest
 
+            # Copy the original file too
+            Copy-Item $_.FullName $DestDir
+
             # Now process the spec into a Rust test using the specgen command
             & "$SpecGenRoot\target\debug\specgen.exe" $Dest
+            $SpecModuleContent += "mod $name;" + [Environment]::NewLine;
         }
     }
+
+    # Generate the spec module
+    $SpecModuleContent | Set-Content $SpecModulePath -Encoding UTF8 
 }
 finally {
     Pop-Location

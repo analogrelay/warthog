@@ -4,12 +4,38 @@ use byteorder::ReadBytesExt;
 
 use crate::{module::Instruction, Error};
 
-pub fn read_leb128_u32<R: io::Read>(r: &mut R) -> Result<u32, Error> {
-    Ok(leb128::read::unsigned(r)? as u32)
+pub trait FromLeb128 {
+    fn from_leb128_u(leb: u64) -> Self;
+    fn from_leb128_s(leb: i64) -> Self;
 }
 
-pub fn read_leb128_u64<R: io::Read>(r: &mut R) -> Result<u64, Error> {
-    Ok(leb128::read::unsigned(r)?)
+macro_rules! impl_from_leb {
+    ($target: ty) => {
+        impl FromLeb128 for $target {
+            fn from_leb128_u(leb: u64) -> $target {
+                leb as $target
+            }
+
+            fn from_leb128_s(leb: i64) -> $target {
+                leb as $target
+            }
+        }
+    };
+}
+
+impl_from_leb!(usize);
+impl_from_leb!(isize);
+impl_from_leb!(u32);
+impl_from_leb!(u64);
+impl_from_leb!(i32);
+impl_from_leb!(i64);
+
+pub fn read_leb128_s<R: io::Read, T: FromLeb128>(r: &mut R) -> Result<T, Error> {
+    Ok(T::from_leb128_s(leb128::read::signed(r)?))
+}
+
+pub fn read_leb128_u32<R: io::Read>(r: &mut R) -> Result<u32, Error> {
+    Ok(leb128::read::unsigned(r)? as u32)
 }
 
 pub fn read_vec<R, F, I>(r: &mut R, mut body: F) -> Result<Vec<I>, Error>
