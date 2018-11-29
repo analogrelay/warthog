@@ -1,8 +1,8 @@
 use crate::{
     hosting::{FuncAddr, FuncImpl, Host, ModuleAddr},
     interp::{exec, ExecutionStack},
-    module::{Expr, Instruction, ValType},
-    Trap, Value,
+    module::{Expr, Instruction},
+    Trap, ValType, Value,
 };
 
 pub struct Thread {
@@ -108,10 +108,10 @@ impl Thread {
                 for local in code.locals() {
                     let v = match local {
                         ValType::Nil => unreachable!(),
-                        ValType::Integer32 => Value::Integer32(0),
-                        ValType::Integer64 => Value::Integer64(0),
-                        ValType::Float32 => Value::Float32(0.0),
-                        ValType::Float64 => Value::Float64(0.0),
+                        ValType::I32 => Value::I32(0),
+                        ValType::I64 => Value::I64(0),
+                        ValType::F32 => Value::F32(0.0),
+                        ValType::F64 => Value::F64(0.0),
                     };
                     locals.push(v);
                 }

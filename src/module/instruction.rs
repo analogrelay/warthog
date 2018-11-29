@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{module::ValType, utils, Error, Value};
+use crate::{utils, Error, ValType, Value};
 
 #[derive(Clone, PartialEq)]
 pub enum Signedness {
@@ -91,16 +91,16 @@ macro_rules! ri {
 
 macro_rules! vt {
     (i32) => {
-        $crate::module::ValType::Integer32
+        $crate::ValType::I32
     };
     (i64) => {
-        $crate::module::ValType::Integer64
+        $crate::ValType::I64
     };
     (f32) => {
-        $crate::module::ValType::Float32
+        $crate::ValType::F32
     };
     (f64) => {
-        $crate::module::ValType::Float64
+        $crate::ValType::F64
     };
 }
 
@@ -120,8 +120,8 @@ impl Instruction {
             0x20 => GetLocal(ri!(reader)),
             0x21 => SetLocal(ri!(reader)),
 
-            0x41 => Const(Integer32(ri!(reader))),
-            0x42 => Const(Integer64(ri!(reader))),
+            0x41 => Const(I32(ri!(reader))),
+            0x42 => Const(I64(ri!(reader))),
             0x43 => unimplemented!("f32.const"),
             0x44 => unimplemented!("f64.const"),
 
@@ -329,9 +329,9 @@ impl fmt::Debug for Instruction {
 fn reinterpreted(v: &ValType) -> ValType {
     match v {
         ValType::Nil => ValType::Nil,
-        ValType::Integer32 => ValType::Float32,
-        ValType::Integer64 => ValType::Float64,
-        ValType::Float32 => ValType::Integer32,
-        ValType::Float64 => ValType::Integer64,
+        ValType::I32 => ValType::F32,
+        ValType::I64 => ValType::F64,
+        ValType::F32 => ValType::I32,
+        ValType::F64 => ValType::I64,
     }
 }

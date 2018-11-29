@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::{
     hosting::{ExternalFunc, ExternalMemory, ExternalModule, Host},
     interp::Thread,
-    module::{FuncType, ValType},
-    Trap, Value,
+    module::FuncType,
+    Trap, ValType, Value,
 };
 
 pub struct Env {
@@ -17,7 +17,7 @@ impl Env {
         Env {
             funcs: vec![Arc::new(ExternalFunc::new(
                 "print",
-                FuncType::new(vec![ValType::Integer32, ValType::Integer32], vec![]),
+                FuncType::new(vec![ValType::I32, ValType::I32], vec![]),
                 print,
             ))],
             mems: vec![ExternalMemory::new("memory", 256, Some(256))],

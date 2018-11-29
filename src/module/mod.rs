@@ -11,7 +11,6 @@ mod memory_type;
 mod module;
 mod module_names;
 mod table_type;
-mod val_type;
 
 pub use self::data_item::DataItem;
 pub use self::export::Export;
@@ -26,4 +25,3 @@ pub use self::memory_type::MemoryType;
 pub use self::module::Module;
 pub use self::module_names::ModuleNames;
 pub use self::table_type::TableType;
-pub use self::val_type::ValType;
