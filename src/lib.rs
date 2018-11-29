@@ -25,7 +25,7 @@ pub use crate::error::Error;
 pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::trap::Trap;
-pub use crate::value::{ValType, Value};
+pub use crate::value::{FromValue, ValType, Value};
 
 pub(crate) use crate::sparse_vec::SparseVec;
 

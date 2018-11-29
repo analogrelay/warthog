@@ -69,14 +69,6 @@ impl Value {
             Value::F64(_) => ValType::F64,
         }
     }
-
-    pub fn unwrap_u32(&self) -> u32 {
-        if let Value::I32(v) = self {
-            *v
-        } else {
-            panic!("Expected an i32, but the value is a {}", self.typ());
-        }
-    }
 }
 
 impl fmt::Display for Value {

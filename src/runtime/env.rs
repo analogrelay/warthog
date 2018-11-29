@@ -4,7 +4,7 @@ use crate::{
     hosting::{ExternalFunc, ExternalMemory, ExternalModule, Host},
     interp::Thread,
     module::FuncType,
-    Trap, ValType, Value,
+    FromValue, Trap, ValType, Value,
 };
 
 pub struct Env {
@@ -41,8 +41,8 @@ impl ExternalModule for Env {
 
 fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
     let (count, start) = (
-        values[0].unwrap_u32() as usize,
-        values[1].unwrap_u32() as usize,
+        u32::from_value(values[0])? as usize,
+        u32::from_value(values[1])? as usize,
     );
 
     let module = thread.stack().current().frame().module();
