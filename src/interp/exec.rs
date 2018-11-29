@@ -1,8 +1,10 @@
+use std::ops;
+
 use crate::{
-    interp::{Thread},
-    module::{Instruction, Signedness},
     hosting::Host,
-    Value, Trap, ValType,
+    interp::Thread,
+    module::{Instruction, Signedness},
+    FromValue, Trap, ValType, Value,
 };
 
 macro_rules! binop {
@@ -65,7 +67,6 @@ macro_rules! unop {
     };
 }
 
-
 pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Result<(), Trap> {
     match inst {
         Instruction::Const(val) => thread.push(val.clone()),
@@ -86,7 +87,8 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
             };
             thread.push(val);
         }
-        Instruction::Add(t) => add(thread, t)?,
+        Instruction::Add(ValType::I32) => add::<u32>(thread)?,
+        Instruction::Add(ValType::I64) => add::<u64>(thread)?,
         Instruction::Sub(t) => sub(thread, t)?,
         Instruction::Mul(t) => mul(thread, t)?,
         Instruction::Div(t, Signedness::Signed) => div_s(thread, t)?,
@@ -129,11 +131,23 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
 
     Ok(())
 }
-binop!(add,
-    (I32, c1, c2) => Ok(Value::I32(c1.wrapping_add(c2))),
-    (I64, c1, c2) => Ok(Value::I64(c1.wrapping_add(c2))),
-    (F32, c1, c2) => Ok(Value::F32(c1 + c2))
-);
+
+fn add<T>(thread: &mut Thread) -> Result<(), Trap>
+where
+    Value: From<T>,
+    T: FromValue + ops::Add<T, Output = T>,
+{
+    let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
+    let res = left + right;
+    thread.stack_mut().push(res);
+    Ok(())
+}
+
+// binop!(add,
+//     (I32, c1, c2) => Ok(Value::I32(c1.wrapping_add(c2))),
+//     (I64, c1, c2) => Ok(Value::I64(c1.wrapping_add(c2))),
+//     (F32, c1, c2) => Ok(Value::F32(c1 + c2))
+// );
 binop!(sub,
     (I32, c1, c2) => Ok(Value::I32(c1.wrapping_sub(c2))),
     (I64, c1, c2) => Ok(Value::I64(c1.wrapping_sub(c2))),
@@ -264,12 +278,9 @@ unop!(extend_s, (I32, c1) => Ok(Value::I64((c1 as i32) as i64 as u64)));
 macro_rules! div_helpers {
     ($name: ident, $unsigned: ty, $signed: ty, $valtyp: ident) => {
         mod $name {
-            use crate::{Value, Trap};
-        
-            pub fn signed_div_helper(
-                x: $unsigned,
-                y: $unsigned,
-            ) -> Result<Value, Trap> {
+            use crate::{Trap, Value};
+
+            pub fn signed_div_helper(x: $unsigned, y: $unsigned) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -279,11 +290,8 @@ macro_rules! div_helpers {
                     }
                 }
             }
-        
-            pub fn unsigned_div_helper(
-                x: $unsigned,
-                y: $unsigned,
-            ) -> Result<Value, Trap> {
+
+            pub fn unsigned_div_helper(x: $unsigned, y: $unsigned) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -293,11 +301,8 @@ macro_rules! div_helpers {
                     }
                 }
             }
-        
-            pub fn signed_rem_helper(
-                x: $unsigned,
-                y: $unsigned,
-            ) -> Result<Value, Trap> {
+
+            pub fn signed_rem_helper(x: $unsigned, y: $unsigned) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -306,11 +311,8 @@ macro_rules! div_helpers {
                     ))
                 }
             }
-        
-            pub fn unsigned_rem_helper(
-                x: $unsigned,
-                y: $unsigned,
-            ) -> Result<Value, Trap> {
+
+            pub fn unsigned_rem_helper(x: $unsigned, y: $unsigned) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {

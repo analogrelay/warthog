@@ -105,8 +105,8 @@ impl TestContext {
             Err(e) => self.panic(format!("Expected: NaN, Actual: <Trap: {}>", e)),
             Ok(vals) => {
                 match self.unwrap_val(vals) {
-                    Value::Float32(f) if f.is_nan() => { /* success */ }
-                    Value::Float64(f) if f.is_nan() => { /* success */ }
+                    Value::F32(f) if f.is_nan() => { /* success */ }
+                    Value::F64(f) if f.is_nan() => { /* success */ }
                     v => {
                         self.panic(format!("Expected: NaN, Actual: {}", v));
                     }
@@ -160,7 +160,8 @@ impl TestContext {
                     return Err(format!(
                         "Export '{}' from module '{}' is not a function, it's a {:?}",
                         field, module, e
-                    ).into())
+                    )
+                    .into())
                 }
             }
         };
