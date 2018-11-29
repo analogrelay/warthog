@@ -132,6 +132,8 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     Ok(())
 }
 
+Need to use wrapping add... maybe add a trait?
+
 fn add<T>(thread: &mut Thread) -> Result<(), Trap>
 where
     Value: From<T>,
