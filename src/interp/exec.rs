@@ -132,12 +132,11 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     Ok(())
 }
 
-Need to use wrapping add... maybe add a trait?
-
-fn add<T>(thread: &mut Thread) -> Result<(), Trap>
+fn add<T, U>(thread: &mut Thread) -> Result<(), Trap>
 where
-    Value: From<T>,
-    T: FromValue + ops::Add<T, Output = T>,
+    T: FromValue<Output=U>,
+    U: ops::Add<U, Output = U>,
+    Value: From<U>
 {
     let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
     let res = left + right;

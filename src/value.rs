@@ -1,4 +1,4 @@
-use std::{fmt, io};
+use std::{fmt, io, num::Wrapping};
 
 use byteorder::ReadBytesExt;
 
@@ -107,7 +107,7 @@ pub trait FromValue: Sized {
 macro_rules! impl_from_value {
     ($repr: ty, $v: ident) => {
         impl FromValue for $repr {
-            fn from_value(v: Value) -> Result<$repr, Trap> {
+            fn from_value(v: Value) -> Result<Self, Trap> {
                 match v {
                     Value::$v(x) => Ok(x as $repr),
                     Value::Nil => Err("Stack underflow.".into()),
@@ -115,7 +115,8 @@ macro_rules! impl_from_value {
                         "Type mismatch. Expected '{}' but got '{}'",
                         ValType::$v,
                         x.typ()
-                    ).into()),
+                    )
+                    .into()),
                 }
             }
         }
@@ -126,3 +127,19 @@ impl_from_value!(u32, I32);
 impl_from_value!(u64, I64);
 impl_from_value!(i32, I32);
 impl_from_value!(i64, I64);
+impl_from_value!(f32, F32);
+impl_from_value!(f64, F64);
+
+pub mod ops {
+    macro_rules! binop_trait {
+        ($name: ident, $method: ident) => {
+            pub trait $name<RHS = Self> {
+                type Output;
+
+                fn $method(self, rhs: RHS) -> Self::Output;
+            }
+        };
+    }
+
+    binop_trait!(WasmAdd, add);
+}
