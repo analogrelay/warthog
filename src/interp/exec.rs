@@ -1,9 +1,8 @@
-use std::ops;
-
 use crate::{
     hosting::Host,
     interp::Thread,
     module::{Instruction, Signedness},
+    value::ops,
     FromValue, Trap, ValType, Value,
 };
 
@@ -132,23 +131,22 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
     Ok(())
 }
 
-fn add<T, U>(thread: &mut Thread) -> Result<(), Trap>
-where
-    T: FromValue<Output=U>,
-    U: ops::Add<U, Output = U>,
-    Value: From<U>
-{
-    let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
-    let res = left + right;
-    thread.stack_mut().push(res);
-    Ok(())
+macro_rules! impl_binop {
+    ($name: ident, $trait: ident, $method: ident) => {
+        fn $name<T>(thread: &mut Thread) -> Result<(), Trap>
+        where
+            T: FromValue + ops::$trait<Output = T> + Into<Value>,
+        {
+            let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
+            let res = left.$method(right);
+            thread.stack_mut().push(res);
+            Ok(())
+        }
+    };
 }
 
-// binop!(add,
-//     (I32, c1, c2) => Ok(Value::I32(c1.wrapping_add(c2))),
-//     (I64, c1, c2) => Ok(Value::I64(c1.wrapping_add(c2))),
-//     (F32, c1, c2) => Ok(Value::F32(c1 + c2))
-// );
+impl_binop!(add, WasmAdd, wasm_add);
+
 binop!(sub,
     (I32, c1, c2) => Ok(Value::I32(c1.wrapping_sub(c2))),
     (I64, c1, c2) => Ok(Value::I64(c1.wrapping_sub(c2))),

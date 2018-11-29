@@ -1,4 +1,4 @@
-use std::{fmt, io, num::Wrapping};
+use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
@@ -131,6 +131,8 @@ impl_from_value!(f32, F32);
 impl_from_value!(f64, F64);
 
 pub mod ops {
+    use std::{num::Wrapping, ops};
+
     macro_rules! binop_trait {
         ($name: ident, $method: ident) => {
             pub trait $name<RHS = Self> {
@@ -141,5 +143,15 @@ pub mod ops {
         };
     }
 
-    binop_trait!(WasmAdd, add);
+    binop_trait!(WasmAdd, wasm_add);
+
+    impl<T> WasmAdd for T
+    where
+        Wrapping<T>: ops::Add<Output = Wrapping<T>>,
+    {
+        type Output = T;
+        fn wasm_add(self, rhs: T) -> T {
+            (Wrapping(self) + Wrapping(rhs)).0
+        }
+    }
 }
