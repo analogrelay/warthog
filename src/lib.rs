@@ -10,6 +10,7 @@ mod error;
 mod location;
 mod memory;
 mod sparse_vec;
+mod trap;
 mod utils;
 mod value;
 
@@ -23,6 +24,7 @@ pub mod runtime;
 pub use crate::error::Error;
 pub use crate::location::Location;
 pub use crate::memory::Memory;
+pub use crate::trap::Trap;
 pub use crate::value::Value;
 
 pub(crate) use crate::sparse_vec::SparseVec;

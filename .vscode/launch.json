@@ -34,9 +34,9 @@
             "name": "(Windows; Debug) ad-hoc test",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/spec_tests-4abdf2514c0aa809.exe",
+            "program": "${workspaceFolder}/target/debug/spec_tests-f0b98a6a48ba5a01.exe",
             "args": [
-                "spec::temp::temp"
+                "spec::f32::f32"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     hosting::{ExternalFunc, ExternalMemory, ExternalModule, Host},
-    interp::{Thread, Trap},
+    interp::Thread,
     module::{FuncType, ValType},
-    Value,
+    Trap, Value,
 };
 
 pub struct SpecTest {
@@ -37,16 +37,13 @@ impl ExternalModule for SpecTest {
     }
 }
 
-fn print_i32(_host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
+fn print_i32(_host: &mut Host, _thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
     let value = match values.iter().next() {
         Some(Value::Integer32(v)) => v,
         Some(v) => {
-            return Err(thread.throw(format!(
-                "Type mismatch, expected an i32 but found a {}",
-                v.typ()
-            )))
+            return Err(format!("Type mismatch, expected an i32 but found a {}", v.typ()).into())
         }
-        None => return Err(thread.throw("Stack underflow!")),
+        None => return Err("Stack underflow!".into()),
     };
     println!("{} : {}", value, ValType::Integer32);
 

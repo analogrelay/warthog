@@ -13,6 +13,7 @@ $SpecGenRoot = [IO.Path]::Combine($RepoRoot, "specgen")
 $TestsToGenerate = @(
     "i32",
     "i64",
+    "f32",
     "int_exprs",
     "names"
 )
@@ -36,6 +37,9 @@ try {
             mkdir $DestDir | Out-Null
             $Dest = Join-Path $DestDir "$name.json"
             wast2json $_.FullName -o $Dest
+
+            # Copy the wast file as well
+            Copy-Item $_.FullName $DestDir
 
             # Now process the spec into a Rust test using the specgen command
             & "$SpecGenRoot\target\debug\specgen.exe" $Dest

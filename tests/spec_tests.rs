@@ -4,10 +4,10 @@ use std::io::Cursor;
 
 use warthog::{
     hosting::{ExternVal, Host, ModuleAddr},
-    interp::{Thread, Trap},
+    interp::Thread,
     module::Module,
     reader::Reader,
-    runtime, Value,
+    runtime, Trap, Value,
 };
 
 macro_rules! vals {
@@ -84,46 +84,45 @@ impl TestContext {
         self.invoke_core(module, field, params)
     }
 
-    pub fn assert_return(&self, mut expected: Vec<Value>, actual: Result<Vec<Value>, Trap>) {
+    pub fn assert_return(&self, expected: Vec<Value>, actual: Result<Vec<Value>, Trap>) {
         // Extract the actual value
         let actual = match actual {
-            Ok(mut v) => {
-                if v.len() > 1 {
-                    self.panic("Multiple return values are not supported.");
-                }
-                v.drain(..).next()
-            }
+            Ok(mut v) => self.unwrap_val(v),
             Err(t) => self.panic(format!("Trapped: {}", t)),
         };
 
         // Expect up to one item in the return value
-        if expected.len() > 1 {
-            self.panic("Multiple return values are not supported.");
-        }
-
-        let expected = expected.drain(..).next();
+        let expected = self.unwrap_val(expected);
 
         // Match the results
-        match (expected, actual) {
-            (None, Some(a)) => self.panic(format!("Expected: <nil>, Actual: {}", a)),
-            (Some(e), None) => self.panic(format!("Expected: {}, Actual: <nil>", e)),
-            (Some(e), Some(a)) if e != a => self.panic(format!("Expected: {}, Actual: {}", e, a)),
-            _ => { /* all good! */ }
+        if expected != actual {
+            self.panic(format!("Expected: {}, Actual: {}", expected, actual));
         }
+    }
+
+    pub fn assert_nan(&self, actual: Result<Vec<Value>, Trap>) {
+        match actual {
+            Err(e) => self.panic(format!("Expected: NaN, Actual: <Trap: {}>", e)),
+            Ok(vals) => {
+                match self.unwrap_val(vals) {
+                    Value::Float32(f) if f.is_nan() => { /* success */ }
+                    Value::Float64(f) if f.is_nan() => { /* success */ }
+                    v => {
+                        self.panic(format!("Expected: NaN, Actual: {}", v));
+                    }
+                }
+            }
+        };
     }
 
     pub fn assert_trap(&self, expected: &str, actual: Result<Vec<Value>, Trap>) {
         match actual {
-            Ok(mut v) => {
-                if v.len() > 1 {
-                    self.panic("Multiple return values are not supported.");
-                }
-
-                if let Some(v) = v.drain(..).next() {
-                    self.panic(format!("Expected: <Trap: {}>, Actual: {}", expected, v));
-                } else {
-                    self.panic(format!("Expected: <Trap: {}>, Actual: <nil>", expected));
-                }
+            Ok(v) => {
+                self.panic(format!(
+                    "Expected: <Trap: {}>, Actual: {}",
+                    expected,
+                    self.unwrap_val(v)
+                ));
             }
             Err(ref t) if t.message() != expected => {
                 self.panic(format!(
@@ -158,18 +157,24 @@ impl TestContext {
             match export.value() {
                 ExternVal::Func(func_addr) => *func_addr,
                 e => {
-                    return Err(Trap::new(
-                        format!(
-                            "Export '{}' from module '{}' is not a function, it's a {:?}",
-                            field, module, e
-                        ),
-                        None,
-                    ))
+                    return Err(format!(
+                        "Export '{}' from module '{}' is not a function, it's a {:?}",
+                        field, module, e
+                    ).into())
                 }
             }
         };
 
         thread.call(&mut self.host, module, func_addr, params)
+    }
+
+    #[inline]
+    fn unwrap_val(&self, mut vals: Vec<Value>) -> Value {
+        if vals.len() > 1 {
+            self.panic("Multiple return values are not supported.");
+        }
+
+        vals.drain(..).next().unwrap_or(Value::Nil)
     }
 
     #[inline]

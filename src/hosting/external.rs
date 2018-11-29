@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     hosting::{Host, HostFunc},
-    interp::{Thread, Trap},
+    interp::Thread,
     module::{FuncType, MemoryType},
-    Value,
+    Trap, Value,
 };
 
 pub trait ExternalModule {
@@ -42,13 +42,13 @@ impl ExternalFunc {
         let values = {
             let mut vals = Vec::new();
             for param in self.typ.params().iter() {
-                match thread.pop()? {
+                match thread.stack_mut().pop()? {
                     v if v.typ() != *param => {
-                        return Err(thread.throw(format!(
+                        return Err(format!(
                             "Type mismatch. Function expects '{}' but '{}' is on top of the stack.",
                             param,
                             v.typ()
-                        )))
+                        ).into())
                     }
                     v => vals.push(v),
                 }

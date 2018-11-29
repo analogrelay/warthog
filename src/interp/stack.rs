@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     hosting::{FuncAddr, ModuleAddr},
-    Value,
+    Trap, Value,
 };
 
 #[derive(Clone, PartialEq)]
@@ -155,5 +155,13 @@ impl ExecutionStack {
         // Iterate up the stack from bottom to top, cloning the stack frames
         let frames = self.0.iter().rev().map(|c| c.frame().clone()).collect();
         StackTrace(frames)
+    }
+
+    /// Pops a new value off the operand stack for this execution context.
+    pub fn pop(&mut self) -> Result<Value, Trap> {
+        match self.current_mut().pop() {
+            Some(v) => Ok(v),
+            None => Err("Stack underflow.".into()),
+        }
     }
 }

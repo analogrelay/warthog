@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     hosting::{ExternalFunc, ExternalMemory, ExternalModule, Host},
-    interp::{Thread, Trap},
+    interp::Thread,
     module::{FuncType, ValType},
-    Value,
+    Trap, Value,
 };
 
 pub struct Env {

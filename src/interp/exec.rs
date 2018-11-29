@@ -1,39 +1,35 @@
 use crate::{
-    interp::{Thread, Trap},
+    interp::{Thread},
     module::{Instruction, Signedness, ValType},
     hosting::Host,
-    Value,
+    Value, Trap,
 };
 
 macro_rules! binop {
     ($name: ident, $(($typ: ident, $x: ident, $y: ident) => $bl: expr),+) => {
         fn $name(thread: &mut Thread, typ: ValType) -> Result<(), Trap> {
-            let c2 = thread.pop()?;
-            let c1 = thread.pop()?;
+            let c2 = thread.stack_mut().pop()?;
+            let c1 = thread.stack_mut().pop()?;
 
             let res = match (typ, c1, c2) {
                 $(
                     (ValType::$typ, Value::$typ($x), Value::$typ($y)) => {
-                        $bl as Result<Value, ::std::borrow::Cow<'static, str>>
-                    }
-                ),+
-                (t, x, y) => return Err(thread.throw(format!(
-                    "Type mismatch. Expected arguments of type '{}' but found arguments of type '{}' and '{}'.",
-                    t,
-                    x.typ(),
-                    y.typ()
-                ))),
+                        $bl as Result<Value, Trap>
+                    },
+                    (ValType::$typ, x, y) => return Err(format!(
+                        "Type mismatch. Expected arguments of type '{}' but found arguments of type '{}' and '{}'.",
+                        ValType::$typ,
+                        x.typ(),
+                        y.typ()
+                    ).into())
+                ),+,
+                (t, _, _) => return Err(format!(
+                    concat!("'", stringify!($name), "' is not yet implemented for operands of type '{}'"),
+                    t
+                ).into())
             };
 
-            match res {
-                Ok(r) => {
-                    thread.push(r);
-                    Ok(())
-                },
-                Err(e) => {
-                    Err(thread.throw(e))
-                }
-            }
+            res.map(|r|{ thread.push(r); () })
         }
     };
 }
@@ -41,19 +37,19 @@ macro_rules! binop {
 macro_rules! unop {
     ($name: ident, $(($typ: ident, $x: ident) => $bl: expr),+) => {
         fn $name(thread: &mut Thread, typ: ValType) -> Result<(), Trap> {
-            let x = thread.pop()?;
+            let x = thread.stack_mut().pop()?;
 
             let res = match (typ, x) {
                 $(
                     (ValType::$typ, Value::$typ($x)) => {
-                        $bl as Result<Value, ::std::borrow::Cow<'static, str>>
+                        $bl as Result<Value, Trap>
                     }
                 ),+
-                (t, x) => return Err(thread.throw(format!(
+                (t, x) => return Err(format!(
                     "Type mismatch. Expected argument of type '{}' but found argument of type '{}'.",
                     t,
                     x.typ()
-                ))),
+                ).into()),
             };
 
             match res {
@@ -62,7 +58,7 @@ macro_rules! unop {
                     Ok(())
                 },
                 Err(e) => {
-                    Err(thread.throw(e))
+                    Err(e)
                 }
             }
         }
@@ -86,7 +82,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::GetLocal(local_idx) => {
             let val = match thread.stack().current().local(local_idx) {
                 Some(l) => l,
-                None => return Err(thread.throw(format!("No such local: {}", local_idx))),
+                None => return Err(format!("No such local: {}", local_idx).into()),
             };
             thread.push(val);
         }
@@ -95,6 +91,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Mul(t) => mul(thread, t)?,
         Instruction::Div(t, Signedness::Signed) => div_s(thread, t)?,
         Instruction::Div(t, Signedness::Unsigned) => div_u(thread, t)?,
+        Instruction::FDiv(t) => fdiv(thread, t)?,
         Instruction::Rem(t, Signedness::Signed) => rem_s(thread, t)?,
         Instruction::Rem(t, Signedness::Unsigned) => rem_u(thread, t)?,
         Instruction::And(t) => and(thread, t)?,
@@ -125,24 +122,27 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
         Instruction::Extend(Signedness::Unsigned) => extend_u(thread, ValType::Integer32)?,
 
         Instruction::Drop => {
-            thread.pop()?;
+            thread.stack_mut().pop()?;
         }
-        x => return Err(thread.throw(format!("Instruction not implemented: {}", x))),
+        x => return Err(format!("Instruction not implemented: {}", x).into()),
     };
 
     Ok(())
 }
 binop!(add,
     (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_add(c2))),
-    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_add(c2)))
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_add(c2))),
+    (Float32, c1, c2) => Ok(Value::Float32(c1 + c2))
 );
 binop!(sub,
     (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_sub(c2))),
-    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_sub(c2)))
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_sub(c2))),
+    (Float32, c1, c2) => Ok(Value::Float32(c1 - c2))
 );
 binop!(mul,
     (Integer32, c1, c2) => Ok(Value::Integer32(c1.wrapping_mul(c2))),
-    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_mul(c2)))
+    (Integer64, c1, c2) => Ok(Value::Integer64(c1.wrapping_mul(c2))),
+    (Float32, c1, c2) => Ok(Value::Float32(c1 * c2))
 );
 binop!(div_s,
     (Integer32, c1, c2) => int32::signed_div_helper(c1, c2),
@@ -151,6 +151,9 @@ binop!(div_s,
 binop!(div_u,
     (Integer32, c1, c2) => int32::unsigned_div_helper(c1, c2),
     (Integer64, c1, c2) => int64::unsigned_div_helper(c1, c2)
+);
+binop!(fdiv,
+    (Float32, c1, c2) => Ok(Value::Float32(c1 / c2))
 );
 binop!(rem_s,
     (Integer32, c1, c2) => int32::signed_rem_helper(c1, c2),
@@ -261,13 +264,12 @@ unop!(extend_s, (Integer32, c1) => Ok(Value::Integer64((c1 as i32) as i64 as u64
 macro_rules! div_helpers {
     ($name: ident, $unsigned: ty, $signed: ty, $valtyp: ident) => {
         mod $name {
-            use crate::Value;
-            use std::borrow::Cow;
+            use crate::{Value, Trap};
         
             pub fn signed_div_helper(
                 x: $unsigned,
                 y: $unsigned,
-            ) -> Result<Value, Cow<'static, str>> {
+            ) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -281,7 +283,7 @@ macro_rules! div_helpers {
             pub fn unsigned_div_helper(
                 x: $unsigned,
                 y: $unsigned,
-            ) -> Result<Value, Cow<'static, str>> {
+            ) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -295,7 +297,7 @@ macro_rules! div_helpers {
             pub fn signed_rem_helper(
                 x: $unsigned,
                 y: $unsigned,
-            ) -> Result<Value, Cow<'static, str>> {
+            ) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {
@@ -308,7 +310,7 @@ macro_rules! div_helpers {
             pub fn unsigned_rem_helper(
                 x: $unsigned,
                 y: $unsigned,
-            ) -> Result<Value, Cow<'static, str>> {
+            ) -> Result<Value, Trap> {
                 if y == 0 {
                     Err("integer divide by zero".into())
                 } else {

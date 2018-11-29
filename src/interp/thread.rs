@@ -1,10 +1,8 @@
-use std::borrow::Cow;
-
 use crate::{
     hosting::{FuncAddr, FuncImpl, Host, ModuleAddr},
-    interp::{exec, ExecutionStack, Trap},
+    interp::{exec, ExecutionStack},
     module::{Expr, Instruction, ValType},
-    Value,
+    Trap, Value,
 };
 
 pub struct Thread {
@@ -86,7 +84,7 @@ impl Thread {
         // Resolve the function
         let func_inst = host.get_func(func);
         match func_inst.imp() {
-            FuncImpl::External(synth_fn) => synth_fn.invoke(host, self),
+            FuncImpl::External(synth_fn) => synth_fn.invoke(host, self).map_err(|e| self.throw(e)),
             FuncImpl::Local(code, _) => {
                 // Pop parameters
                 let mut locals =
@@ -165,11 +163,6 @@ impl Thread {
         Ok(())
     }
 
-    /// Creates a new [`Trap`], capturing the current stack frame.
-    pub fn throw<S: Into<Cow<'static, str>>>(&self, message: S) -> Trap {
-        Trap::new(message, Some(self.stack.trace()))
-    }
-
     /// Tries to pop a value off the stack for the current frame, traps if there is no current value.
     pub fn pop(&mut self) -> Result<Value, Trap> {
         match self.stack.current_mut().pop() {
@@ -183,6 +176,13 @@ impl Thread {
     }
 
     fn execute(&mut self, host: &mut Host, inst: Instruction) -> Result<(), Trap> {
-        exec::execute(self, host, inst)
+        exec::execute(self, host, inst).map_err(|e| self.throw(e))
+    }
+
+    /// Creates a new [`Trap`], capturing the current stack frame.
+    fn throw<T: Into<Trap>>(&self, trap: T) -> Trap {
+        let mut trap = trap.into();
+        trap.try_set_stack(self.stack.trace());
+        trap
     }
 }
