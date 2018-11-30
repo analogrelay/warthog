@@ -1,8 +1,8 @@
 use crate::{
     hosting::{FuncAddr, FuncImpl, Host, ModuleAddr},
     interp::{exec, ExecutionStack},
-    module::{Expr, Instruction},
-    Trap, ValType, Value,
+    module::Expr,
+    Instruction, Trap, ValType, Value,
 };
 
 pub struct Thread {

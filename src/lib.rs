@@ -1,21 +1,17 @@
 // Elevate certain warnings to errors in debug and ALL warnings to errors in release
-#![deny(warnings)]
+// #![deny(warnings)]
 // Quiet down some warnings when running tests.
 #![cfg_attr(test, allow(dead_code))]
 
 extern crate byteorder;
 extern crate leb128;
 
-macro_rules! type_to_valtype {
-    (i32) => ($crate::ValType::I32),
-    (i64) => ($crate::ValType::I64),
-    (u32) => ($crate::ValType::I32),
-    (u64) => ($crate::ValType::I64),
-    (f32) => ($crate::ValType::F32),
-    (f64) => ($crate::ValType::F64),
-}
+// This module has to be imported first because macros are processed
+// in a single pass.
+mod macros;
 
 mod error;
+pub mod instruction;
 mod location;
 mod memory;
 mod sparse_vec;
@@ -31,6 +27,7 @@ pub mod reader;
 pub mod runtime;
 
 pub use crate::error::Error;
+pub use crate::instruction::Instruction;
 pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::trap::Trap;

@@ -1,6 +1,6 @@
 use std::{fmt, io};
 
-use crate::{module::Instruction, utils, Error, ValType};
+use crate::{utils, Error, Instruction, ValType};
 
 #[derive(PartialEq, Clone)]
 pub struct FuncBody {

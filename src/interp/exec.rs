@@ -1,9 +1,8 @@
 use crate::{
     hosting::Host,
     interp::Thread,
-    module::{Instruction, Signedness},
     value::ops,
-    FromValue, Trap, ValType, Value,
+    FromValue, Instruction, Trap, ValType, Value,
 };
 
 macro_rules! binop {
@@ -68,63 +67,63 @@ macro_rules! unop {
 
 pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Result<(), Trap> {
     match inst {
-        Instruction::Const(val) => thread.push(val.clone()),
-        Instruction::Call(func_idx) => {
-            let module_addr = thread.stack().current().frame().module();
-            let func = host.resolve_func(module_addr, func_idx);
-            let values = thread.invoke(host, func)?;
+        // Instruction::Const(val) => thread.push(val.clone()),
+        // Instruction::Call(func_idx) => {
+        //     let module_addr = thread.stack().current().frame().module();
+        //     let func = host.resolve_func(module_addr, func_idx);
+        //     let values = thread.invoke(host, func)?;
 
-            // Push the result values on to the stack
-            for value in values {
-                thread.push(value)
-            }
-        }
-        Instruction::GetLocal(local_idx) => {
-            let val = match thread.stack().current().local(local_idx) {
-                Some(l) => l,
-                None => return Err(format!("No such local: {}", local_idx).into()),
-            };
-            thread.push(val);
-        }
-        Instruction::Add(ValType::I32) => add::<u32>(thread)?,
-        Instruction::Add(ValType::I64) => add::<u64>(thread)?,
-        Instruction::Sub(t) => sub(thread, t)?,
-        Instruction::Mul(t) => mul(thread, t)?,
-        Instruction::Div(t, Signedness::Signed) => div_s(thread, t)?,
-        Instruction::Div(t, Signedness::Unsigned) => div_u(thread, t)?,
-        Instruction::FDiv(t) => fdiv(thread, t)?,
-        Instruction::Rem(t, Signedness::Signed) => rem_s(thread, t)?,
-        Instruction::Rem(t, Signedness::Unsigned) => rem_u(thread, t)?,
-        Instruction::And(t) => and(thread, t)?,
-        Instruction::Or(t) => or(thread, t)?,
-        Instruction::Xor(t) => xor(thread, t)?,
-        Instruction::Shl(t) => shl(thread, t)?,
-        Instruction::Shr(t, Signedness::Signed) => shr_s(thread, t)?,
-        Instruction::Shr(t, Signedness::Unsigned) => shr_u(thread, t)?,
-        Instruction::Rotl(t) => rotl(thread, t)?,
-        Instruction::Rotr(t) => rotr(thread, t)?,
-        Instruction::Clz(t) => clz(thread, t)?,
-        Instruction::Ctz(t) => ctz(thread, t)?,
-        Instruction::Popcnt(t) => popcnt(thread, t)?,
-        Instruction::Eqz(t) => eqz(thread, t)?,
-        Instruction::Eq(t) => eq(thread, t)?,
-        Instruction::Ne(t) => ne(thread, t)?,
-        Instruction::Gt(t, Signedness::Signed) => gt_s(thread, t)?,
-        Instruction::Ge(t, Signedness::Signed) => ge_s(thread, t)?,
-        Instruction::Lt(t, Signedness::Signed) => lt_s(thread, t)?,
-        Instruction::Le(t, Signedness::Signed) => le_s(thread, t)?,
-        Instruction::Gt(t, Signedness::Unsigned) => gt_u(thread, t)?,
-        Instruction::Ge(t, Signedness::Unsigned) => ge_u(thread, t)?,
-        Instruction::Lt(t, Signedness::Unsigned) => lt_u(thread, t)?,
-        Instruction::Le(t, Signedness::Unsigned) => le_u(thread, t)?,
+        //     // Push the result values on to the stack
+        //     for value in values {
+        //         thread.push(value)
+        //     }
+        // }
+        // Instruction::GetLocal(local_idx) => {
+        //     let val = match thread.stack().current().local(local_idx) {
+        //         Some(l) => l,
+        //         None => return Err(format!("No such local: {}", local_idx).into()),
+        //     };
+        //     thread.push(val);
+        // }
+        // Instruction::Add(ValType::I32) => add::<u32>(thread)?,
+        // Instruction::Add(ValType::I64) => add::<u64>(thread)?,
+        // Instruction::Sub(t) => sub(thread, t)?,
+        // Instruction::Mul(t) => mul(thread, t)?,
+        // Instruction::Div(t, Signedness::Signed) => div_s(thread, t)?,
+        // Instruction::Div(t, Signedness::Unsigned) => div_u(thread, t)?,
+        // Instruction::FDiv(t) => fdiv(thread, t)?,
+        // Instruction::Rem(t, Signedness::Signed) => rem_s(thread, t)?,
+        // Instruction::Rem(t, Signedness::Unsigned) => rem_u(thread, t)?,
+        // Instruction::And(t) => and(thread, t)?,
+        // Instruction::Or(t) => or(thread, t)?,
+        // Instruction::Xor(t) => xor(thread, t)?,
+        // Instruction::Shl(t) => shl(thread, t)?,
+        // Instruction::Shr(t, Signedness::Signed) => shr_s(thread, t)?,
+        // Instruction::Shr(t, Signedness::Unsigned) => shr_u(thread, t)?,
+        // Instruction::Rotl(t) => rotl(thread, t)?,
+        // Instruction::Rotr(t) => rotr(thread, t)?,
+        // Instruction::Clz(t) => clz(thread, t)?,
+        // Instruction::Ctz(t) => ctz(thread, t)?,
+        // Instruction::Popcnt(t) => popcnt(thread, t)?,
+        // Instruction::Eqz(t) => eqz(thread, t)?,
+        // Instruction::Eq(t) => eq(thread, t)?,
+        // Instruction::Ne(t) => ne(thread, t)?,
+        // Instruction::Gt(t, Signedness::Signed) => gt_s(thread, t)?,
+        // Instruction::Ge(t, Signedness::Signed) => ge_s(thread, t)?,
+        // Instruction::Lt(t, Signedness::Signed) => lt_s(thread, t)?,
+        // Instruction::Le(t, Signedness::Signed) => le_s(thread, t)?,
+        // Instruction::Gt(t, Signedness::Unsigned) => gt_u(thread, t)?,
+        // Instruction::Ge(t, Signedness::Unsigned) => ge_u(thread, t)?,
+        // Instruction::Lt(t, Signedness::Unsigned) => lt_u(thread, t)?,
+        // Instruction::Le(t, Signedness::Unsigned) => le_u(thread, t)?,
 
-        Instruction::Wrap => wrap(thread, ValType::I64)?,
-        Instruction::Extend(Signedness::Signed) => extend_s(thread, ValType::I32)?,
-        Instruction::Extend(Signedness::Unsigned) => extend_u(thread, ValType::I32)?,
+        // Instruction::Wrap => wrap(thread, ValType::I64)?,
+        // Instruction::Extend(Signedness::Signed) => extend_s(thread, ValType::I32)?,
+        // Instruction::Extend(Signedness::Unsigned) => extend_u(thread, ValType::I32)?,
 
-        Instruction::Drop => {
-            thread.stack_mut().pop()?;
-        }
+        // Instruction::Drop => {
+        //     thread.stack_mut().pop()?;
+        // }
         x => return Err(format!("Instruction not implemented: {}", x).into()),
     };
 

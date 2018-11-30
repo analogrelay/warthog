@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 
-use crate::{module::Instruction, Error};
+use crate::{Instruction, Error};
 
 pub trait FromLeb128 {
     fn from_leb128_u(leb: u64) -> Self;

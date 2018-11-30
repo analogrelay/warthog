@@ -5,8 +5,8 @@ use crate::{
         ExportInst, ExternVal, ExternalModule, FuncAddr, FuncImpl, FuncInst, MemAddr, MemInst,
         ModuleAddr, ModuleInst,
     },
-    module::{Export, Expr, Instruction, MemberDesc, Module},
-    Error, Location, Value,
+    module::{Export, Expr, MemberDesc, Module},
+    Error, Instruction, Location, Value,
 };
 
 #[derive(Clone)]
@@ -83,7 +83,7 @@ impl Host {
     pub fn eval_expr(&mut self, expr: &Expr) -> Result<Value, Error> {
         // Offset must be a constant expression
         match expr.instructions() {
-            [Instruction::Const(v)] => Ok(*v),
+            [Instruction::I32Const(v)] => Ok(Value::I32(*v)),
             _ => panic!("expr not implemented!"),
         }
     }
