@@ -124,11 +124,11 @@ impl TestContext {
                     self.unwrap_val(v)
                 ));
             }
-            Err(ref t) if t.message() != expected => {
+            Err(ref t) if t.cause() != expected => {
                 self.panic(format!(
                     "Expected: <Trap: {}>, Actual: <Trap: {}>",
                     expected,
-                    t.message()
+                    t.cause()
                 ));
             }
             _ => { /* all good! */ }

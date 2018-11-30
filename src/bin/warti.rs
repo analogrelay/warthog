@@ -61,7 +61,7 @@ pub fn run(file: &Path) {
 
     // Invoke the entry point
     if let Err(trap) = thread.invoke(&mut host, main_func) {
-        eprintln!("trap! {}", trap.message());
+        eprintln!("trap! {}", trap.cause());
         if let Some(trace) = trap.trace() {
             for frame in trace.frames() {
                 if let Some(loc) = frame.func().and_then(|f| host.get_location(f, 0)) {

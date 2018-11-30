@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     hosting::{FuncAddr, ModuleAddr},
-    FromValue, Trap, Value,
+    FromValue, TrapCause, Value,
 };
 
 #[derive(Clone, PartialEq)]
@@ -164,18 +164,18 @@ impl ExecutionStack {
 
     /// Pops a new value off the operand stack for this execution context.
     /// TODO: Remove this when Exec overhaul is done
-    pub fn pop(&mut self) -> Result<Value, Trap> {
+    pub fn pop(&mut self) -> Result<Value, TrapCause> {
         match self.current_mut().pop() {
             Some(v) => Ok(v),
-            None => Err("Stack underflow.".into()),
+            None => Err(TrapCause::StackUnderflow),
         }
     }
 
     /// Pops a new value off the operand stack for this execution context.
-    pub fn pop_as<T: FromValue>(&mut self) -> Result<T, Trap> {
+    pub fn pop_as<T: FromValue>(&mut self) -> Result<T, TrapCause> {
         match self.current_mut().pop() {
             Some(v) => T::from_value(v),
-            None => Err("Stack underflow.".into()),
+            None => Err(TrapCause::StackUnderflow),
         }
     }
 
@@ -185,7 +185,7 @@ impl ExecutionStack {
     /// The second item in the tuple represents the **first** pop from the stack.
     /// This is done because it makes it easier to write aritmetic operators the way you
     /// expect to write them.
-    pub fn pop_pair_as<T: FromValue, U: FromValue>(&mut self) -> Result<(T, U), Trap> {
+    pub fn pop_pair_as<T: FromValue, U: FromValue>(&mut self) -> Result<(T, U), TrapCause> {
         let right = self.pop_as::<U>()?;
         let left = self.pop_as::<T>()?;
         Ok((left, right))

@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{Error, Trap};
+use crate::{Error, TrapCause};
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -101,22 +101,17 @@ impl_from!(f32, f32, F32);
 impl_from!(f64, f64, F64);
 
 pub trait FromValue: Sized {
-    fn from_value(v: Value) -> Result<Self, Trap>;
+    fn from_value(v: Value) -> Result<Self, TrapCause>;
 }
 
 macro_rules! impl_from_value {
     ($repr: ty, $v: ident) => {
         impl FromValue for $repr {
-            fn from_value(v: Value) -> Result<Self, Trap> {
+            fn from_value(v: Value) -> Result<Self, TrapCause> {
                 match v {
                     Value::$v(x) => Ok(x as $repr),
-                    Value::Nil => Err("Stack underflow.".into()),
-                    x => Err(format!(
-                        "Type mismatch. Expected '{}' but got '{}'",
-                        ValType::$v,
-                        x.typ()
-                    )
-                    .into()),
+                    Value::Nil => Err(TrapCause::StackUnderflow),
+                    x => Err(TrapCause::TypeMismatch { expected: ValType::$v, actual: x.typ() }),
                 }
             }
         }
@@ -130,28 +125,93 @@ impl_from_value!(i64, I64);
 impl_from_value!(f32, F32);
 impl_from_value!(f64, F64);
 
-pub mod ops {
-    use std::{num::Wrapping, ops};
-
-    macro_rules! binop_trait {
-        ($name: ident, $method: ident) => {
-            pub trait $name<RHS = Self> {
-                type Output;
-
-                fn $method(self, rhs: RHS) -> Self::Output;
-            }
-        };
-    }
-
-    binop_trait!(WasmAdd, wasm_add);
-
-    impl<T> WasmAdd for T
-    where
-        Wrapping<T>: ops::Add<Output = Wrapping<T>>,
-    {
-        type Output = T;
-        fn wasm_add(self, rhs: T) -> T {
-            (Wrapping(self) + Wrapping(rhs)).0
-        }
-    }
+/// Basic arithmetic operations defined for BOTH integers and floats.
+pub trait ArithmeticOps<T> {
+    fn add(self, rhs: T) -> Result<T, TrapCause>;
+    fn sub(self, rhs: T) -> Result<T, TrapCause>;
+    fn mul(self, rhs: T) -> Result<T, TrapCause>;
+    fn div(self, rhs: T) -> Result<T, TrapCause>;
 }
+
+macro_rules! impl_arith_for_integer {
+    ($t: ty) => {
+        impl ArithmeticOps<$t> for $t {
+            fn add(self, rhs: $t) -> Result<$t, TrapCause> {
+                Ok(self.wrapping_add(rhs))
+            }
+
+            fn sub(self, rhs: $t) -> Result<$t, TrapCause>{
+                Ok(self.wrapping_sub(rhs))
+            }
+
+            fn mul(self, rhs: $t) -> Result<$t, TrapCause>{
+                Ok(self.wrapping_mul(rhs))
+            }
+
+            fn div(self, rhs: $t) -> Result<$t, TrapCause> {
+                if rhs == 0 {
+                    Err(TrapCause::IntegerDivideByZero)
+                } else {
+                    match self.checked_div(rhs) {
+                        Some(y) => Ok(y),
+                        None => Err(TrapCause::IntegerOverflow)
+                    }
+                }
+            }
+        }
+    };
+}
+
+impl_arith_for_integer!(u32);
+impl_arith_for_integer!(u64);
+impl_arith_for_integer!(i32);
+impl_arith_for_integer!(i64);
+
+/// Operations defined only for Integers
+pub trait IntegerOps<T>: ArithmeticOps<T> {
+    fn clz(self) -> Result<T, TrapCause>;
+    fn ctz(self) -> Result<T, TrapCause>;
+    fn popcnt(self) -> Result<T, TrapCause>;
+    fn rotl(self, rhs: T) -> Result<T, TrapCause>;
+    fn rotr(self, rhs: T) -> Result<T, TrapCause>;
+    fn rem(self, rhs: T) -> Result<T, TrapCause>;
+}
+
+macro_rules! impl_integer {
+    ($t: ty) => {
+        impl IntegerOps<$t> for $t {
+            fn clz(self) -> Result<$t, TrapCause> {
+                Ok(self.leading_zeros() as $t)
+            }
+
+            fn ctz(self) -> Result<$t, TrapCause> {
+                Ok(self.trailing_zeros() as $t)
+            }
+
+            fn popcnt(self) -> Result<$t, TrapCause> {
+                Ok(self.count_ones() as $t)
+            }
+
+            fn rotl(self, rhs: $t) -> Result<$t, TrapCause> {
+                Ok(self.rotate_left(rhs as u32))
+            }
+
+            fn rotr(self, rhs: $t) -> Result<$t, TrapCause> {
+                Ok(self.rotate_right(rhs as u32))
+            }
+
+            fn rem(self, rhs: $t) -> Result<$t, TrapCause> {
+                if rhs == 0 {
+                    Err(TrapCause::IntegerDivideByZero)
+                } else {
+                    Ok(self.overflowing_rem(rhs).0)
+                }
+            }
+        }
+    };
+}
+
+impl_integer!(u32);
+impl_integer!(u64);
+impl_integer!(i32);
+impl_integer!(i64);
