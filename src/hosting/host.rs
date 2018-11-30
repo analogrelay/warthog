@@ -81,9 +81,14 @@ impl Host {
 
     /// Evaluates an expression at the module scope.
     pub fn eval_expr(&mut self, expr: &Expr) -> Result<Value, Error> {
+        use crate::InstructionPayload;
+
         // Offset must be a constant expression
         match expr.instructions() {
-            [Instruction::I32Const(v)] => Ok(Value::I32(*v)),
+            [Instruction {
+                payload: InstructionPayload::Const(v),
+                ..
+            }] => Ok(*v),
             _ => panic!("expr not implemented!"),
         }
     }

@@ -11,7 +11,7 @@ extern crate leb128;
 mod macros;
 
 mod error;
-pub mod instruction;
+mod instruction;
 mod location;
 mod memory;
 mod sparse_vec;
@@ -27,7 +27,7 @@ pub mod reader;
 pub mod runtime;
 
 pub use crate::error::Error;
-pub use crate::instruction::Instruction;
+pub use crate::instruction::{Instruction, InstructionPayload, Opcode};
 pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::trap::Trap;

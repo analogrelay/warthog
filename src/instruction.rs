@@ -1,37 +1,99 @@
 use std::{fmt, io};
 
-use byteorder::ReadBytesExt;
+use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{utils, Error, ValType, Value};
+use crate::{utils, Error, Value};
 
 #[derive(Clone, PartialEq)]
-pub enum Signedness {
-    Unsigned,
-    Signed,
+pub struct Instruction {
+    pub opcode: Opcode,
+    pub payload: InstructionPayload,
 }
 
-impl fmt::Display for Signedness {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Signedness::Unsigned => write!(f, "u"),
-            Signedness::Signed => write!(f, "s"),
+impl Instruction {
+    pub fn read<R: io::Read>(reader: &mut R) -> Result<Instruction, Error> {
+        // Read the opcode and decode it
+        let opcode = reader.read_u8()?;
+        let opcode = match Opcode::decode(opcode) {
+            Some(o) => o,
+            None => return Err(Error::UnknownOpcode(opcode)),
+        };
+
+        // Decode the payload
+        let payload = InstructionPayload::decode(opcode, reader)?;
+
+        Ok(Instruction { opcode, payload })
+    }
+
+    pub fn unwrap_idx(&self) -> u32 {
+        match &self.payload {
+            InstructionPayload::Idx(x) => *x,
+            x => panic!(
+                "Attempted to unwrap an 'Idx' payload, but the payload is: '{:?}'",
+                x
+            ),
+        }
+    }
+
+    pub fn unwrap_mem_arg(&self) -> (u32, u32) {
+        match &self.payload {
+            InstructionPayload::MemArg(a, s) => (*a, *s),
+            x => panic!(
+                "Attempted to unwrap a 'MemArg' payload, but the payload is: '{:?}'",
+                x
+            ),
+        }
+    }
+
+    pub fn unwrap_const(&self) -> Value {
+        match &self.payload {
+            InstructionPayload::Const(v) => *v,
+            x => panic!(
+                "Attempted to unwrap a 'Const' payload, but the payload is: '{:?}'",
+                x
+            ),
         }
     }
 }
 
-impl fmt::Debug for Signedness {
+impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+        if self.payload == InstructionPayload::Empty {
+            write!(f, "{}", self.opcode)
+        } else {
+            write!(f, "{} {}", self.opcode, self.payload)
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InstructionPayload {
+    Empty,
+    Idx(u32),
+    MemArg(u32, u32),
+    Const(Value),
+}
+
+impl fmt::Display for InstructionPayload {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::InstructionPayload::*;
+
+        match self {
+            Empty => Ok(()),
+            Idx(i) => write!(f, "{}", i),
+            MemArg(a, s) => write!(f, "{} {}", a, s),
+            Const(v) => write!(f, "{}", v),
+        }
     }
 }
 
 macro_rules! isa {
     ($(
-        ($text: expr, $opcode: expr) => $name: ident
+        ($opcode: expr, $text: expr, $read_method: ident) => $name: ident
     ),*,) => {
         #[repr(u8)]
         #[allow(non_camel_case_types)]
-        #[derive(Clone, PartialEq, Eq)]
+        #[derive(Copy, Clone, PartialEq, Eq)]
         pub enum Opcode {
             $(
                 $name = $opcode,
@@ -49,6 +111,22 @@ macro_rules! isa {
             }
         }
 
+        impl InstructionPayload {
+            pub fn decode<R: ::std::io::Read>(opcode: Opcode, reader: &mut R) -> Result<InstructionPayload, $crate::Error> {
+                match opcode {
+                    $(
+                        Opcode::$name => $read_method(reader),
+                    )*
+                }
+            }
+        }
+
+        impl ::std::convert::Into<u8> for Opcode {
+            fn into(self) -> u8 {
+                unsafe { ::std::mem::transmute(self) }
+            }
+        }
+
         impl ::std::fmt::Display for Opcode {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 let val = match self {
@@ -59,450 +137,259 @@ macro_rules! isa {
                 write!(f, "{}", val)
             }
         }
+
+        impl ::std::fmt::Debug for Opcode {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                ::std::fmt::Display::fmt(self, f)
+            }
+        }
     }
 }
 
 isa! {
     // Control Instructions
     // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
-    () => Unreachable,
-    () => Nop,
-    () => Block,
-    () => Loop,
-    () => If,
-    () => IfElse,
-    () => Br,
-    () => Br_If,
-    () => Br_Table,
-    () => Return,
-    () => Call(usize),
-    () => Call_Indirect(usize),
+    (0x00, "unreachable", read_none) => Unreachable,
+    (0x01, "nop", read_none) => Nop,
+    (0x02, "block", read_none) => Block,
+    (0x03, "loop", read_none) => Loop,
+    (0x04, "if", read_none) => If,
+    (0x0C, "br", read_none) => Br,
+    (0x0D, "br_if", read_none) => Br_If,
+    (0x0E, "br_table", read_none) => Br_Table,
+    (0x0F, "return", read_none) => Return,
+    (0x10, "call", read_idx) => Call,
+    (0x11, "call_indirect", read_idx) => Call_Indirect,
 
     // Parametric Instructions
     // https://webassembly.github.io/spec/core/binary/instructions.html#parametric-instructions
-    () => Drop,
-    () => Select,
+    (0x1A, "drop", read_none) => Drop,
+    (0x1B, "select", read_none) => Select,
 
     // Variable Instructions
     // https://webassembly.github.io/spec/core/binary/instructions.html#variable-instructions
-    () => GetLocal(usize),
-    () => SetLocal(usize),
-    () => TeeLocal(usize),
-    () => GetGlobal(usize),
-    () => SetGlobal(usize),
+    (0x20, "get_local", read_idx) => GetLocal,
+    (0x21, "set_local", read_idx) => SetLocal,
+    (0x22, "tee_local", read_idx) => TeeLocal,
+    (0x23, "get_global", read_idx) => GetGlobal,
+    (0x24, "set_global", read_idx) => SetGlobal,
 
     // Memory Instructions,
     // https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions
-    () => I32Load(u32, u32),
-    () => I64Load(u32, u32),
-    () => F32Load(u32, u32),
-    () => F64Load(u32, u32),
-    () => I32Load8_S(u32, u32),
-    () => I32Load8_U(u32, u32),
-    () => I32Load16_S(u32, u32),
-    () => I32Load16_U(u32, u32),
-    () => I64Load8_S(u32, u32),
-    () => I64Load8_U(u32, u32),
-    () => I64Load16_S(u32, u32),
-    () => I64Load16_U(u32, u32),
-    () => I64Load32_S(u32, u32),
-    () => I64Load32_U(u32, u32),
-    () => I32Store(u32, u32),
-    () => I64Store(u32, u32),
-    () => F32Store(u32, u32),
-    () => F64Store(u32, u32),
-    () => I32Store8_S(u32, u32),
-    () => I32Store8_U(u32, u32),
-    () => I32Store16_S(u32, u32),
-    () => I32Store16_U(u32, u32),
-    () => I64Store8_S(u32, u32),
-    () => I64Store8_U(u32, u32),
-    () => I64Store16_S(u32, u32),
-    () => I64Store16_U(u32, u32),
-    () => I64Store32_S(u32, u32),
-    () => I64Store32_U(u32, u32),
-    () => Memory_Size(u32),
-    () => Memory_Grow(u32),
+    (0x28, "i32.load", read_mem_arg) => I32Load,
+    (0x29, "i64.load", read_mem_arg) => I64Load,
+    (0x2A, "f32.load", read_mem_arg) => F32Load,
+    (0x2B, "f64.load", read_mem_arg) => F64Load,
+    (0x2C, "i32.load8_s", read_mem_arg) => I32Load8_S,
+    (0x2D, "i32.load8_u", read_mem_arg) => I32Load8_U,
+    (0x2E, "i32.load16_s", read_mem_arg) => I32Load16_S,
+    (0x2F, "i32.load16_u", read_mem_arg) => I32Load16_U,
+    (0x30, "i64.load8_s", read_mem_arg) => I64Load8_S,
+    (0x31, "i64.load8_u", read_mem_arg) => I64Load8_U,
+    (0x32, "i64.load16_s", read_mem_arg) => I64Load16_S,
+    (0x33, "i64.load16_u", read_mem_arg) => I64Load16_U,
+    (0x34, "i64.load32_s", read_mem_arg) => I64Load32_S,
+    (0x35, "i64.load32_u", read_mem_arg) => I64Load32_U,
+    (0x36, "i32.store", read_mem_arg) => I32Store,
+    (0x37, "i64.store", read_mem_arg) => I64Store,
+    (0x38, "f32.store", read_mem_arg) => F32Store,
+    (0x39, "f64.store", read_mem_arg) => F64Store,
+    (0x3A, "i32.store8", read_mem_arg) => I32Store8,
+    (0x3B, "i32.store16", read_mem_arg) => I32Store16,
+    (0x3C, "i64.store8", read_mem_arg) => I64Store8,
+    (0x3D, "i64.store16", read_mem_arg) => I64Store16,
+    (0x3E, "i64.store32", read_mem_arg) => I64Store32,
+    (0x3F, "memory.size", read_idx) => Memory_Size,
+    (0x40, "memory.grow", read_idx) => Memory_Grow,
 
     // Numeric instructions
     // https://webassembly.github.io/spec/core/binary/instructions.html#numeric-instructions
-    () => I32Const(u32),
-    () => I64Const(u64),
-    () => F32Const(f32),
-    () => F64Const(f64),
+    (0x41, "i32.const", read_i32) => I32Const,
+    (0x42, "i64.const", read_i64) => I64Const,
+    (0x43, "f32.const", read_f32) => F32Const,
+    (0x44, "f64.const", read_f64) => F64Const,
 
-    () => I32Eqz,
-    () => I32Eq,
-    () => I32Ne,
-    () => I32Lt_S,
-    () => I32Lt_U,
-    () => I32Gt_S,
-    () => I32Gt_U,
-    () => I32Le_S,
-    () => I32Le_U,
-    () => I32Ge_S,
-    () => I32Ge_U,
+    (0x45, "i32.eqz", read_none) => I32Eqz,
+    (0x46, "i32.eq", read_none) => I32Eq,
+    (0x47, "i32.ne", read_none) => I32Ne,
+    (0x48, "i32.lt_s", read_none) => I32Lt_S,
+    (0x49, "i32.lt_u", read_none) => I32Lt_U,
+    (0x4A, "i32.gt_s", read_none) => I32Gt_S,
+    (0x4B, "i32.gt_u", read_none) => I32Gt_U,
+    (0x4C, "i32.le_s", read_none) => I32Le_S,
+    (0x4D, "i32.le_u", read_none) => I32Le_U,
+    (0x4E, "i32.ge_s", read_none) => I32Ge_S,
+    (0x4F, "i32.ge_u", read_none) => I32Ge_U,
 
-    () => I64Eqz,
-    () => I64Eq,
-    () => I64Ne,
-    () => I64Lt_S,
-    () => I64Lt_U,
-    () => I64Gt_S,
-    () => I64Gt_U,
-    () => I64Le_S,
-    () => I64Le_U,
-    () => I64Ge_S,
-    () => I64Ge_U,
+    (0x50, "i64.eqz", read_none) => I64Eqz,
+    (0x51, "i64.eq", read_none) => I64Eq,
+    (0x52, "i64.ne", read_none) => I64Ne,
+    (0x53, "i64.lt_s", read_none) => I64Lt_S,
+    (0x54, "i64.lt_u", read_none) => I64Lt_U,
+    (0x55, "i64.gt_s", read_none) => I64Gt_S,
+    (0x56, "i64.gt_u", read_none) => I64Gt_U,
+    (0x57, "i64.le_s", read_none) => I64Le_S,
+    (0x58, "i64.le_u", read_none) => I64Le_U,
+    (0x59, "i64.ge_s", read_none) => I64Ge_S,
+    (0x5A, "i64.ge_u", read_none) => I64Ge_U,
 
-    () => F32Eq,
-    () => F32Ne,
-    () => F32Lt,
-    () => F32Gt,
-    () => F32Le,
-    () => F32Ge,
+    (0x5B, "f32.eq", read_none) => F32Eq,
+    (0x5C, "f32.ne", read_none) => F32Ne,
+    (0x5D, "f32.lt", read_none) => F32Lt,
+    (0x5E, "f32.gt", read_none) => F32Gt,
+    (0x5F, "f32.le", read_none) => F32Le,
+    (0x60, "f32.ge", read_none) => F32Ge,
 
-    () => F64Eq,
-    () => F64Ne,
-    () => F64Lt,
-    () => F64Gt,
-    () => F64Le,
-    () => F64Ge,
+    (0x61, "f64.eq", read_none) => F64Eq,
+    (0x62, "f64.ne", read_none) => F64Ne,
+    (0x63, "f64.lt", read_none) => F64Lt,
+    (0x64, "f64.gt", read_none) => F64Gt,
+    (0x65, "f64.le", read_none) => F64Le,
+    (0x66, "f64.ge", read_none) => F64Ge,
 
-    () => I32Clz,
-    () => I32Ctz,
-    () => I32Popcnt,
-    () => I32Add,
-    () => I32Sub,
-    () => I32Mul,
-    () => I32Div_S,
-    () => I32Div_U,
-    () => I32Rem_S,
-    () => I32Rem_U,
-    () => I32And,
-    () => I32Or,
-    () => I32Xor,
-    () => I32Shl,
-    () => I32Shr_S,
-    () => I32Shr_U,
-    () => I32Rotl,
-    () => I32Rotr,
+    (0x67, "i32.clz", read_none) => I32Clz,
+    (0x68, "i32.ctz", read_none) => I32Ctz,
+    (0x69, "i32.popcnt", read_none) => I32Popcnt,
+    (0x6A, "i32.add", read_none) => I32Add,
+    (0x6B, "i32.sub", read_none) => I32Sub,
+    (0x6C, "i32.mul", read_none) => I32Mul,
+    (0x6D, "i32.div_s", read_none) => I32Div_S,
+    (0x6E, "i32.div_u", read_none) => I32Div_U,
+    (0x6F, "i32.rem_s", read_none) => I32Rem_S,
+    (0x70, "i32.rem_u", read_none) => I32Rem_U,
+    (0x71, "i32.and", read_none) => I32And,
+    (0x72, "i32.or", read_none) => I32Or,
+    (0x73, "i32.xor", read_none) => I32Xor,
+    (0x74, "i32.shl", read_none) => I32Shl,
+    (0x75, "i32.shr_s", read_none) => I32Shr_S,
+    (0x76, "i32.shr_u", read_none) => I32Shr_U,
+    (0x77, "i32.rotl", read_none) => I32Rotl,
+    (0x78, "i32.rotr", read_none) => I32Rotr,
 
-    () => I64Clz,
-    () => I64Ctz,
-    () => I64Popcnt,
-    () => I64Add,
-    () => I64Sub,
-    () => I64Mul,
-    () => I64Div_S,
-    () => I64Div_U,
-    () => I64Rem_S,
-    () => I64Rem_U,
-    () => I64And,
-    () => I64Or,
-    () => I64Xor,
-    () => I64Shl,
-    () => I64Shr_S,
-    () => I64Shr_U,
-    () => I64Rotl,
-    () => I64Rotr,
+    (0x79, "i64.clz", read_none) => I64Clz,
+    (0x7A, "i64.ctz", read_none) => I64Ctz,
+    (0x7B, "i64.popcnt", read_none) => I64Popcnt,
+    (0x7C, "i64.add", read_none) => I64Add,
+    (0x7D, "i64.sub", read_none) => I64Sub,
+    (0x7E, "i64.mul", read_none) => I64Mul,
+    (0x7F, "i64.div_s", read_none) => I64Div_S,
+    (0x80, "i64.div_u", read_none) => I64Div_U,
+    (0x81, "i64.rem_s", read_none) => I64Rem_S,
+    (0x82, "i64.rem_u", read_none) => I64Rem_U,
+    (0x83, "i64.and", read_none) => I64And,
+    (0x84, "i64.or", read_none) => I64Or,
+    (0x85, "i64.xor", read_none) => I64Xor,
+    (0x86, "i64.shl", read_none) => I64Shl,
+    (0x87, "i64.shr_s", read_none) => I64Shr_S,
+    (0x88, "i64.shr_u", read_none) => I64Shr_U,
+    (0x89, "i64.rotl", read_none) => I64Rotl,
+    (0x8A, "i64.rotr", read_none) => I64Rotr,
 
-    () => F32Abs,
-    () => F32Neg,
-    () => F32Ceil,
-    () => F32Floor,
-    () => F32Trunc,
-    () => F32Nearest,
-    () => F32Sqrt,
-    () => F32Add,
-    () => F32Sub,
-    () => F32Mul,
-    () => F32Div,
-    () => F32Min,
-    () => F32Max,
-    () => F32Copysign,
+    (0x8B, "f32.abs", read_none) => F32Abs,
+    (0x8C, "f32.neg", read_none) => F32Neg,
+    (0x8D, "f32.ceil", read_none) => F32Ceil,
+    (0x8E, "f32.floor", read_none) => F32Floor,
+    (0x8F, "f32.trunc", read_none) => F32Trunc,
+    (0x90, "f32.nearest", read_none) => F32Nearest,
+    (0x91, "f32.sqrt", read_none) => F32Sqrt,
+    (0x92, "f32.add", read_none) => F32Add,
+    (0x93, "f32.sub", read_none) => F32Sub,
+    (0x94, "f32.mul", read_none) => F32Mul,
+    (0x95, "f32.div", read_none) => F32Div,
+    (0x96, "f32.min", read_none) => F32Min,
+    (0x97, "f32.max", read_none) => F32Max,
+    (0x98, "f32.copysign", read_none) => F32Copysign,
 
-    () => F64Abs,
-    () => F64Neg,
-    () => F64Ceil,
-    () => F64Floor,
-    () => F64Trunc,
-    () => F64Nearest,
-    () => F64Sqrt,
-    () => F64Add,
-    () => F64Sub,
-    () => F64Mul,
-    () => F64Div,
-    () => F64Min,
-    () => F64Max,
-    () => F64Copysign,
+    (0x99, "f64.abs", read_none) => F64Abs,
+    (0x9A, "f64.neg", read_none) => F64Neg,
+    (0x9B, "f64.ceil", read_none) => F64Ceil,
+    (0x9C, "f64.floor", read_none) => F64Floor,
+    (0x9D, "f64.trunc", read_none) => F64Trunc,
+    (0x9E, "f64.nearest", read_none) => F64Nearest,
+    (0x9F, "f64.sqrt", read_none) => F64Sqrt,
+    (0xA0, "f64.add", read_none) => F64Add,
+    (0xA1, "f64.sub", read_none) => F64Sub,
+    (0xA2, "f64.mul", read_none) => F64Mul,
+    (0xA3, "f64.div", read_none) => F64Div,
+    (0xA4, "f64.min", read_none) => F64Min,
+    (0xA5, "f64.max", read_none) => F64Max,
+    (0xA6, "f64.copysign", read_none) => F64Copysign,
 
-    () => I32Wrap_I64,
-    () => I32Trunc_S_F32,
-    () => I32Trunc_U_F32,
-    () => I32Trunc_S_F64,
-    () => I32Trunc_U_F64,
-    () => I64Extend_S_I32,
-    () => I64Extend_U_I32,
-    () => I64Trunc_S_F32,
-    () => I64Trunc_U_F32,
-    () => I64Trunc_S_F64,
-    () => I64Trunc_U_F64,
-    () => F32Convert_S_I32,
-    () => F32Convert_U_I32,
-    () => F32Convert_S_I64,
-    () => F32Convert_U_I64,
-    () => F32Demote_F64,
-    () => F64Convert_S_I32,
-    () => F64Convert_U_I32,
-    () => F64Convert_S_I64,
-    () => F64Convert_U_I64,
-    () => F64Promote_F32,
-    () => I32Reinterpret_F32,
-    () => I64Reinterpret_F64,
-    () => F32Reinterpret_I32,
-    () => F64Reinterpret_I64,
+    (0xA7, "i32.wrap/i64", read_none) => I32Wrap_I64,
+    (0xA8, "i32.trunc_s/f32", read_none) => I32Trunc_S_F32,
+    (0xA9, "i32.trunc_u/f32", read_none) => I32Trunc_U_F32,
+    (0xAA, "i32.trunc_s/f64", read_none) => I32Trunc_S_F64,
+    (0xAB, "i32.trunc_u/f64", read_none) => I32Trunc_U_F64,
+    (0xAC, "i64.extend_s/i32", read_none) => I64Extend_S_I32,
+    (0xAD, "i64.extend_u/i32", read_none) => I64Extend_U_I32,
+    (0xAE, "i64.trunc_s/f32", read_none) => I64Trunc_S_F32,
+    (0xAF, "i64.trunc_u/f32", read_none) => I64Trunc_U_F32,
+    (0xB0, "i64.trunc_s/f64", read_none) => I64Trunc_S_F64,
+    (0xB1, "i64.trunc_u/f64", read_none) => I64Trunc_U_F64,
+    (0xB2, "f32.convert_s/i32", read_none) => F32Convert_S_I32,
+    (0xB3, "f32.convert_u/i32", read_none) => F32Convert_U_I32,
+    (0xB4, "f32.convert_s/i64", read_none) => F32Convert_S_I64,
+    (0xB5, "f32.convert_u/i64", read_none) => F32Convert_U_I64,
+    (0xB6, "f32.demote/f64", read_none) => F32Demote_F64,
+    (0xB7, "f64.convert_s/i32", read_none) => F64Convert_S_I32,
+    (0xB8, "f64.convert_u/i32", read_none) => F64Convert_U_I32,
+    (0xB9, "f64.convert_s/i64", read_none) => F64Convert_S_I64,
+    (0xBA, "f64.convert_u/i64", read_none) => F64Convert_U_I64,
+    (0xBB, "f64.promote/f32", read_none) => F64Promote_F32,
+    (0xBC, "i32.reinterpret/f32", read_none) => I32Reinterpret_F32,
+    (0xBD, "i64.reinterpret/f64", read_none) => I64Reinterpret_F64,
+    (0xBE, "f32.reinterpret/i32", read_none) => F32Reinterpret_I32,
+    (0xBF, "f64.reinterpret/i64", read_none) => F64Reinterpret_I64,
 
     // Psuedo-Instruction 'end'
     // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
-    () => End,
+    (0x0B, "end", read_none) => End,
+
+    // Pseudo-Instruction 'else'
+    // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
+    (0x05, "else", read_none) => Else, // Else is a pseudo instruction
 }
 
-// We want to use WASM-like names for the enum variants
-#[allow(non_camel_case_types)]
-#[derive(Clone, PartialEq)]
-pub enum Instruction {}
-
-impl Instruction {
-    pub fn read<R: io::Read>(reader: &mut R) -> Result<Option<Instruction>, Error> {
-        unimplemented!();
-        // use self::{Instruction::*, Signedness::*};
-        // use Value::*;
-
-        // let opcode = reader.read_u8()?;
-        // if opcode == 0x0B {
-        //     return Ok(None);
-        // }
-
-        // Ok(Some(match opcode {
-        //     0x10 => Call(ri!(reader)),
-        //     0x1A => Drop,
-        //     0x20 => GetLocal(ri!(reader)),
-        //     0x21 => SetLocal(ri!(reader)),
-
-        //     0x41 => Const(I32(ri!(reader))),
-        //     0x42 => Const(I64(ri!(reader))),
-        //     0x43 => unimplemented!("f32.const"),
-        //     0x44 => unimplemented!("f64.const"),
-
-        //     0x45 => Eqz(vt!(i32)),
-        //     0x46 => Eq(vt!(i32)),
-        //     0x47 => Ne(vt!(i32)),
-        //     0x48 => Lt(vt!(i32), Signed),
-        //     0x49 => Lt(vt!(i32), Unsigned),
-        //     0x4A => Gt(vt!(i32), Signed),
-        //     0x4B => Gt(vt!(i32), Unsigned),
-        //     0x4C => Le(vt!(i32), Signed),
-        //     0x4D => Le(vt!(i32), Unsigned),
-        //     0x4E => Ge(vt!(i32), Signed),
-        //     0x4F => Ge(vt!(i32), Unsigned),
-
-        //     0x50 => Eqz(vt!(i64)),
-        //     0x51 => Eq(vt!(i64)),
-        //     0x52 => Ne(vt!(i64)),
-        //     0x53 => Lt(vt!(i64), Signed),
-        //     0x54 => Lt(vt!(i64), Unsigned),
-        //     0x55 => Gt(vt!(i64), Signed),
-        //     0x56 => Gt(vt!(i64), Unsigned),
-        //     0x57 => Le(vt!(i64), Signed),
-        //     0x58 => Le(vt!(i64), Unsigned),
-        //     0x59 => Ge(vt!(i64), Signed),
-        //     0x5A => Ge(vt!(i64), Unsigned),
-
-        //     0x5B => Eq(vt!(f32)),
-        //     0x5C => Ne(vt!(f32)),
-        //     0x5D => FLt(vt!(f32)),
-        //     0x5E => FGt(vt!(f32)),
-        //     0x5F => FLe(vt!(f32)),
-        //     0x60 => FGe(vt!(f32)),
-
-        //     0x61 => Eq(vt!(f64)),
-        //     0x62 => Ne(vt!(f64)),
-        //     0x63 => FLt(vt!(f64)),
-        //     0x64 => FGt(vt!(f64)),
-        //     0x65 => FLe(vt!(f64)),
-        //     0x66 => FGe(vt!(f64)),
-
-        //     0x67 => Clz(vt!(i32)),
-        //     0x68 => Ctz(vt!(i32)),
-        //     0x69 => Popcnt(vt!(i32)),
-        //     0x6A => Add(vt!(i32)),
-        //     0x6B => Sub(vt!(i32)),
-        //     0x6C => Mul(vt!(i32)),
-        //     0x6D => Div(vt!(i32), Signed),
-        //     0x6E => Div(vt!(i32), Unsigned),
-        //     0x6F => Rem(vt!(i32), Signed),
-        //     0x70 => Rem(vt!(i32), Unsigned),
-        //     0x71 => And(vt!(i32)),
-        //     0x72 => Or(vt!(i32)),
-        //     0x73 => Xor(vt!(i32)),
-        //     0x74 => Shl(vt!(i32)),
-        //     0x75 => Shr(vt!(i32), Signed),
-        //     0x76 => Shr(vt!(i32), Unsigned),
-        //     0x77 => Rotl(vt!(i32)),
-        //     0x78 => Rotr(vt!(i32)),
-
-        //     0x79 => Clz(vt!(i64)),
-        //     0x7A => Ctz(vt!(i64)),
-        //     0x7B => Popcnt(vt!(i64)),
-        //     0x7C => Add(vt!(i64)),
-        //     0x7D => Sub(vt!(i64)),
-        //     0x7E => Mul(vt!(i64)),
-        //     0x7F => Div(vt!(i64), Signed),
-        //     0x80 => Div(vt!(i64), Unsigned),
-        //     0x81 => Rem(vt!(i64), Signed),
-        //     0x82 => Rem(vt!(i64), Unsigned),
-        //     0x83 => And(vt!(i64)),
-        //     0x84 => Or(vt!(i64)),
-        //     0x85 => Xor(vt!(i64)),
-        //     0x86 => Shl(vt!(i64)),
-        //     0x87 => Shr(vt!(i64), Signed),
-        //     0x88 => Shr(vt!(i64), Unsigned),
-        //     0x89 => Rotl(vt!(i64)),
-        //     0x8A => Rotr(vt!(i64)),
-
-        //     0x8B => Abs(vt!(f32)),
-        //     0x8C => Neg(vt!(f32)),
-        //     0x8D => Ceil(vt!(f32)),
-        //     0x8E => Floor(vt!(f32)),
-        //     0x8F => FTrunc(vt!(f32)),
-        //     0x90 => Nearest(vt!(f32)),
-        //     0x91 => Sqrt(vt!(f32)),
-        //     0x92 => Add(vt!(f32)),
-        //     0x93 => Sub(vt!(f32)),
-        //     0x94 => Mul(vt!(f32)),
-        //     0x95 => FDiv(vt!(f32)),
-        //     0x96 => Min(vt!(f32)),
-        //     0x97 => Max(vt!(f32)),
-        //     0x98 => Copysign(vt!(f32)),
-
-        //     0x99 => Abs(vt!(f64)),
-        //     0x9A => Neg(vt!(f64)),
-        //     0x9B => Ceil(vt!(f64)),
-        //     0x9C => Floor(vt!(f64)),
-        //     0x9D => FTrunc(vt!(f64)),
-        //     0x9E => Nearest(vt!(f64)),
-        //     0x9F => Sqrt(vt!(f64)),
-        //     0xA0 => Add(vt!(f64)),
-        //     0xA1 => Sub(vt!(f64)),
-        //     0xA2 => Mul(vt!(f64)),
-        //     0xA3 => FDiv(vt!(f64)),
-        //     0xA4 => Min(vt!(f64)),
-        //     0xA5 => Max(vt!(f64)),
-        //     0xA6 => Copysign(vt!(f64)),
-
-        //     0xA7 => Wrap,
-        //     0xA8 => Trunc(vt!(i32), Signed, vt!(f32)),
-        //     0xA9 => Trunc(vt!(i32), Unsigned, vt!(f32)),
-        //     0xAA => Trunc(vt!(i32), Signed, vt!(f64)),
-        //     0xAB => Trunc(vt!(i32), Unsigned, vt!(f64)),
-        //     0xAC => Extend(Signed),
-        //     0xAD => Extend(Unsigned),
-        //     0xAE => Trunc(vt!(i64), Signed, vt!(f32)),
-        //     0xAF => Trunc(vt!(i64), Unsigned, vt!(f32)),
-        //     0xB0 => Trunc(vt!(i64), Signed, vt!(f64)),
-        //     0xB1 => Trunc(vt!(i64), Unsigned, vt!(f64)),
-        //     0xB2 => Convert(vt!(f32), Signed, vt!(i32)),
-        //     0xB3 => Convert(vt!(f32), Unsigned, vt!(i32)),
-        //     0xB4 => Convert(vt!(f32), Signed, vt!(i64)),
-        //     0xB5 => Convert(vt!(f32), Unsigned, vt!(i64)),
-        //     0xB6 => Demote,
-        //     0xB7 => Convert(vt!(f64), Signed, vt!(i32)),
-        //     0xB8 => Convert(vt!(f64), Unsigned, vt!(i32)),
-        //     0xB9 => Convert(vt!(f64), Signed, vt!(i64)),
-        //     0xBA => Convert(vt!(f64), Unsigned, vt!(i64)),
-        //     0xBB => Promote,
-
-        //     x => panic!("Instruction not implemented: 0x{:X}", x),
-        // }))
-    }
+#[inline]
+fn read_none<R: io::Read>(_: &mut R) -> Result<InstructionPayload, Error> {
+    Ok(InstructionPayload::Empty)
 }
 
-impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unimplemented!();
-        // match self {
-        //     Instruction::Call(x) => write!(f, "call {}", x),
-        //     Instruction::GetLocal(x) => write!(f, "get_local {}", x),
-        //     Instruction::SetLocal(x) => write!(f, "set_local {}", x),
-
-        //     Instruction::Const(x) => write!(f, "{}.const {}", x.typ(), x),
-        //     Instruction::Clz(x) => write!(f, "{}.clz", x),
-        //     Instruction::Ctz(x) => write!(f, "{}.ctz", x),
-        //     Instruction::Popcnt(x) => write!(f, "{}.popcnt", x),
-        //     Instruction::Add(x) => write!(f, "{}.add", x),
-        //     Instruction::Mul(x) => write!(f, "{}.mul", x),
-        //     Instruction::Sub(x) => write!(f, "{}.sub", x),
-        //     Instruction::Div(x, s) => write!(f, "{}.div_{}", x, s),
-        //     Instruction::Rem(x, s) => write!(f, "{}.rem_{}", x, s),
-        //     Instruction::And(x) => write!(f, "{}.and", x),
-        //     Instruction::Or(x) => write!(f, "{}.or", x),
-        //     Instruction::Xor(x) => write!(f, "{}.xor", x),
-        //     Instruction::Shl(x) => write!(f, "{}.shl", x),
-        //     Instruction::Shr(x, s) => write!(f, "{}.shr_{}", x, s),
-        //     Instruction::Rotl(x) => write!(f, "{}.rotl", x),
-        //     Instruction::Rotr(x) => write!(f, "{}.rotr", x),
-
-        //     Instruction::Abs(x) => write!(f, "{}.abs", x),
-        //     Instruction::Neg(x) => write!(f, "{}.neg", x),
-        //     Instruction::Ceil(x) => write!(f, "{}.ceil", x),
-        //     Instruction::Floor(x) => write!(f, "{}.floor", x),
-        //     Instruction::FTrunc(x) => write!(f, "{}.trunc", x),
-        //     Instruction::Nearest(x) => write!(f, "{}.nearest", x),
-        //     Instruction::Sqrt(x) => write!(f, "{}.sqrt", x),
-        //     Instruction::FDiv(x) => write!(f, "{}.div", x),
-        //     Instruction::Min(x) => write!(f, "{}.min", x),
-        //     Instruction::Max(x) => write!(f, "{}.max", x),
-        //     Instruction::Copysign(x) => write!(f, "{}.copysign", x),
-
-        //     Instruction::Eqz(x) => write!(f, "{}.eqz", x),
-        //     Instruction::Eq(x) => write!(f, "{}.eq", x),
-        //     Instruction::Ne(x) => write!(f, "{}.ne", x),
-        //     Instruction::Lt(x, s) => write!(f, "{}.lt_{}", x, s),
-        //     Instruction::Gt(x, s) => write!(f, "{}.gt_{}", x, s),
-        //     Instruction::Le(x, s) => write!(f, "{}.le_{}", x, s),
-        //     Instruction::Ge(x, s) => write!(f, "{}.ge_{}", x, s),
-
-        //     Instruction::FLt(x) => write!(f, "{}.lt", x),
-        //     Instruction::FGt(x) => write!(f, "{}.gt", x),
-        //     Instruction::FLe(x) => write!(f, "{}.le", x),
-        //     Instruction::FGe(x) => write!(f, "{}.ge", x),
-
-        //     Instruction::Wrap => write!(f, "i32.wrap/i64"),
-        //     Instruction::Extend(s) => write!(f, "i64.extend_{}/i32", s),
-        //     Instruction::Demote => write!(f, "f32.demote/f64"),
-        //     Instruction::Promote => write!(f, "f64.promote/f32"),
-        //     Instruction::Reinterpret(x) => write!(f, "{}.reinterpret/{}", x, reinterpreted(x)),
-        //     Instruction::Convert(x, s, y) => write!(f, "{}.convert_{}/{}", x, s, y),
-        //     Instruction::Trunc(x, s, y) => write!(f, "{}.trunc_{}/{}", x, s, y),
-
-        //     Instruction::Drop => write!(f, "drop"),
-        // }
-    }
+#[inline]
+fn read_idx<R: io::Read>(reader: &mut R) -> Result<InstructionPayload, Error> {
+    Ok(InstructionPayload::Idx(utils::read_leb128_u32(reader)?))
 }
 
-impl fmt::Debug for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
+#[inline]
+fn read_mem_arg<R: io::Read>(reader: &mut R) -> Result<InstructionPayload, Error> {
+    Ok(InstructionPayload::MemArg(
+        utils::read_leb128_u32(reader)?,
+        utils::read_leb128_u32(reader)?,
+    ))
 }
 
-fn reinterpreted(v: &ValType) -> ValType {
-    match v {
-        ValType::Nil => ValType::Nil,
-        ValType::I32 => ValType::F32,
-        ValType::I64 => ValType::F64,
-        ValType::F32 => ValType::I32,
-        ValType::F64 => ValType::I64,
-    }
+#[inline]
+fn read_i32<R: io::Read>(reader: &mut R) -> Result<InstructionPayload, Error> {
+    Ok(InstructionPayload::Const(Value::I32(utils::read_leb128_s(
+        reader,
+    )?)))
+}
+
+#[inline]
+fn read_i64<R: io::Read>(reader: &mut R) -> Result<InstructionPayload, Error> {
+    Ok(InstructionPayload::Const(Value::I64(utils::read_leb128_s(
+        reader,
+    )?)))
+}
+
+#[inline]
+fn read_f32<R: io::Read>(reader: &mut R) -> Result<InstructionPayload, Error> {
+    let bits = reader.read_u32::<LittleEndian>()?;
+    Ok(InstructionPayload::Const(Value::F32(f32::from_bits(bits))))
+}
+
+#[inline]
+fn read_f64<R: io::Read>(reader: &mut R) -> Result<InstructionPayload, Error> {
+    let bits = reader.read_u64::<LittleEndian>()?;
+    Ok(InstructionPayload::Const(Value::F64(f64::from_bits(bits))))
 }

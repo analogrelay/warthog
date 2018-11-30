@@ -1,3 +1,5 @@
+use crate::Trap;
+
 #[derive(Debug)]
 pub enum Error {
     InvalidModule,
@@ -8,6 +10,8 @@ pub enum Error {
     LayoutError,
     Utf8Error(std::string::FromUtf8Error),
     IoError(String),
+    UnknownOpcode(u8),
+    Trap(Trap),
 }
 
 impl From<std::io::Error> for Error {
@@ -37,5 +41,11 @@ impl From<leb128::read::Error> for Error {
 impl From<std::alloc::LayoutErr> for Error {
     fn from(_: std::alloc::LayoutErr) -> Error {
         Error::LayoutError
+    }
+}
+
+impl From<Trap> for Error {
+    fn from(t: Trap) -> Error {
+        Error::Trap(t)
     }
 }

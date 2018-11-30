@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 
-use crate::{Instruction, Error};
+use crate::{Instruction, Opcode, Error};
 
 pub trait FromLeb128 {
     fn from_leb128_u(leb: u64) -> Self;
@@ -76,10 +76,10 @@ pub fn read_limits<R: io::Read>(r: &mut R) -> Result<(usize, Option<usize>), Err
 pub fn read_instructions<R: io::Read>(r: &mut R) -> Result<Vec<Instruction>, Error> {
     let mut insts = Vec::new();
     loop {
-        if let Some(i) = Instruction::read(r)? {
-            insts.push(i);
-        } else {
+        let inst = Instruction::read(r)?;
+        if inst.opcode == Opcode::End {
             return Ok(insts);
         }
+        insts.push(inst);
     }
 }
