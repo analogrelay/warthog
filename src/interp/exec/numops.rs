@@ -1,41 +1,23 @@
-use std::ops;
+use std::{cmp, ops};
 
-use crate::{hosting::Host, interp::Thread, value, FromValue, Instruction, Trap, Value};
+use crate::{interp::Thread, value, FromValue, Instruction, Trap, Value};
 
-pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Result<(), Trap> {
+pub fn exec(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
     use crate::Opcode::*;
 
     match inst.opcode {
-        I32Const | I64Const | F32Const | F64Const => thread.push(inst.unwrap_const()),
-        Call => {
-            let func_idx = inst.unwrap_idx() as usize;
-            let module_addr = thread.stack().current().frame().module();
-            let func = host.resolve_func(module_addr, func_idx);
-            let values = thread.invoke(host, func)?;
+        I32Eqz => eqz::<u32>(thread),
+        I32Eq => eq::<u32>(thread),
+        I32Ne => ne::<u32>(thread),
+        I32Lt_S => lt::<i32>(thread),
+        I32Lt_U => lt::<u32>(thread),
+        I32Gt_S => gt::<i32>(thread),
+        I32Gt_U => gt::<u32>(thread),
+        I32Le_S => le::<i32>(thread),
+        I32Le_U => le::<u32>(thread),
+        I32Ge_S => ge::<i32>(thread),
+        I32Ge_U => ge::<u32>(thread),
 
-            // Push the result values on to the stack
-            for value in values {
-                thread.push(value)
-            }
-        }
-        GetLocal => {
-            let local_idx = inst.unwrap_idx() as usize;
-            let val = match thread.stack().current().local(local_idx) {
-                Some(l) => l,
-                None => return Err(format!("No such local: {}", local_idx).into()),
-            };
-            thread.push(val);
-        }
-        _ => exec_numeric(thread, inst)?,
-    };
-
-    Ok(())
-}
-
-fn exec_numeric(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
-    use crate::Opcode::*;
-
-    match inst.opcode {
         I32Clz => clz::<u32>(thread),
         I32Ctz => ctz::<u32>(thread),
         I32Popcnt => popcnt::<u32>(thread),
@@ -59,6 +41,7 @@ fn exec_numeric(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! impl_panic {
     ($name: ident) => {
         fn $name<T>(_thread: &mut Thread) -> Result<(), Trap> {
@@ -155,3 +138,66 @@ impl_binop!(notry, shl, value::IntegerOps);
 impl_binop!(notry, shr, value::IntegerOps);
 impl_binop!(notry, rotl, value::IntegerOps);
 impl_binop!(notry, rotr, value::IntegerOps);
+
+fn eqz<T>(thread: &mut Thread) -> Result<(), Trap>
+where
+    T: FromValue,   // Convert Value into T
+    T: cmp::Eq,     // Compare Ts
+    T: From<u8>,    // Need to be able to convert '0' into T
+    Value: From<T>, // Convert T back to Value
+{
+    let val = thread.stack_mut().pop_as::<T>()?;
+    let res = val == 0.into();
+    thread.stack_mut().push(res);
+    Ok(())
+}
+
+fn eq<T>(thread: &mut Thread) -> Result<(), Trap>
+where
+    T: FromValue,   // Convert Value into T
+    T: cmp::Eq,     // Compare Ts
+    Value: From<T>, // Convert T back to Value
+{
+    let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
+    let res = left == right;
+    thread.stack_mut().push(res);
+    Ok(())
+}
+
+fn ne<T>(thread: &mut Thread) -> Result<(), Trap>
+where
+    T: FromValue,   // Convert Value into T
+    T: cmp::Eq,     // Compare Ts
+    Value: From<T>, // Convert T back to Value
+{
+    let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
+    let res = left != right;
+    thread.stack_mut().push(res);
+    Ok(())
+}
+
+macro_rules! impl_ord {
+    ($name: ident, $($true_ord: ident),*) => {
+        fn $name<T>(thread: &mut Thread) -> Result<(), Trap>
+        where
+            T: FromValue,   // Convert Value into T
+            T: cmp::Ord,    // Compare Ts
+            Value: From<T>, // Convert T back to Value
+        {
+            let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
+            let res = match left.cmp(&right) {
+                $(
+                    cmp::Ordering::$true_ord => true,
+                )*
+                _ => false
+            };
+            thread.stack_mut().push(res);
+            Ok(())
+        }
+    };
+}
+
+impl_ord!(lt, Less);
+impl_ord!(gt, Greater);
+impl_ord!(le, Less, Equal);
+impl_ord!(ge, Greater, Equal);

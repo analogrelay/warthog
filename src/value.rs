@@ -100,6 +100,12 @@ impl_from!(i64, u64, I64);
 impl_from!(f32, f32, F32);
 impl_from!(f64, f64, F64);
 
+impl From<bool> for Value {
+    fn from(b: bool) -> Value {
+        Value::I32(if b { 1 } else { 0 })
+    }
+}
+
 pub trait FromValue: Sized {
     fn from_value(v: Value) -> Result<Self, TrapCause>;
 }
