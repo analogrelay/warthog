@@ -154,21 +154,21 @@ macro_rules! impl_unop_core {
     };
 }
 
-impl_unop!(notry, clz, value::IntegerOps);
-impl_unop!(notry, ctz, value::IntegerOps);
-impl_unop!(notry, popcnt, value::IntegerOps);
-impl_binop!(notry, add, value::ArithmeticOps);
-impl_binop!(notry, sub, value::ArithmeticOps);
-impl_binop!(notry, mul, value::ArithmeticOps);
-impl_binop!(try, div, value::ArithmeticOps);
-impl_binop!(try, rem, value::IntegerOps);
+impl_unop!(notry, clz, value::ops::IntegerOps);
+impl_unop!(notry, ctz, value::ops::IntegerOps);
+impl_unop!(notry, popcnt, value::ops::IntegerOps);
+impl_binop!(notry, add, value::ops::ArithmeticOps);
+impl_binop!(notry, sub, value::ops::ArithmeticOps);
+impl_binop!(notry, mul, value::ops::ArithmeticOps);
+impl_binop!(try, div, value::ops::ArithmeticOps);
+impl_binop!(try, rem, value::ops::IntegerOps);
 impl_binop!(notry, and, bitand, ops::BitAnd);
 impl_binop!(notry, or, bitor, ops::BitOr);
 impl_binop!(notry, xor, bitxor, ops::BitXor);
-impl_binop!(notry, shl, value::IntegerOps);
-impl_binop!(notry, shr, value::IntegerOps);
-impl_binop!(notry, rotl, value::IntegerOps);
-impl_binop!(notry, rotr, value::IntegerOps);
+impl_binop!(notry, shl, value::ops::IntegerOps);
+impl_binop!(notry, shr, value::ops::IntegerOps);
+impl_binop!(notry, rotl, value::ops::IntegerOps);
+impl_binop!(notry, rotr, value::ops::IntegerOps);
 
 fn eqz<T>(thread: &mut Thread) -> Result<(), Trap>
 where
