@@ -126,26 +126,30 @@ impl_from_value!(f32, F32);
 impl_from_value!(f64, F64);
 
 /// Basic arithmetic operations defined for BOTH integers and floats.
-pub trait ArithmeticOps<T> {
-    fn add(self, rhs: T) -> Result<T, TrapCause>;
-    fn sub(self, rhs: T) -> Result<T, TrapCause>;
-    fn mul(self, rhs: T) -> Result<T, TrapCause>;
-    fn div(self, rhs: T) -> Result<T, TrapCause>;
+pub trait ArithmeticOps<RHS = Self> {
+    type Output;
+
+    fn add(self, rhs: RHS) -> Self::Output;
+    fn sub(self, rhs: RHS) -> Self::Output;
+    fn mul(self, rhs: RHS) -> Self::Output;
+    fn div(self, rhs: RHS) -> Result<Self::Output, TrapCause>;
 }
 
 macro_rules! impl_arith_for_integer {
     ($t: ty) => {
         impl ArithmeticOps<$t> for $t {
-            fn add(self, rhs: $t) -> Result<$t, TrapCause> {
-                Ok(self.wrapping_add(rhs))
+            type Output = $t;
+
+            fn add(self, rhs: $t) -> $t {
+                self.wrapping_add(rhs)
             }
 
-            fn sub(self, rhs: $t) -> Result<$t, TrapCause>{
-                Ok(self.wrapping_sub(rhs))
+            fn sub(self, rhs: $t) -> $t {
+                self.wrapping_sub(rhs)
             }
 
-            fn mul(self, rhs: $t) -> Result<$t, TrapCause>{
-                Ok(self.wrapping_mul(rhs))
+            fn mul(self, rhs: $t) -> $t {
+                self.wrapping_mul(rhs)
             }
 
             fn div(self, rhs: $t) -> Result<$t, TrapCause> {
@@ -168,36 +172,50 @@ impl_arith_for_integer!(i32);
 impl_arith_for_integer!(i64);
 
 /// Operations defined only for Integers
-pub trait IntegerOps<T>: ArithmeticOps<T> {
-    fn clz(self) -> Result<T, TrapCause>;
-    fn ctz(self) -> Result<T, TrapCause>;
-    fn popcnt(self) -> Result<T, TrapCause>;
-    fn rotl(self, rhs: T) -> Result<T, TrapCause>;
-    fn rotr(self, rhs: T) -> Result<T, TrapCause>;
-    fn rem(self, rhs: T) -> Result<T, TrapCause>;
+pub trait IntegerOps<RHS = Self> {
+    type Output;
+
+    fn clz(self) -> Self::Output;
+    fn ctz(self) -> Self::Output;
+    fn popcnt(self) -> Self::Output;
+    fn shl(self, rhs: RHS) -> Self::Output;
+    fn shr(self, rhs: RHS) -> Self::Output;
+    fn rotl(self, rhs: RHS) -> Self::Output;
+    fn rotr(self, rhs: RHS) -> Self::Output;
+    fn rem(self, rhs: RHS) -> Result<Self::Output, TrapCause>;
 }
 
 macro_rules! impl_integer {
     ($t: ty) => {
         impl IntegerOps<$t> for $t {
-            fn clz(self) -> Result<$t, TrapCause> {
-                Ok(self.leading_zeros() as $t)
+            type Output = $t;
+
+            fn clz(self) -> $t {
+                self.leading_zeros() as $t
             }
 
-            fn ctz(self) -> Result<$t, TrapCause> {
-                Ok(self.trailing_zeros() as $t)
+            fn ctz(self) -> $t {
+                self.trailing_zeros() as $t
             }
 
-            fn popcnt(self) -> Result<$t, TrapCause> {
-                Ok(self.count_ones() as $t)
+            fn popcnt(self) -> $t {
+                self.count_ones() as $t
             }
 
-            fn rotl(self, rhs: $t) -> Result<$t, TrapCause> {
-                Ok(self.rotate_left(rhs as u32))
+            fn shl(self, rhs: $t) -> Self::Output {
+                self.wrapping_shl(rhs as u32) as $t
             }
 
-            fn rotr(self, rhs: $t) -> Result<$t, TrapCause> {
-                Ok(self.rotate_right(rhs as u32))
+            fn shr(self, rhs: $t) -> Self::Output {
+                self.wrapping_shr(rhs as u32) as $t
+            }
+
+            fn rotl(self, rhs: $t) -> $t {
+                self.rotate_left(rhs as u32)
+            }
+
+            fn rotr(self, rhs: $t) -> $t {
+                self.rotate_right(rhs as u32)
             }
 
             fn rem(self, rhs: $t) -> Result<$t, TrapCause> {
