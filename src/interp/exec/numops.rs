@@ -30,6 +30,20 @@ pub fn exec(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
         I64Ge_S => ge::<i64>(thread),
         I64Ge_U => ge::<u64>(thread),
 
+        F32Eq => eq::<f32>(thread),
+        F32Ne => ne::<f32>(thread),
+        F32Lt => lt::<f32>(thread),
+        F32Gt => gt::<f32>(thread),
+        F32Le => le::<f32>(thread),
+        F32Ge => ge::<f32>(thread),
+
+        F64Eq => eq::<f64>(thread),
+        F64Ne => ne::<f64>(thread),
+        F64Lt => lt::<f64>(thread),
+        F64Gt => gt::<f64>(thread),
+        F64Le => le::<f64>(thread),
+        F64Ge => ge::<f64>(thread),
+
         I32Clz => clz::<u32>(thread),
         I32Ctz => ctz::<u32>(thread),
         I32Popcnt => popcnt::<u32>(thread),
@@ -67,6 +81,21 @@ pub fn exec(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
         I64Shr_U => shr::<u64>(thread),
         I64Rotl => rotl::<u64>(thread),
         I64Rotr => rotr::<u64>(thread),
+
+        F32Abs => abs::<f32>(thread),
+        F32Neg => neg::<f32>(thread),
+        F32Ceil => ceil::<f32>(thread),
+        F32Floor => floor::<f32>(thread),
+        F32Trunc => trunc::<f32>(thread),
+        F32Nearest => nearest::<f32>(thread),
+        F32Sqrt => sqrt::<f32>(thread),
+        F32Add => add::<f32>(thread),
+        F32Sub => sub::<f32>(thread),
+        F32Mul => mul::<f32>(thread),
+        F32Div => div::<f32>(thread),
+        F32Min => min::<f32>(thread),
+        F32Max => max::<f32>(thread),
+        F32Copysign => copysign::<f32>(thread),
 
         I32Wrap_I64 => convert::<u32, u64>(thread),
         I32Trunc_S_F32 => unimplemented!("I32Trunc_S_F32"),
@@ -211,9 +240,9 @@ where
 
 fn eq<T>(thread: &mut Thread) -> Result<(), Trap>
 where
-    T: FromValue,   // Convert Value into T
-    T: cmp::Eq,     // Compare Ts
-    Value: From<T>, // Convert T back to Value
+    T: FromValue,      // Convert Value into T
+    T: cmp::PartialEq, // Compare Ts
+    Value: From<T>,    // Convert T back to Value
 {
     let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
     let res = left == right;
@@ -223,9 +252,9 @@ where
 
 fn ne<T>(thread: &mut Thread) -> Result<(), Trap>
 where
-    T: FromValue,   // Convert Value into T
-    T: cmp::Eq,     // Compare Ts
-    Value: From<T>, // Convert T back to Value
+    T: FromValue,      // Convert Value into T
+    T: cmp::PartialEq, // Compare Ts
+    Value: From<T>,    // Convert T back to Value
 {
     let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
     let res = left != right;
@@ -238,13 +267,13 @@ macro_rules! impl_ord {
         fn $name<T>(thread: &mut Thread) -> Result<(), Trap>
         where
             T: FromValue,   // Convert Value into T
-            T: cmp::Ord,    // Compare Ts
+            T: cmp::PartialOrd,    // Compare Ts
             Value: From<T>, // Convert T back to Value
         {
             let (left, right) = thread.stack_mut().pop_pair_as::<T, T>()?;
-            let res = match left.cmp(&right) {
+            let res = match left.partial_cmp(&right) {
                 $(
-                    cmp::Ordering::$true_ord => true,
+                    Some(cmp::Ordering::$true_ord) => true,
                 )*
                 _ => false
             };
@@ -270,3 +299,14 @@ where
     thread.stack_mut().push(res);
     Ok(())
 }
+
+impl_unop!(notry, copysign, value::ops::FloatOps);
+impl_binop!(notry, max, value::ops::FloatOps);
+impl_binop!(notry, min, value::ops::FloatOps);
+impl_unop!(notry, sqrt, value::ops::FloatOps);
+impl_unop!(notry, nearest, value::ops::FloatOps);
+impl_unop!(notry, trunc, value::ops::FloatOps);
+impl_unop!(notry, floor, value::ops::FloatOps);
+impl_unop!(notry, ceil, value::ops::FloatOps);
+impl_unop!(notry, neg, value::ops::FloatOps);
+impl_unop!(notry, abs, value::ops::FloatOps);
