@@ -109,6 +109,20 @@ impl_integer!(u64);
 impl_integer!(i32);
 impl_integer!(i64);
 
-pub trait WrapInto<T> {
-    fn wrap_into(self) -> T;
+pub trait ConvertInto<T> {
+    fn convert_into(self) -> T;
 }
+
+macro_rules! impl_convert_by_cast {
+    ($from: ty, $to: ty) => {
+        impl ConvertInto<$to> for $from {
+            fn convert_into(self) -> $to {
+                self as $to
+            }
+        }
+    };
+}
+
+impl_convert_by_cast!(u64, u32);
+impl_convert_by_cast!(u32, u64);
+impl_convert_by_cast!(i32, i64);

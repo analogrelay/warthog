@@ -85,6 +85,18 @@ impl fmt::Display for Value {
     }
 }
 
+impl fmt::UpperHex for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Value::Nil => write!(f, "nil"),
+            Value::I32(x) => write!(f, "{:X}", x),
+            Value::I64(x) => write!(f, "{:X}", x),
+            Value::F32(x) => write!(f, "{:X}", x.to_bits()),
+            Value::F64(x) => write!(f, "{:X}", x.to_bits()),
+        }
+    }
+}
+
 macro_rules! impl_from {
     ($t: ty, $repr: ty, $v: ident) => {
         impl From<$t> for Value {

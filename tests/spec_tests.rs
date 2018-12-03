@@ -96,7 +96,10 @@ impl TestContext {
 
         // Match the results
         if expected != actual {
-            self.panic(format!("Expected: {}, Actual: {}", expected, actual));
+            self.panic(format!(
+                "Expected: {} (0x{:X}), Actual: {} (0x{:X})",
+                expected, expected, actual, actual
+            ));
         }
     }
 
@@ -119,8 +122,9 @@ impl TestContext {
         match actual {
             Ok(v) => {
                 self.panic(format!(
-                    "Expected: <Trap: {}>, Actual: {}",
+                    "Expected: <Trap: {}>, Actual: {} (0x{:X})",
                     expected,
+                    self.unwrap_val(v.clone()),
                     self.unwrap_val(v)
                 ));
             }
