@@ -15,6 +15,8 @@ $TestsToGenerate = @(
     "i64",
     "f32",
     "f32_cmp",
+    "f64",
+    "f64_cmp",
     # "conversions",
     # "int_exprs",
     "names"
