@@ -68,6 +68,32 @@ pub fn exec(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
         I64Rotl => rotl::<u64>(thread),
         I64Rotr => rotr::<u64>(thread),
 
+        I32Wrap_I64 => wrap::<u32, u64>(thread),
+        I32Trunc_S_F32 => unimplemented!(),
+        I32Trunc_U_F32 => unimplemented!(),
+        I32Trunc_S_F64 => unimplemented!(),
+        I32Trunc_U_F64 => unimplemented!(),
+        I64Extend_S_I32 => unimplemented!(),
+        I64Extend_U_I32 => unimplemented!(),
+        I64Trunc_S_F32 => unimplemented!(),
+        I64Trunc_U_F32 => unimplemented!(),
+        I64Trunc_S_F64 => unimplemented!(),
+        I64Trunc_U_F64 => unimplemented!(),
+        F32Convert_S_I32 => unimplemented!(),
+        F32Convert_U_I32 => unimplemented!(),
+        F32Convert_S_I64 => unimplemented!(),
+        F32Convert_U_I64 => unimplemented!(),
+        F32Demote_F64 => unimplemented!(),
+        F64Convert_S_I32 => unimplemented!(),
+        F64Convert_U_I32 => unimplemented!(),
+        F64Convert_S_I64 => unimplemented!(),
+        F64Convert_U_I64 => unimplemented!(),
+        F64Promote_F32 => unimplemented!(),
+        I32Reinterpret_F32 => unimplemented!(),
+        I64Reinterpret_F64 => unimplemented!(),
+        F32Reinterpret_I32 => unimplemented!(),
+        F64Reinterpret_I64 => unimplemented!(),
+
         x => return Err(format!("Instruction not implemented: {}", x).into()),
     }
 }
@@ -232,3 +258,15 @@ impl_ord!(lt, Less);
 impl_ord!(gt, Greater);
 impl_ord!(le, Less, Equal);
 impl_ord!(ge, Greater, Equal);
+
+fn wrap<T, U>(thread: &mut Thread) -> Result<(), Trap>
+where
+    U: FromValue,
+    U: value::ops::WrapInto<T>,
+    Value: From<T>,
+{
+    let val = thread.stack_mut().pop_as::<U>()?;
+    let res: T = val.wrap_into();
+    thread_stack_mut().push(res);
+    Ok(())
+}

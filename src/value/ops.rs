@@ -108,3 +108,7 @@ impl_integer!(u32);
 impl_integer!(u64);
 impl_integer!(i32);
 impl_integer!(i64);
+
+pub trait WrapInto<T> {
+    fn wrap_into(self) -> T;
+}

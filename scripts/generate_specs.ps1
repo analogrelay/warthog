@@ -13,8 +13,9 @@ $SpecGenRoot = [IO.Path]::Combine($RepoRoot, "specgen")
 $TestsToGenerate = @(
     "i32",
     "i64",
-    "f32",
-    "int_exprs",
+    # "f32",
+    "conversions",
+    # "int_exprs",
     "names"
 )
 
