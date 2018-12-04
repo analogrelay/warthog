@@ -6,7 +6,9 @@ use crate::{interp::StackTrace, ValType};
 pub enum TrapCause {
     IntegerOverflow,
     IntegerDivideByZero,
+    InvalidConversionToInteger,
     StackUnderflow,
+    StackNotEmpty,
     TypeMismatch { expected: ValType, actual: ValType },
     Other(Cow<'static, str>),
 }
@@ -20,6 +22,8 @@ impl TrapCause {
             // These strings are described by the spec tests. Do not modify them.
             IntegerOverflow => "integer overflow".into(),
             IntegerDivideByZero => "integer divide by zero".into(),
+            InvalidConversionToInteger => "invalid conversion to integer".into(),
+            StackNotEmpty => "stack not empty".into(),
 
             // These are other well-known traps that we define
             StackUnderflow => "stack underflow".into(),

@@ -94,8 +94,14 @@ impl TestContext {
         // Expect up to one item in the return value
         let expected = self.unwrap_val(expected);
 
-        // Match the results
-        if expected != actual {
+        // Special-case NaN == NaN here
+        let success = match (expected, actual) {
+            (Value::F32(e), Value::F32(a)) if e.is_nan() && a.is_nan() => true,
+            (Value::F64(e), Value::F64(a)) if e.is_nan() && a.is_nan() => true,
+            (e, v) => e == v,
+        };
+
+        if !success {
             self.panic(format!(
                 "Expected: {} (0x{:X}), Actual: {} (0x{:X})",
                 expected, expected, actual, actual

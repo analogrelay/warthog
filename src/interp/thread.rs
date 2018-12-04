@@ -2,7 +2,7 @@ use crate::{
     hosting::{FuncAddr, FuncImpl, Host, ModuleAddr},
     interp::{exec, ExecutionStack},
     module::Expr,
-    Instruction, Trap, ValType, Value,
+    Instruction, Trap, TrapCause, ValType, Value,
 };
 
 pub struct Thread {
@@ -44,7 +44,7 @@ impl Thread {
         };
 
         let result = if !self.stack.current().is_empty() {
-            Err(self.throw("Stack is not empty at end of function invocation!"))
+            Err(self.throw(TrapCause::StackNotEmpty))
         } else {
             Ok(val)
         };
@@ -143,7 +143,7 @@ impl Thread {
 
                 // Validate that the stack is empty
                 let result = if !self.stack.current().is_empty() {
-                    Err(self.throw("Stack is not empty at end of function invocation!"))
+                    Err(self.throw(TrapCause::StackNotEmpty))
                 } else {
                     Ok(results)
                 };

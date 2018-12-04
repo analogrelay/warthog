@@ -113,30 +113,30 @@ pub fn exec(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
         F64Copysign => copysign::<f64>(thread),
 
         I32Wrap_I64 => convert::<u32, u64>(thread),
-        I32Trunc_S_F32 => unimplemented!("I32Trunc_S_F32"),
-        I32Trunc_U_F32 => unimplemented!("I32Trunc_U_F32"),
-        I32Trunc_S_F64 => unimplemented!("I32Trunc_S_F64"),
-        I32Trunc_U_F64 => unimplemented!("I32Trunc_U_F64"),
+        I32Trunc_S_F32 => convert::<i32, f32>(thread),
+        I32Trunc_U_F32 => convert::<u32, f32>(thread),
+        I32Trunc_S_F64 => convert::<i32, f64>(thread),
+        I32Trunc_U_F64 => convert::<u32, f64>(thread),
         I64Extend_S_I32 => convert::<i64, i32>(thread),
         I64Extend_U_I32 => convert::<u64, u32>(thread),
-        I64Trunc_S_F32 => unimplemented!("I64Trunc_S_F32"),
-        I64Trunc_U_F32 => unimplemented!("I64Trunc_U_F32"),
-        I64Trunc_S_F64 => unimplemented!("I64Trunc_S_F64"),
-        I64Trunc_U_F64 => unimplemented!("I64Trunc_U_F64"),
-        F32Convert_S_I32 => unimplemented!("F32Convert_S_I32"),
-        F32Convert_U_I32 => unimplemented!("F32Convert_U_I32"),
-        F32Convert_S_I64 => unimplemented!("F32Convert_S_I64"),
-        F32Convert_U_I64 => unimplemented!("F32Convert_U_I64"),
-        F32Demote_F64 => unimplemented!("F32Demote_F64"),
-        F64Convert_S_I32 => unimplemented!("F64Convert_S_I32"),
-        F64Convert_U_I32 => unimplemented!("F64Convert_U_I32"),
-        F64Convert_S_I64 => unimplemented!("F64Convert_S_I64"),
-        F64Convert_U_I64 => unimplemented!("F64Convert_U_I64"),
-        F64Promote_F32 => unimplemented!("F64Promote_F32"),
-        I32Reinterpret_F32 => unimplemented!("I32Reinterpret_F32"),
-        I64Reinterpret_F64 => unimplemented!("I64Reinterpret_F64"),
-        F32Reinterpret_I32 => unimplemented!("F32Reinterpret_I32"),
-        F64Reinterpret_I64 => unimplemented!("F64Reinterpret_I64"),
+        I64Trunc_S_F32 => convert::<i64, f32>(thread),
+        I64Trunc_U_F32 => convert::<u64, f32>(thread),
+        I64Trunc_S_F64 => convert::<i64, f64>(thread),
+        I64Trunc_U_F64 => convert::<u64, f64>(thread),
+        F32Convert_S_I32 => convert::<f32, i32>(thread),
+        F32Convert_U_I32 => convert::<f32, u32>(thread),
+        F32Convert_S_I64 => convert::<f32, i64>(thread),
+        F32Convert_U_I64 => convert::<f32, u64>(thread),
+        F32Demote_F64 => convert::<f32, f64>(thread),
+        F64Convert_S_I32 => convert::<f64, i32>(thread),
+        F64Convert_U_I32 => convert::<f64, u32>(thread),
+        F64Convert_S_I64 => convert::<f64, i64>(thread),
+        F64Convert_U_I64 => convert::<f64, u64>(thread),
+        F64Promote_F32 => convert::<f64, f32>(thread),
+        I32Reinterpret_F32 => reinterpret::<u32, f32>(thread),
+        I64Reinterpret_F64 => reinterpret::<u64, f64>(thread),
+        F32Reinterpret_I32 => reinterpret::<f32, u32>(thread),
+        F64Reinterpret_I64 => reinterpret::<f64, u64>(thread),
 
         x => return Err(format!("Instruction not implemented: {}", x).into()),
     }
@@ -310,12 +310,12 @@ where
     Value: From<T>,
 {
     let val = thread.stack_mut().pop_as::<U>()?;
-    let res: T = val.convert_into();
+    let res: T = val.convert_into()?;
     thread.stack_mut().push(res);
     Ok(())
 }
 
-impl_unop!(notry, copysign, value::ops::FloatOps);
+impl_binop!(notry, copysign, value::ops::FloatOps);
 impl_binop!(notry, max, value::ops::FloatOps);
 impl_binop!(notry, min, value::ops::FloatOps);
 impl_unop!(notry, sqrt, value::ops::FloatOps);
@@ -325,3 +325,15 @@ impl_unop!(notry, floor, value::ops::FloatOps);
 impl_unop!(notry, ceil, value::ops::FloatOps);
 impl_unop!(notry, neg, value::ops::FloatOps);
 impl_unop!(notry, abs, value::ops::FloatOps);
+
+fn reinterpret<T, U>(thread: &mut Thread) -> Result<(), Trap>
+where
+    U: FromValue,
+    U: value::ops::ReinterpretInto<T>,
+    Value: From<T>,
+{
+    let val = thread.stack_mut().pop_as::<U>()?;
+    let res: T = val.reinterpret_into();
+    thread.stack_mut().push(res);
+    Ok(())
+}
