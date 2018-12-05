@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{module::Expr, utils, Error};
+use crate::{module::Expr, utils, Error, Instruction};
 
 #[derive(PartialEq, Clone)]
 pub struct DataItem {
@@ -14,7 +14,7 @@ pub struct DataItem {
 impl DataItem {
     pub fn read<R: io::Read>(reader: &mut R) -> Result<DataItem, Error> {
         let index = utils::read_leb128_u32(reader)? as usize;
-        let expr = Expr::new(utils::read_instructions(reader)?);
+        let expr = Expr::new(Instruction::read_sequence(reader)?);
         let init = utils::read_vec(reader, |r| Ok(r.read_u8()?))?;
         Ok(DataItem { index, expr, init })
     }

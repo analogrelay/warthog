@@ -3,9 +3,9 @@ use std::{cmp, ops};
 use crate::{interp::Thread, value, FromValue, Instruction, Trap, Value};
 
 pub fn exec(thread: &mut Thread, inst: Instruction) -> Result<(), Trap> {
-    use crate::Opcode::*;
+    use crate::Instruction::*;
 
-    match inst.opcode {
+    match inst {
         I32Eqz => eqz::<u32>(thread),
         I32Eq => eq::<u32>(thread),
         I32Ne => ne::<u32>(thread),

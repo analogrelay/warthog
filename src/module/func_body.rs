@@ -28,7 +28,7 @@ impl FuncBody {
             }
         }
 
-        let body = utils::read_instructions(reader)?;
+        let body = Instruction::read_sequence(reader)?;
 
         Ok(FuncBody { locals, body })
     }

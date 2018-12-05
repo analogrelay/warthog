@@ -9,7 +9,7 @@ pub mod ops;
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum ValType {
-    Nil = 0x00,
+    Nil = 0x40,
     I32 = 0x7F,
     I64 = 0x7E,
     F32 = 0x7D,
@@ -19,6 +19,7 @@ pub enum ValType {
 impl ValType {
     pub fn from_u8(v: u8) -> Result<ValType, Error> {
         match v {
+            0x40 => Ok(ValType::Nil),
             0x7F => Ok(ValType::I32),
             0x7E => Ok(ValType::I64),
             0x7D => Ok(ValType::F32),

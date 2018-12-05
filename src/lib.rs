@@ -2,6 +2,8 @@
 // #![deny(warnings)]
 // Quiet down some warnings when running tests.
 #![cfg_attr(test, allow(dead_code))]
+// The isa! macro is very recursive because it's a push-down accumulator.
+#![recursion_limit = "256"]
 
 extern crate byteorder;
 extern crate leb128;
@@ -27,7 +29,7 @@ pub mod reader;
 pub mod runtime;
 
 pub use crate::error::Error;
-pub use crate::instruction::{Instruction, InstructionPayload, Opcode};
+pub use crate::instruction::Instruction;
 pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::trap::{Trap, TrapCause};
