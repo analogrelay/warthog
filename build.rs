@@ -9,12 +9,21 @@ use std::{
     path::Path,
 };
 
+pub enum InstructionType {
+    Empty,
+    Block,
+    Index,
+    BranchTable,
+    TableIndex,
+    MemArg,
+}
+
 pub struct InstructionRecord {
     pub opcode: usize,
     pub old_name: String,
     pub new_name: String,
     pub enum_name: String,
-    pub typ: Option<String>,
+    pub typ: InstructionType,
 }
 
 fn main() {
@@ -29,12 +38,21 @@ fn main() {
             .map(|record| {
                 let record = record.unwrap();
                 let name = record.get(2).unwrap().to_owned();
+                let typ = match record.get(3) {
+                    None | Some("") => InstructionType::Empty,
+                    Some("block") => InstructionType::Block,
+                    Some("index") => InstructionType::Index,
+                    Some("branch-table") => InstructionType::BranchTable,
+                    Some("table-index") => InstructionType::TableIndex,
+                    Some("memarg") => InstructionType::MemArg,
+                    Some(x) => panic!("Unknown instruction type: {}", x),
+                };
                 InstructionRecord {
                     opcode: parse_usize(record.get(0).unwrap()),
                     old_name: record.get(1).unwrap().to_owned(),
                     new_name: name.clone(),
                     enum_name: create_enum_name(name),
-                    typ: record.get(3).map(|x| x.to_string()),
+                    typ,
                 }
             })
             .collect()
@@ -63,6 +81,8 @@ fn create_enum_name(name: String) -> String {
 }
 
 fn generate_instruction_type(instructions: Vec<InstructionRecord>) -> Result<(), io::Error> {
+    use InstructionType::*;
+
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("instructions.g.rs");
     let mut f = File::create(&dest_path).unwrap();
@@ -72,9 +92,19 @@ fn generate_instruction_type(instructions: Vec<InstructionRecord>) -> Result<(),
 
     writeln!(f, "pub enum Instruction {{")?;
     for record in instructions {
-        writeln!(f, "    {},", record.enum_name)?;
+        match record.typ {
+            Empty => writeln!(f, "    {},", record.enum_name)?,
+            Block => writeln!(f, "    {}(ValType)", record.enum_name)?,
+            Index => writeln!(f, "    {}(u32)", record.enum_name)?,
+            BranchTable => writeln!(f, "    {}(Box<BranchTable>)", record.enum_name)?,
+            TableIndex => writeln!(f, "    {}(u32, u32)", record.enum_name)?,
+            MemArg => writeln!(f, "    {}(u32, u32)", record.enum_name)?,
+        }
     }
     writeln!(f, "}}")?;
+    writeln!(f, "");
+    writeln!(f, "impl Instruction {{");
+    writeln!(f, "}}");
 
     Ok(())
 }
