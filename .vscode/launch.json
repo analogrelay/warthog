@@ -5,12 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(Windows; Debug) wasmdump hello_world.wasm",
+            "name": "(Windows; Debug) wasmdump branch.wasm",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/wasmdump.exe",
             "args": [
-                "${workspaceFolder}/samples/temp.wasm"
+                "${workspaceFolder}/samples/branch.wasm"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

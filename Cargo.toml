@@ -2,7 +2,11 @@
 name = "warthog"
 version = "0.1.0"
 authors = ["Andrew Stanton-Nurse <andrew@stanton-nurse.com>"]
+build = "build.rs"
 
 [dependencies]
 byteorder = "1.2.6"
 leb128 = "0.2.3"
+
+[build-dependencies]
+csv = "1.0.2"

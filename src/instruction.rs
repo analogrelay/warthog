@@ -2,67 +2,118 @@ use std::io;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{utils, Error, Value};
+use crate::{utils, Error, ValType, Value};
 
 macro_rules! drop_tt {
     ($($ts: tt)*) => (_)
 }
 
+macro_rules! instruction_format {
+    // Finalizer
+    (@a $inp: expr; $w: expr; ($($accum:tt)*); ) => {
+        match $inp {
+            $($accum)*
+        }
+    };
+
+    // Accumulators
+    (@a $inp: expr; $w: expr; ($($accum:tt)*); ($name: ident, $text: expr, $p1: ty, $p2: ty), $($rest: tt)*) => {
+        instruction_format!(@a $inp; $w;
+            (
+                $($accum)*
+                Instruction::$name(p1, p2) => write!($w, concat!($text, " {} {}"), p1, p2),
+            );
+            $($rest)*);
+    };
+
+    (@a $inp: expr; $w: expr; ($($accum:tt)*); ($name: ident, $text: expr, $p1: ty), $($rest: tt)*) => {
+        instruction_format!(@a $inp; $w;
+            (
+                $($accum)*
+                Instruction::$name(p1) => write!($w, concat!($text, " {}"), p1),
+            );
+            $($rest)*);
+    };
+
+    (@a $inp: expr; $w: expr; ($($accum:tt)*); ($name: ident, $text: expr, ), $($rest: tt)*) => {
+        instruction_format!(@a $inp; $w;
+            (
+                $($accum)*
+                Instruction::$name => write!($w, $text),
+            );
+            $($rest)*);
+    };
+
+    // Entry point
+    ($inp: expr; $w: expr; $(($name: ident, $text: expr, $($read_method: ident : $param: ty),*),)*) => {
+        instruction_format!(@a $inp; $w; ();
+            $(
+                ($name, $text, $($param),*),
+            )*);
+    };
+}
+
 macro_rules! instruction_get_opcode {
+    // Finalizer
     (@a $val: expr; ($($accum: tt)*); ) => {
         match $val {
             $($accum)*
         }
     };
 
-    (@a $val: expr; ($($accum: tt)*); ($opcode: expr, $name: ident, $($read_method: ident: $param: ty),+ ),) => {
-        instruction_get_opcode!(@a $val; (Instruction::$name($(drop_tt!($param)),+) => $opcode, $($accum)*););
-    };
-
-    (@a $val: expr; ($($accum: tt)*); ($opcode: expr, $name: ident, ),) => {
-        instruction_get_opcode!(@a $val; (Instruction::$name => $opcode, $($accum)*););
-    };
-
+    // Accumulators
     (@a $val: expr; ($($accum: tt)*); ($opcode: expr, $name: ident, $($read_method: ident: $param: ty),+ ), $($rest: tt)*) => {
-        instruction_get_opcode!(@a $val; (Instruction::$name($(drop_tt!($param)),+) => $opcode, $($accum)*); $($rest)*);
+        instruction_get_opcode!(@a $val;
+            (
+                Instruction::$name($(drop_tt!($param)),+) => $opcode,
+                $($accum)*
+            );
+            $($rest)*);
     };
 
     (@a $val: expr; ($($accum: tt)*); ($opcode: expr, $name: ident, ), $($rest: tt)*) => {
-        instruction_get_opcode!(@a $val; (Instruction::$name => $opcode, $($accum)*); $($rest)*);
+        instruction_get_opcode!(@a $val;
+            (
+                Instruction::$name => $opcode,
+                $($accum)*
+            );
+            $($rest)*);
     };
 
-    (@a $($items: tt)*) => { compile_error!("Parser Failure"); };
-
+    // Entry Point
     ($val: expr; (); $(($opcode: expr, $name: ident, $($defn: tt)*),)*) => {
         instruction_get_opcode!(@a $val; (); $(($opcode, $name, $($defn)*),)*);
     };
 }
 
 macro_rules! instruction_enum {
+    // Finalizer
     (@a ($($accum: tt)*); ) => {
         #[derive(Clone, Copy, PartialEq)]
         #[allow(non_camel_case_types)]
         pub enum Instruction { $($accum)* }
     };
 
-    (@a ($($accum: tt)*); $name: ident($( $read_method: ident: $param: ty ),+)) => {
-        instruction_enum!(@a ($($accum)* $name($($param),*),););
-    };
-
-    (@a ($($accum: tt)*); $name: ident()) => {
-        instruction_enum!(@a ($($accum)* $name,););
-    };
-
+    // Accumulators
     (@a ($($accum: tt)*); $name: ident($( $read_method: ident: $param: ty ),+) , $($rest: tt)*) => {
-        instruction_enum!(@a ($($accum)* $name($($param),*),); $($rest)*);
+        instruction_enum!(@a
+            (
+                $name($($param),*),
+                $($accum)*
+            );
+            $($rest)*);
     };
 
     (@a ($($accum: tt)*); $name: ident() , $($rest: tt)*) => {
-        instruction_enum!(@a ($($accum)* $name,); $($rest)*);
+        instruction_enum!(@a
+            (
+                $name,
+                $($accum)*
+            );
+            $($rest)*);
     };
 
-    (@a $($items: tt)*) => { compile_error!("Parser Failure"); };
-
+    // Entrypoint
     ($($items: tt)*) => {
         instruction_enum!(@a (); $($items)*);
     };
@@ -84,8 +135,8 @@ macro_rules! isa {
         ($opcode: expr, $text: expr) => $name:ident ($($defn: tt)*)
     ),*,) => {
         instruction_enum!($(
-            $name($($defn)*)
-        ),*);
+            $name($($defn)*),
+        )*);
 
         impl Instruction {
             pub fn read<R: ::std::io::Read>(reader: &mut R) -> Result<Instruction, $crate::Error> {
@@ -123,17 +174,19 @@ macro_rules! isa {
 
             pub fn is_block(&self) -> bool {
                 match self {
-                    Instruction::Block => true,
-                    Instruction::Loop => true,
-                    Instruction::If => true,
+                    Instruction::Block(_) => true,
+                    Instruction::Loop(_) => true,
+                    Instruction::If(_) => true,
                     _ => false,
                 }
             }
         }
 
         impl ::std::fmt::Display for Instruction {
-            fn fmt(&self, _f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                unimplemented!()
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                instruction_format!(self; f; $(
+                    ($name, $text, $($defn)*),
+                )*)
             }
         }
 
@@ -150,9 +203,9 @@ isa! {
     // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
     (0x00, "unreachable") => Unreachable(),
     (0x01, "nop") => Nop(),
-    (0x02, "block") => Block(),
-    (0x03, "loop") => Loop(),
-    (0x04, "if") => If(),
+    (0x02, "block") => Block(read_val_type: ValType),
+    (0x03, "loop") => Loop(read_val_type: ValType),
+    (0x04, "if") => If(read_val_type: ValType),
     (0x0C, "br") => Br(),
     (0x0D, "br_if") => Br_If(),
     (0x0E, "br_table") => Br_Table(),
@@ -347,6 +400,11 @@ isa! {
     // Pseudo-Instruction 'else'
     // https://webassembly.github.io/spec/core/binary/instructions.html#control-instructions
     (0x05, "else") => Else(), // Else is a pseudo instruction
+}
+
+#[inline]
+fn read_val_type<R: io::Read>(reader: &mut R) -> Result<ValType, Error> {
+    ValType::read(reader)
 }
 
 #[inline]
