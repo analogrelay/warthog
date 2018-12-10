@@ -20,7 +20,7 @@ pub fn execute(thread: &mut Thread, host: &mut Host, inst: Instruction) -> Resul
                 thread.push(value)
             }
         }
-        GetLocal(local_idx) => {
+        LocalGet(local_idx) => {
             let val = match thread.stack().current().local(local_idx as usize) {
                 Some(l) => l,
                 None => return Err(format!("No such local: {}", local_idx).into()),
