@@ -260,11 +260,12 @@ fn generate_instruction_methods<W: io::Write>(w: &mut IndentingWriter<W>, instru
                     Const => writeln!(w, "{} => Ok({}(read_{}(reader)?)),", opcode, record.enum_ref, get_value_type(&record.new_name))?,
                     Block => writeln!(w, "{} => Ok({}(crate::ValType::read(reader)?)),", opcode, record.enum_ref)?,
                     Index => writeln!(w, "{} => Ok({}(read_idx(reader)?)),", opcode, record.enum_ref)?,
-                    BranchTable => writeln!(w, "{} => Ok({}(unimplemented!())),", opcode, record.enum_ref)?,
+                    BranchTable => writeln!(w, "{} => Ok({}(BranchTable::read(reader)?)),", opcode, record.enum_ref)?,
                     TableIndex => writeln!(w, "{} => Ok({}(read_idx(reader)?, read_idx(reader)?)),", opcode, record.enum_ref)?,
                     MemArg => writeln!(w, "{} => Ok({}(read_idx(reader)?, read_idx(reader)?)),", opcode, record.enum_ref)?,
                 }
             }
+            writeln!(w, "x => Err(Error::UnknownOpcode(x)),")?;
             Ok(())
         })?;
         Ok(())

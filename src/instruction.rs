@@ -2,21 +2,25 @@ use std::{fmt, io};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::{utils, Error, ValType, Value};
+use crate::{utils, Error, Value};
 
 #[derive(PartialEq, Clone)]
-pub struct BranchTable(Vec<u32>);
+pub struct BranchTable(Vec<u32>, u32);
+
+impl BranchTable {
+    pub fn read<R: io::Read>(reader: &mut R) -> Result<BranchTable, Error> {
+        let branches = utils::read_vec(reader, utils::read_leb128_u32)?;
+        let else_case = utils::read_leb128_u32(reader)?;
+        Ok(BranchTable(branches, else_case))
+    }
+}
 
 impl fmt::Display for BranchTable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (i, branch) in self.0.iter().enumerate() {
-            if i == 0 {
-                write!(f, "{}", branch)?;
-            } else {
-                write!(f, ", {}", branch)?;
-            }
+        for branch in self.0.iter() {
+            write!(f, "{}, ", branch)?;
         }
-        Ok(())
+        write!(f, "{}", self.1)
     }
 }
 
@@ -45,11 +49,6 @@ impl Instruction {
             insts.push(inst);
         }
     }
-}
-
-#[inline]
-fn read_val_type<R: io::Read>(reader: &mut R) -> Result<ValType, Error> {
-    ValType::read(reader)
 }
 
 #[inline]
