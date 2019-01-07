@@ -6,9 +6,7 @@ use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
     hosting::{FuncImpl, Host, MemInst, ModuleAddr, ModuleInst},
-    module::{Module, ModuleNames},
-    reader::Reader,
-    runtime,
+    format::{Module, ModuleNames, reader::Reader},
 };
 
 fn main() {
@@ -44,7 +42,7 @@ pub fn run(file: &Path) {
     };
 
     // Synthesize the 'env' module
-    host.external(runtime::Env::new()).unwrap();
+    // host.external(runtime::Env::new()).unwrap();
 
     // Instantiate the module
     let entry_point = host.instantiate(name, module).unwrap();
@@ -69,7 +67,7 @@ fn dump_funcs(host: &Host) {
                     func_id
                 );
             }
-            FuncImpl::External(_) => println!("  * {:04} {} <extern>", i + 1, func_inst.typ()),
+            // FuncImpl::External(_) => println!("  * {:04} {} <extern>", i + 1, func_inst.typ()),
         }
     }
 }

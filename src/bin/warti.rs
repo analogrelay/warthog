@@ -8,7 +8,6 @@ use warthog::{
     hosting::{ExternVal, Host},
     format::Module,
     format::reader::Reader,
-    runtime,
 };
 
 fn main() {
@@ -44,13 +43,13 @@ pub fn run(file: &Path) {
     };
 
     // Synthesize the 'env' module
-    host.external(runtime::Env::new()).unwrap();
+    // host.external(runtime::Env::new()).unwrap();
 
     // Instantiate the module
     let entry_point = host.instantiate(name, module).unwrap();
 
     // Look for the main entry point
-    let main_func = match host.resolve_import(entry_point, "_main").unwrap().value() {
+    let _main_func = match host.resolve_import(entry_point, "_main").unwrap().value() {
         ExternVal::Func(f) => *f,
         _ => panic!("'_main' is not a function!"),
     };

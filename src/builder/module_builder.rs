@@ -4,6 +4,7 @@ use crate::{
 };
 
 pub struct ModuleBuilder {
+    pub version: u32,
     pub types: Vec<FuncType>,
     pub imports: Vec<Import>,
     pub funcs: Vec<usize>,
@@ -16,6 +17,7 @@ pub struct ModuleBuilder {
 impl ModuleBuilder {
     pub fn new() -> ModuleBuilder {
         ModuleBuilder {
+            version: 1,
             types: Vec::new(),
             imports: Vec::new(),
             funcs: Vec::new(),

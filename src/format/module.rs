@@ -15,6 +15,7 @@ use crate::{
 /// Represents the static information associated with a WebAssembly Module
 #[derive(Clone, PartialEq)]
 pub struct Module {
+    version: u32,
     types: Vec<FuncType>,
     imports: Vec<Import>,
     funcs: Vec<usize>,
@@ -27,6 +28,7 @@ pub struct Module {
 impl Module {
     pub fn from_builder(builder: ModuleBuilder) -> Module {
         Module {
+            version: builder.version,
             types: builder.types,
             imports: builder.imports,
             funcs: builder.funcs,
@@ -35,6 +37,11 @@ impl Module {
             data: builder.data,
             names: builder.names,
         }
+    }
+
+    /// Reads a module from the provided reader
+    pub fn read<R: io::Read + io::Seek>(r: R) -> Result<Module, Error> {
+        Module::load(Reader::new(io::BufReader::new(r)))
     }
 
     /// Loads a module up from the provided reader, consuming the reader in the process
@@ -83,6 +90,7 @@ impl Module {
         }
 
         Ok(Module {
+            version: header.version,
             types: types.unwrap_or_else(|| Vec::new()),
             imports: imports.unwrap_or_else(|| Vec::new()),
             funcs: funcs.unwrap_or_else(|| Vec::new()),
@@ -91,6 +99,10 @@ impl Module {
             data: data.unwrap_or_else(|| Vec::new()),
             names,
         })
+    }
+
+    pub fn version(&self) -> u32 {
+        self.version
     }
 
     pub fn types(&self) -> &Vec<FuncType> {
