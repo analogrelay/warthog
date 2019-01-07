@@ -1,6 +1,6 @@
 use std::{borrow::Cow, cmp, fmt};
 
-use crate::{interp::StackTrace, ValType};
+use crate::{ValType};
 
 #[derive(Clone, PartialEq)]
 pub enum TrapCause {
@@ -63,7 +63,7 @@ impl cmp::PartialEq<str> for TrapCause {
 #[derive(Clone, PartialEq)]
 pub struct Trap {
     cause: TrapCause,
-    stack_trace: Option<StackTrace>,
+    stack_trace: Option<()>,
 }
 
 impl Trap {
@@ -74,24 +74,24 @@ impl Trap {
         }
     }
 
-    /// Sets the stack trace associated with this trap, but **only** if it hasn't already been set.
-    ///
-    /// ## Returns
-    /// A boolean indicating if the stack trace was set.
-    pub fn try_set_stack(&mut self, trace: StackTrace) -> bool {
-        if self.stack_trace.is_some() {
-            false
-        } else {
-            self.stack_trace = Some(trace);
-            true
-        }
-    }
+    // /// Sets the stack trace associated with this trap, but **only** if it hasn't already been set.
+    // ///
+    // /// ## Returns
+    // /// A boolean indicating if the stack trace was set.
+    // pub fn try_set_stack(&mut self, trace: StackTrace) -> bool {
+    //     if self.stack_trace.is_some() {
+    //         false
+    //     } else {
+    //         self.stack_trace = Some(trace);
+    //         true
+    //     }
+    // }
 
     pub fn cause(&self) -> &TrapCause {
         &self.cause
     }
 
-    pub fn trace(&self) -> Option<&StackTrace> {
+    pub fn trace(&self) -> Option<&()> {
         self.stack_trace.as_ref()
     }
 }

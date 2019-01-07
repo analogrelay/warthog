@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{module::DataItem, reader::Section, utils, Error};
+use crate::{format::{DataItem, reader::Section}, utils, Error};
 
 pub struct DataSection {
     pub data: Vec<DataItem>,

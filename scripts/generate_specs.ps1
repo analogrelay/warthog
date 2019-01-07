@@ -11,6 +11,7 @@ $SpecGenRoot = [IO.Path]::Combine($RepoRoot, "specgen")
 # Right now, manually specify the tests to generate Rust tests for
 # This is because we don't implement everything yet.
 $TestsToGenerate = @(
+    "br",
     "i32",
     "i64",
     "f32",

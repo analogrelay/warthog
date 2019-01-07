@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 
-use crate::{reader::Section, utils, Error};
+use crate::{format::reader::Section, utils, Error};
 
 pub struct NameSection {
     pub module_name: Option<String>,

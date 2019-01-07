@@ -7,6 +7,7 @@ Binary,Old Name,New Name,Type
 0x0C,br,br,index
 0x0D,br_if,br_if,index
 0x0E,br_table,br_table,branch-table
+0x0F,return,return,
 0x10,call,call,index
 0x11,call_indirect,call_indirect,table-index
 0x1A,drop,drop,

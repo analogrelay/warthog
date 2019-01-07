@@ -1,6 +1,6 @@
 use crate::{
     hosting::{ExportInst, FuncAddr, MemAddr},
-    module::ModuleNames,
+    format::ModuleNames,
 };
 
 addr_type!(ModuleAddr);

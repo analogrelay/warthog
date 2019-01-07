@@ -1,7 +1,7 @@
 use std::{fmt, io};
 
 use crate::{
-    module::{MemberDesc, MemoryType},
+    format::{MemberDesc, MemoryType},
     utils, Error,
 };
 

@@ -1,6 +1,7 @@
+use std::fmt;
+
 use crate::Trap;
 
-#[derive(Debug)]
 pub enum Error {
     InvalidModule,
     ModuleNotFound { module: String },
@@ -47,5 +48,30 @@ impl From<std::alloc::LayoutErr> for Error {
 impl From<Trap> for Error {
     fn from(t: Trap) -> Error {
         Error::Trap(t)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Error::*;
+
+        match self {
+            InvalidModule => write!(f, "invalid module"),
+            ModuleNotFound { module: m } => write!(f, "module not found: {}", m),
+            ExportNotFound { module: m, name: n } => write!(f, "export not found: {}.{}", m, n),
+            ExportTypeMismatch { module: m, name: n } => write!(f, "export type mismatch: {}.{}", m, n),
+            UnsupportedVersion { version: v } => write!(f, "unsupported version: {}", v),
+            LayoutError => write!(f, "memory layout invalid"),
+            Utf8Error(_) => write!(f, "utf-8 conversion error"),
+            IoError(s) => write!(f, "i/o error: {}", s),
+            UnknownOpcode(o) => write!(f, "unknown opcode: 0x{:2X}", o),
+            Trap(t) => write!(f, "trap: {}", t),
+        }
+    }
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }

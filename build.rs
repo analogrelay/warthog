@@ -213,7 +213,7 @@ fn generate_enum_members<W: io::Write>(w: &mut IndentingWriter<W>, instructions:
             Const => writeln!(w, "{}(crate::Value),", record.enum_name)?,
             Block => writeln!(w, "{}(crate::ValType),", record.enum_name)?,
             Index => writeln!(w, "{}(u32),", record.enum_name)?,
-            BranchTable => writeln!(w, "{}(crate::instruction::BranchTable),", record.enum_name)?,
+            BranchTable => writeln!(w, "{}(crate::format::instruction::BranchTable),", record.enum_name)?,
             TableIndex => writeln!(w, "{}(u32, u32),", record.enum_name)?,
             MemArg => writeln!(w, "{}(u32, u32),", record.enum_name)?,
         }

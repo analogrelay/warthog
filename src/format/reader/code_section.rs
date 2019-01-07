@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{module::FuncBody, reader::Section, utils, Error};
+use crate::{format::{FuncBody, reader::Section}, utils, Error};
 
 pub struct CodeSection {
     pub code: Vec<FuncBody>,

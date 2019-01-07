@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{reader::Section, utils, Error};
+use crate::{format::reader::Section, utils, Error};
 
 pub struct FunctionSection {
     pub funcs: Vec<usize>,

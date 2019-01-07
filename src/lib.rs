@@ -2,18 +2,11 @@
 // #![deny(warnings)]
 // Quiet down some warnings when running tests.
 #![cfg_attr(test, allow(dead_code))]
-// The isa! macro is very recursive because it's a push-down accumulator.
-#![recursion_limit = "256"]
 
 extern crate byteorder;
 extern crate leb128;
 
-// This module has to be imported first because macros are processed
-// in a single pass.
-mod macros;
-
 mod error;
-mod instruction;
 mod location;
 mod memory;
 mod sparse_vec;
@@ -23,13 +16,11 @@ mod value;
 
 pub mod builder;
 pub mod hosting;
-pub mod interp;
-pub mod module;
-pub mod reader;
-pub mod runtime;
+// pub mod interp;
+pub mod format;
+// pub mod runtime;
 
 pub use crate::error::Error;
-pub use crate::instruction::Instruction;
 pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::trap::{Trap, TrapCause};

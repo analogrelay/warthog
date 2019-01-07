@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Instruction;
+use crate::format::Instruction;
 
 #[derive(PartialEq, Clone)]
 pub struct Expr(Vec<Instruction>);

@@ -2,10 +2,12 @@ use std::{fmt, io};
 
 use crate::{
     builder::ModuleBuilder,
-    module::{DataItem, Export, FuncBody, FuncType, Import, ModuleNames},
-    reader::{
-        CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection,
-        Reader, SectionHeader, SectionId, TypeSection,
+    format::{
+        DataItem, Export, FuncBody, FuncType, Import, ModuleNames,
+        reader::{
+            CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection,
+            Reader, SectionHeader, SectionId, TypeSection,
+        },
     },
     Error,
 };

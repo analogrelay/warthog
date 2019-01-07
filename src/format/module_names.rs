@@ -1,4 +1,4 @@
-use crate::{reader::NameSection, SparseVec};
+use crate::{format::reader::NameSection, SparseVec};
 
 #[derive(Clone, PartialEq)]
 pub struct FuncNames {

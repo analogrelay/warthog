@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{module::Expr, utils, Error, Instruction};
+use crate::{format::{Expr, Instruction}, utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct DataItem {

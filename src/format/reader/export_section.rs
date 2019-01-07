@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{module::Export, reader::Section, utils, Error};
+use crate::{format::{Export, reader::Section}, utils, Error};
 
 pub struct ExportSection {
     pub exports: Vec<Export>,

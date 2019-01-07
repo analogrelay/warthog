@@ -6,9 +6,8 @@ use std::{borrow::Cow, env, fs, path::Path, process};
 
 use warthog::{
     hosting::{ExternVal, Host},
-    interp::Thread,
-    module::Module,
-    reader::Reader,
+    format::Module,
+    format::reader::Reader,
     runtime,
 };
 
@@ -56,20 +55,22 @@ pub fn run(file: &Path) {
         _ => panic!("'_main' is not a function!"),
     };
 
-    // Create a thread
-    let mut thread = Thread::new();
+    unimplemented!()
 
-    // Invoke the entry point
-    if let Err(trap) = thread.invoke(&mut host, main_func) {
-        eprintln!("trap! {}", trap.cause());
-        if let Some(trace) = trap.trace() {
-            for frame in trace.frames() {
-                if let Some(loc) = frame.func().and_then(|f| host.get_location(f, 0)) {
-                    eprintln!(" at {}", loc);
-                } else {
-                    eprintln!(" at {}", frame);
-                }
-            }
-        }
-    }
+    // // Create a thread
+    // let mut thread = Thread::new();
+
+    // // Invoke the entry point
+    // if let Err(trap) = thread.invoke(&mut host, main_func) {
+    //     eprintln!("trap! {}", trap.cause());
+    //     if let Some(trace) = trap.trace() {
+    //         for frame in trace.frames() {
+    //             if let Some(loc) = frame.func().and_then(|f| host.get_location(f, 0)) {
+    //                 eprintln!(" at {}", loc);
+    //             } else {
+    //                 eprintln!(" at {}", frame);
+    //             }
+    //         }
+    //     }
+    // }
 }

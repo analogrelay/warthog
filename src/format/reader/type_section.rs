@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{module::FuncType, reader::Section, utils, Error};
+use crate::{format::{FuncType, reader::Section}, utils, Error};
 
 pub struct TypeSection {
     pub types: Vec<FuncType>,

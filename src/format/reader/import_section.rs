@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{module::Import, reader::Section, utils, Error};
+use crate::{format::{Import, reader::Section}, utils, Error};
 
 pub struct ImportSection {
     pub imports: Vec<Import>,

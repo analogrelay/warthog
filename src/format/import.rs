@@ -1,6 +1,6 @@
 use std::{fmt, io};
 
-use crate::{module::MemberDesc, utils, Error};
+use crate::{format::MemberDesc, utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct Import {
