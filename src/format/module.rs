@@ -3,12 +3,13 @@ use std::{fmt, io};
 use crate::{
     builder::ModuleBuilder,
     format::{
-        DataItem, Export, FuncBody, FuncType, Import, ModuleNames,
         reader::{
             CodeSection, CustomSection, DataSection, ExportSection, FunctionSection, ImportSection,
             Reader, SectionHeader, SectionId, TypeSection,
         },
+        DataItem, Export, FuncBody, Import, ModuleNames,
     },
+    types::FuncType,
     Error,
 };
 

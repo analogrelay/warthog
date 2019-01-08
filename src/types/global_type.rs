@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{Error, ValType};
+use crate::{types::ValType, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct GlobalType {

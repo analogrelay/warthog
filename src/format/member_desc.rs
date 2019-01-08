@@ -3,7 +3,7 @@ use std::{fmt, io};
 use byteorder::ReadBytesExt;
 
 use crate::{
-    format::{GlobalType, MemoryType, TableType},
+    types::{GlobalType, MemoryType, TableType},
     utils, Error,
 };
 

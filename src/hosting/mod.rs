@@ -2,7 +2,7 @@ macro_rules! addr_type {
     ($name: ident) => {
         #[derive(Clone, Copy, PartialEq)]
         pub struct $name(::std::num::NonZeroUsize);
-        
+
         impl $name {
             pub fn new(id: usize) -> Option<$name> {
                 match ::std::num::NonZeroUsize::new(id) {
@@ -10,12 +10,12 @@ macro_rules! addr_type {
                     None => None,
                 }
             }
-        
+
             pub fn val(&self) -> usize {
                 self.0.get() - 1
             }
         }
-        
+
         impl ::std::fmt::Display for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 write!(f, concat!("[", stringify!($name), "]0x{:04X}"), self.0)
@@ -37,17 +37,17 @@ macro_rules! addr_type {
 }
 
 mod export_inst;
+mod external;
 mod func_inst;
 mod host;
+mod host_func;
 mod mem_inst;
 mod module_inst;
-// mod external;
-// mod host_func;
 
 pub use self::export_inst::{ExportInst, ExternVal};
+pub use self::external::{ExternalFunc, ExternalMemory, ExternalModule};
 pub use self::func_inst::{FuncAddr, FuncImpl, FuncInst};
 pub use self::host::Host;
+pub use self::host_func::HostFunc;
 pub use self::mem_inst::{MemAddr, MemInst};
 pub use self::module_inst::{ModuleAddr, ModuleInst};
-// pub use self::external::{ExternalModule, ExternalFunc, ExternalMemory};
-// pub use self::host_func::HostFunc;

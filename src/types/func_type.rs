@@ -2,7 +2,7 @@ use std::{fmt, io};
 
 use byteorder::ReadBytesExt;
 
-use crate::{utils, Error, ValType};
+use crate::{types::ValType, utils, Error};
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct FuncType {

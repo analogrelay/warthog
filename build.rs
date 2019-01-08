@@ -211,7 +211,7 @@ fn generate_enum_members<W: io::Write>(w: &mut IndentingWriter<W>, instructions:
         match record.typ {
             Empty => writeln!(w, "{},", record.enum_name)?,
             Const => writeln!(w, "{}(crate::Value),", record.enum_name)?,
-            Block => writeln!(w, "{}(crate::ValType),", record.enum_name)?,
+            Block => writeln!(w, "{}(crate::types::ValType),", record.enum_name)?,
             Index => writeln!(w, "{}(u32),", record.enum_name)?,
             BranchTable => writeln!(w, "{}(crate::format::instruction::BranchTable),", record.enum_name)?,
             TableIndex => writeln!(w, "{}(u32, u32),", record.enum_name)?,
@@ -258,7 +258,7 @@ fn generate_instruction_methods<W: io::Write>(w: &mut IndentingWriter<W>, instru
                 match record.typ {
                     Empty => writeln!(w, "{} => Ok({}),", opcode, record.enum_ref)?,
                     Const => writeln!(w, "{} => Ok({}(read_{}(reader)?)),", opcode, record.enum_ref, get_value_type(&record.new_name))?,
-                    Block => writeln!(w, "{} => Ok({}(crate::ValType::read(reader)?)),", opcode, record.enum_ref)?,
+                    Block => writeln!(w, "{} => Ok({}(crate::types::ValType::read(reader)?)),", opcode, record.enum_ref)?,
                     Index => writeln!(w, "{} => Ok({}(read_idx(reader)?)),", opcode, record.enum_ref)?,
                     BranchTable => writeln!(w, "{} => Ok({}(BranchTable::read(reader)?)),", opcode, record.enum_ref)?,
                     TableIndex => writeln!(w, "{} => Ok({}(read_idx(reader)?, read_idx(reader)?)),", opcode, record.enum_ref)?,

@@ -1,9 +1,6 @@
 use std::{fmt, io};
 
-use crate::{
-    format::{MemberDesc, MemoryType},
-    utils, Error,
-};
+use crate::{format::MemberDesc, types::MemoryType, utils, Error};
 
 #[derive(PartialEq, Clone)]
 pub struct Export {

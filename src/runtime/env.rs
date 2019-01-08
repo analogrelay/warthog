@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use crate::{
     hosting::{ExternalFunc, ExternalMemory, ExternalModule, Host},
-    interp::Thread,
-    module::FuncType,
-    FromValue, Trap, ValType, Value,
+    types::{ValType, FuncType},
+    Trap, Value,
 };
 
 pub struct Env {
@@ -39,28 +38,29 @@ impl ExternalModule for Env {
     }
 }
 
-fn print(host: &mut Host, thread: &mut Thread, values: &[Value]) -> Result<Vec<Value>, Trap> {
-    let (count, start) = (
-        u32::from_value(values[0])? as usize,
-        u32::from_value(values[1])? as usize,
-    );
+fn print(_host: &mut Host, _values: &[Value]) -> Result<Vec<Value>, Trap> {
+    unimplemented!();
+    // let (count, start) = (
+    //     u32::from_value(values[0])? as usize,
+    //     u32::from_value(values[1])? as usize,
+    // );
 
-    let module = thread.stack().current().frame().module();
-    let end = start + count;
+    // let module = thread.stack().current().frame().module();
+    // let end = start + count;
 
-    // Get memory 0 for the current frame
-    let mem_addr = host.resolve_mem(module, 0);
-    let mem_inst = host.get_mem(mem_addr);
-    let mem = mem_inst.memory();
+    // // Get memory 0 for the current frame
+    // let mem_addr = host.resolve_mem(module, 0);
+    // let mem_inst = host.get_mem(mem_addr);
+    // let mem = mem_inst.memory();
 
-    // Safe as long as other threads (which don't even exist in WASM yet)
-    // aren't accessing memory. When threading exists, WASM will provide
-    // it's own synchronization primitives.
-    unsafe {
-        // Read the memory sequence in as a UTF-8 string
-        let s = std::str::from_utf8(&mem.data()[start..end]).unwrap();
-        println!("{}", s);
-    }
+    // // Safe as long as other threads (which don't even exist in WASM yet)
+    // // aren't accessing memory. When threading exists, WASM will provide
+    // // it's own synchronization primitives.
+    // unsafe {
+    //     // Read the memory sequence in as a UTF-8 string
+    //     let s = std::str::from_utf8(&mem.data()[start..end]).unwrap();
+    //     println!("{}", s);
+    // }
 
-    Ok(Vec::new())
+    // Ok(Vec::new())
 }

@@ -18,13 +18,14 @@ pub mod builder;
 pub mod hosting;
 // pub mod interp;
 pub mod format;
-// pub mod runtime;
+pub mod runtime;
+pub mod types;
 
 pub use crate::error::Error;
 pub use crate::location::Location;
 pub use crate::memory::Memory;
 pub use crate::trap::{Trap, TrapCause};
-pub use crate::value::{FromValue, ValType, Value};
+pub use crate::value::{FromValue, Value};
 
 pub(crate) use crate::sparse_vec::SparseVec;
 

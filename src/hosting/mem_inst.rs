@@ -1,4 +1,4 @@
-use crate::{format::MemoryType, Error, Memory, PAGE_SIZE};
+use crate::{types::MemoryType, Error, Memory, PAGE_SIZE};
 
 addr_type!(MemAddr);
 

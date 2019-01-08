@@ -1,6 +1,6 @@
 use std::{borrow::Cow, cmp, fmt};
 
-use crate::{ValType};
+use crate::types::ValType;
 
 #[derive(Clone, PartialEq)]
 pub enum TrapCause {

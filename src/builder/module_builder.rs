@@ -1,6 +1,7 @@
 use crate::{
     builder::{FuncBuilder, TypeUse},
-    format::{DataItem, Export, FuncBody, FuncType, Import, MemberDesc, Module, ModuleNames},
+    format::{DataItem, Export, FuncBody, Import, MemberDesc, Module, ModuleNames},
+    types::FuncType,
 };
 
 pub struct ModuleBuilder {

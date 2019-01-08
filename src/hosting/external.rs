@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     hosting::{Host, HostFunc},
-    interp::Thread,
-    module::{FuncType, MemoryType},
+    types::{FuncType, MemoryType},
     Trap, Value,
 };
 
@@ -37,26 +36,28 @@ impl ExternalFunc {
         &self.typ
     }
 
-    pub fn invoke(&self, host: &mut Host, thread: &mut Thread) -> Result<Vec<Value>, Trap> {
-        // Pop values off the stack
-        let values = {
-            let mut vals = Vec::new();
-            for param in self.typ.params().iter() {
-                match thread.stack_mut().pop()? {
-                    v if v.typ() != *param => {
-                        return Err(format!(
-                            "Type mismatch. Function expects '{}' but '{}' is on top of the stack.",
-                            param,
-                            v.typ()
-                        ).into())
-                    }
-                    v => vals.push(v),
-                }
-            }
-            vals
-        };
+    pub fn invoke(&self, _host: &mut Host) -> Result<Vec<Value>, Trap> {
+        unimplemented!();
+        // // Pop values off the stack
+        // let values = {
+        //     let mut vals = Vec::new();
+        //     for param in self.typ.params().iter() {
+        //         match thread.stack_mut().pop()? {
+        //             v if v.typ() != *param => {
+        //                 return Err(format!(
+        //                     "Type mismatch. Function expects '{}' but '{}' is on top of the stack.",
+        //                     param,
+        //                     v.typ()
+        //                 )
+        //                 .into());
+        //             }
+        //             v => vals.push(v),
+        //         }
+        //     }
+        //     vals
+        // };
 
-        (self.imp)(host, thread, &values)
+        // (self.imp)(host, thread, &values)
     }
 }
 

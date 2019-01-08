@@ -1,4 +1,4 @@
-use crate::ValType;
+use crate::types::ValType;
 
 pub struct TypeUse {
     pub id: Option<usize>,

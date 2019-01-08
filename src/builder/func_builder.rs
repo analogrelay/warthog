@@ -1,4 +1,4 @@
-use crate::{builder::TypeUse, format::Instruction, ValType};
+use crate::{builder::TypeUse, format::Instruction, types::ValType};
 
 pub struct FuncBuilder {
     pub export: Option<String>,

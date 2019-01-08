@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
+    format::{Export, Expr, Instruction, MemberDesc, Module},
     hosting::{
-        ExportInst, ExternVal, FuncAddr, FuncImpl, FuncInst, MemAddr, MemInst,
+        ExportInst, ExternVal, ExternalModule, FuncAddr, FuncImpl, FuncInst, MemAddr, MemInst,
         ModuleAddr, ModuleInst,
     },
-    format::{Export, Expr, MemberDesc, Module, Instruction},
     Error, Location, Value,
 };
 
@@ -95,7 +95,7 @@ impl Host {
             let module = &self.modules[func.module().val()];
 
             let func_name = match func.imp() {
-                // FuncImpl::External(f) => Some(f.name().to_owned()),
+                FuncImpl::External(f) => Some(f.name().to_owned()),
                 FuncImpl::Local(_, id) => module
                     .names()
                     .and_then(|n| n.funcs().get(*id))
@@ -116,46 +116,46 @@ impl Host {
     }
 
     /// Instantiates an external module.
-    // pub fn external<M: ExternalModule>(&mut self, module: M) -> Result<ModuleAddr, Error> {
-    //     let module_addr = ModuleAddr::new(self.modules.len() + 1)
-    //         .expect("New module address should be non-zero!");
+    pub fn external<M: ExternalModule>(&mut self, module: M) -> Result<ModuleAddr, Error> {
+        let module_addr = ModuleAddr::new(self.modules.len() + 1)
+            .expect("New module address should be non-zero!");
 
-    //     let mut funcs = Vec::new();
-    //     let mut exports = Vec::new();
-    //     for (idx, func) in module.funcs().iter().enumerate() {
-    //         // Allocate a func in the host
-    //         let func_addr = FuncAddr::new(self.funcs.len() + 1)
-    //             .expect("New function address should be non-zero!");
-    //         let func_inst = FuncInst::external(func.typ().clone(), module_addr, func.clone());
-    //         self.funcs.push(Arc::new(func_inst));
-    //         funcs.push(func_addr);
-    //         exports.push(Export::new(
-    //             func.name().to_owned(),
-    //             MemberDesc::Function(idx),
-    //         ))
-    //     }
+        let mut funcs = Vec::new();
+        let mut exports = Vec::new();
+        for (idx, func) in module.funcs().iter().enumerate() {
+            // Allocate a func in the host
+            let func_addr = FuncAddr::new(self.funcs.len() + 1)
+                .expect("New function address should be non-zero!");
+            let func_inst = FuncInst::external(func.typ().clone(), module_addr, func.clone());
+            self.funcs.push(Arc::new(func_inst));
+            funcs.push(func_addr);
+            exports.push(Export::new(
+                func.name().to_owned(),
+                MemberDesc::Function(idx),
+            ))
+        }
 
-    //     // Export memories
-    //     for mem in module.mems() {
-    //         exports.push(Export::new(
-    //             mem.name().to_owned(),
-    //             MemberDesc::Memory(mem.typ().clone()),
-    //         ));
-    //     }
+        // Export memories
+        for mem in module.mems() {
+            exports.push(Export::new(
+                mem.name().to_owned(),
+                MemberDesc::Memory(mem.typ().clone()),
+            ));
+        }
 
-    //     // Export the synthetic module
-    //     let exports = self.export_module(&funcs, &exports)?;
+        // Export the synthetic module
+        let exports = self.export_module(&funcs, &exports)?;
 
-    //     // Register the module and return
-    //     self.modules.push(Arc::new(ModuleInst::new(
-    //         module.name().to_owned(),
-    //         funcs,
-    //         Vec::new(),
-    //         exports,
-    //         None,
-    //     )));
-    //     Ok(module_addr)
-    // }
+        // Register the module and return
+        self.modules.push(Arc::new(ModuleInst::new(
+            module.name().to_owned(),
+            funcs,
+            Vec::new(),
+            exports,
+            None,
+        )));
+        Ok(module_addr)
+    }
 
     /// Instantiates the provided [`Module`], consuming it in the process.
     pub fn instantiate<S: Into<String>>(
